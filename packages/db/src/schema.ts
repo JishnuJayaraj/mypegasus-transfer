@@ -1876,6 +1876,10 @@ export const document = pgTable(
       .references(() => project.id),
     participationId: uuid("participation_id").notNull(),
     type: documentType("type").notNull(),
+    dsvOfferId: uuid("dsv_offer_id").references(() => dsvOffer.id),
+    dsvReceivedBy: uuid("dsv_received_by").references(() => staffUser.id),
+    dsvReceivedOn: dateColumn("dsv_received_on"),
+    dsvSignatures: jsonb("dsv_signatures"),
     catalogVersion: integer("catalog_version").notNull(),
     retentionClass: text("retention_class").notNull(),
     mediaType: documentMediaType("media_type").notNull(),
@@ -3461,6 +3465,23 @@ export const dsvOffer = pgTable("dsv_offer", {
   endedAt: timestamp("ended_at", { withTimezone: true }),
 });
 
+/** Confirmed actual signature dates; personnel-file evidence, append-only. */
+export const dsvScanSignature = pgTable("dsv_scan_signature", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => project.id),
+  participationId: uuid("participation_id")
+    .notNull()
+    .references(() => participation.id),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => document.id),
+  kind: text("kind").notNull(),
+  signedOn: dateColumn("signed_on").notNull(),
+  recordedAt: instant("recorded_at").notNull().defaultNow(),
+});
+
 export const tables = [
   staffUser,
   region,
@@ -3501,6 +3522,7 @@ export const tables = [
   documentLink,
   formGeneration,
   dsvOffer,
+  dsvScanSignature,
   signedDeclaration,
   asuRecord,
   asuRegistration,

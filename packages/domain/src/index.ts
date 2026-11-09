@@ -1278,3 +1278,5 @@ export {
   DsvTemplateView,
   DsvView,
 } from "./dsv/api";
+
+export { DsvSignatures, DsvScanMetadata, dsvScanProblems } from "./dsv/scans";

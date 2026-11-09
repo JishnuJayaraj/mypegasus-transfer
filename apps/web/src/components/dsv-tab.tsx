@@ -1,3 +1,4 @@
+import { DsvScans } from "./dsv-scans";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
@@ -239,6 +240,7 @@ export function DsvTab({ participationId }: { participationId: string }) {
           />
         </Stack>
       </Card>
+      <DsvScans view={view} onOpen={open} />
       <Card title={t("dsv.generations.title")} level={3}>
         <SimpleTable
           title={t("dsv.generations.title")}

@@ -236,6 +236,11 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   // A generated form's provenance (data-protection.md, generated forms; Q179): the document, form
   // code and version, the source revisions, the declarations it printed, the confirmed warning
   // codes, the Anlage, who generated it and when. Its row stays when the working copy's file goes.
+  dsv_scan_signature: {
+    retentionClass: "personnel_file",
+    dataClass: "highly_confidential",
+    holdsParticipantData: true,
+  },
   dsv_offer: {
     retentionClass: "participation_record",
     dataClass: "internal",
@@ -924,6 +929,7 @@ const withoutFields = new Set([
   "form_generation",
   // The offered paper's provenance, deadline and printed terms (process-and-lifecycle.md, DSV offers).
   "dsv_offer",
+  "dsv_scan_signature",
   // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
   // declarations to the BA).
   "signed_declaration",

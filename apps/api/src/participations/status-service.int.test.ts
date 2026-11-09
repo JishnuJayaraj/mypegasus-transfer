@@ -1,3 +1,4 @@
+import { acceptedDsvScan } from "@transfer/db/testing";
 import { ManualClock } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds, seedWaves } from "@transfer/db";
 import { changeStatus, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
@@ -193,6 +194,7 @@ describe("status changes", () => {
     };
     const entering = createStatusService({ db, clock, facts: withFacts(facts) });
     await changeStatus(owner, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
+    await acceptedDsvScan(owner, id);
     await entering.changeStatus(backOffice, {
       participationId: id,
       track: "dsv",
@@ -229,6 +231,7 @@ describe("status changes", () => {
     };
     const entering = createStatusService({ db, clock, facts: withFacts(facts) });
     await changeStatus(owner, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
+    await acceptedDsvScan(owner, id);
     for (const [from, to] of [["dsv_offered", "dsv_signed"]] as const) {
       await entering.changeStatus(backOffice, { participationId: id, track: "dsv", from, to });
     }
@@ -663,6 +666,7 @@ describe("effective dates (round 18)", () => {
 
   it("records an exit on or after the entry, never in the future", async () => {
     const id = await offered();
+    await acceptedDsvScan(owner, id);
     await dated.changeStatus(backOffice, {
       participationId: id,
       track: "dsv",

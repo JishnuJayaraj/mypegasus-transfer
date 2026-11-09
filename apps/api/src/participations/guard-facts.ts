@@ -174,6 +174,18 @@ export const dbGuardFacts: GuardFactsProvider = {
     const ids = inputs.map((input) => input.participationId);
     const recorded = await tl407Facts(tx, ids);
     const asu = await asuStatesOf(tx, ids);
+    const { rows: dsv } = await tx.execute<{
+      participation_id: string;
+      signed_on: string;
+      recorded_at: string;
+    }>(sql`select distinct on (participation_id) participation_id, signed_on::text,
+      ${utcText("recorded_at")} as recorded_at from dsv_facts(${`{${ids.join(",")}}`}::uuid[]) order by participation_id, recorded_at, document_id`);
+    const dsvById = new Map(
+      dsv.map((row) => [
+        row.participation_id,
+        { validOn: row.signed_on, recordedAt: new Date(row.recorded_at) },
+      ]),
+    );
     const evidence = await approvalEvidence(
       tx,
       inputs
@@ -190,6 +202,9 @@ export const dbGuardFacts: GuardFactsProvider = {
       all.push({
         ...(approved && { profilingExceptionApproved: approved }),
         ...recorded.get(input.participationId),
+        ...(dsvById.has(input.participationId) && {
+          dsvScanReceived: dsvById.get(input.participationId)!,
+        }),
         ...(registered && { asuRegisteredWithProof: registered }),
       });
     }

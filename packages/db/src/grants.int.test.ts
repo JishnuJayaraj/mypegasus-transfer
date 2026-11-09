@@ -81,6 +81,8 @@ describe("transfer_app", () => {
 
 // ADR-0002: statuses and audit events are written only by the status functions.
 const statusFunctions = [
+  "dsv_facts",
+  "sign_dsv",
   "lock_participation",
   "create_participation",
   "change_participation_status",
@@ -256,6 +258,7 @@ const statusFunctions = [
   "decide_evidence_correction",
 ];
 const helpers = [
+  "validate_dsv_scan",
   "assert_context",
   "write_audit_event",
   "end_reason_fits",
@@ -1026,9 +1029,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 to 8 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 9 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 73 },
+      { n: 85 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });

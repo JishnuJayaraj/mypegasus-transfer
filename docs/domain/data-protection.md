@@ -399,7 +399,7 @@ access matrix has the table "Document operations".
 - Signed documents are never deleted (`immutable`; the retention job only). The other types'
   operations stay `undecided` (Q65) until their slice: the signed TL 407 (version 4) and the ASU
   proof (version 5) and the exception evidence (version 7, PR 6-7; "Exception evidence") have
-  theirs, the Kug 200b scan its own (version 6); the DSV scan and cancellation follow with Slice 7.
+  theirs, the Kug 200b scan its own (version 6); the DSV scan follows in version 9; cancellation follows in its own Slice 7 PR.
 
 **File names** *(assumed, Q148)*: kept only for the CV, other uploads and certificates, as
 confidential metadata: NFC, path parts and control characters (including bidirectional
@@ -1442,3 +1442,22 @@ DSV offer metadata (`dsv_offer`) is internal case data, class `participation_rec
 `project_id` and participation. The PL and back office read and record it through the DSV
 endpoints; external offers store printed TG dates and wording identity `external_unknown`, with
 no scan required at offer time. The generated paper remains a logged, encrypted working copy.
+
+### DSV scan operations (catalog version 9)
+
+`dsv_signed_scan` is uploaded and reviewed by the PL or back office in normal mode; either may
+quarantine it. The existing lift rule applies: the person who quarantined it, while still allowed,
+or the PL. Only the PL deletes, before review, with `wrong_person` or `wrong_file`; deletion
+queues encrypted-object purging through the existing document path. The cancellation's operations
+remain undecided until their own slice. Earlier documents retain their catalog policy.
+
+Scan receipt, offer linkage and confirmed signature rows are highly confidential employment
+contract evidence, retained as `personnel_file`. Signature rows carry project and participation
+ids; the runtime role reads them but cannot insert, change or delete them directly. The DSV tab
+is restricted to PL/back office. No file name is retained for DSV scans. The receiver selector
+shows active staff assigned to the project; the receipt records the explicitly chosen staff id.
+DSV document events appear in the DSV history stream, including for back office; their projection
+shows codes and confirmed signature kinds, not signature dates or receipt identities.
+
+The counting rule preserves actual dates through quarantine lifts; see
+[DSV scans and participant signature](process-and-lifecycle.md#dsv-scans-and-participant-signature-as-built-7-2b).

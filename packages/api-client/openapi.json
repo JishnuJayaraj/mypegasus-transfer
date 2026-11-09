@@ -11275,46 +11275,6 @@
         ],
         "additionalProperties": false
       },
-      "DocumentList": {
-        "type": "object",
-        "properties": {
-          "documents": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Document"
-            }
-          },
-          "addableTypes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "tl407_signed_scan",
-                "kug200b_signed_scan",
-                "dsv_signed_scan",
-                "dsv_cancellation",
-                "asu_proof",
-                "profiling_exception_evidence",
-                "cv",
-                "participant_upload",
-                "qualification_certificate",
-                "tl407_form",
-                "kug200b_form",
-                "dsv_form"
-              ]
-            }
-          },
-          "limits": {
-            "$ref": "#/components/schemas/DocumentLimits"
-          }
-        },
-        "required": [
-          "documents",
-          "addableTypes",
-          "limits"
-        ],
-        "additionalProperties": false
-      },
       "Document": {
         "type": "object",
         "properties": {
@@ -11507,98 +11467,51 @@
         ],
         "additionalProperties": false
       },
-      "DocumentLimits": {
-        "type": "object",
-        "properties": {
-          "maxBytes": {
-            "type": "integer"
-          },
-          "maxLiveDocuments": {
-            "type": "integer"
-          },
-          "maxUploadsPerHour": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "maxBytes",
-          "maxLiveDocuments",
-          "maxUploadsPerHour"
-        ],
-        "additionalProperties": false
-      },
-      "DocumentUploadInput": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "tl407_signed_scan",
-              "kug200b_signed_scan",
-              "dsv_signed_scan",
-              "dsv_cancellation",
-              "asu_proof",
-              "profiling_exception_evidence",
-              "cv",
-              "participant_upload",
-              "qualification_certificate",
-              "tl407_form",
-              "kug200b_form",
-              "dsv_form"
-            ]
-          },
-          "fileName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 1000
-          },
-          "content": {
-            "type": "string",
-            "description": "The file, base64; decoded at most 10 MB"
-          },
-          "origin": {
-            "$ref": "#/components/schemas/ScanOrigin"
-          },
-          "generationDocumentId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "type",
-          "fileName",
-          "content"
-        ],
-        "additionalProperties": false
-      },
-      "ScanOrigin": {
-        "type": "string",
-        "enum": [
-          "generated",
-          "external_paper"
-        ]
-      },
-      "DocumentOpening": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "UTC timestamp (ISO 8601)"
-          }
-        },
-        "required": [
-          "url",
-          "expiresAt"
-        ],
-        "additionalProperties": false
-      },
       "DocumentReviewInput": {
         "type": "object",
         "properties": {
+          "dsv": {
+            "type": "object",
+            "properties": {
+              "signatures": {
+                "type": "object",
+                "properties": {
+                  "participant": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "customer": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "transfergesellschaft": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "termsConfirmed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "signatures"
+            ],
+            "additionalProperties": false
+          },
           "decision": {
             "type": "string",
             "enum": [
@@ -11763,6 +11676,193 @@
           "mandatory_completed",
           "signature_present"
         ]
+      },
+      "DocumentList": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            }
+          },
+          "addableTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tl407_signed_scan",
+                "kug200b_signed_scan",
+                "dsv_signed_scan",
+                "dsv_cancellation",
+                "asu_proof",
+                "profiling_exception_evidence",
+                "cv",
+                "participant_upload",
+                "qualification_certificate",
+                "tl407_form",
+                "kug200b_form",
+                "dsv_form"
+              ]
+            }
+          },
+          "limits": {
+            "$ref": "#/components/schemas/DocumentLimits"
+          }
+        },
+        "required": [
+          "documents",
+          "addableTypes",
+          "limits"
+        ],
+        "additionalProperties": false
+      },
+      "DocumentLimits": {
+        "type": "object",
+        "properties": {
+          "maxBytes": {
+            "type": "integer"
+          },
+          "maxLiveDocuments": {
+            "type": "integer"
+          },
+          "maxUploadsPerHour": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maxBytes",
+          "maxLiveDocuments",
+          "maxUploadsPerHour"
+        ],
+        "additionalProperties": false
+      },
+      "DocumentUploadInput": {
+        "type": "object",
+        "properties": {
+          "dsv": {
+            "type": "object",
+            "properties": {
+              "offerId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "signatures": {
+                "type": "object",
+                "properties": {
+                  "participant": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "customer": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "transfergesellschaft": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "receivedBy": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "receivedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "offerId",
+              "signatures",
+              "receivedBy",
+              "receivedOn"
+            ],
+            "additionalProperties": false
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "tl407_signed_scan",
+              "kug200b_signed_scan",
+              "dsv_signed_scan",
+              "dsv_cancellation",
+              "asu_proof",
+              "profiling_exception_evidence",
+              "cv",
+              "participant_upload",
+              "qualification_certificate",
+              "tl407_form",
+              "kug200b_form",
+              "dsv_form"
+            ]
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "content": {
+            "type": "string",
+            "description": "The file, base64; decoded at most 10 MB"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/ScanOrigin"
+          },
+          "generationDocumentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "type",
+          "fileName",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "ScanOrigin": {
+        "type": "string",
+        "enum": [
+          "generated",
+          "external_paper"
+        ]
+      },
+      "DocumentOpening": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ],
+        "additionalProperties": false
       },
       "DocumentQuarantineInput": {
         "type": "object",
@@ -14813,6 +14913,104 @@
             "type": "integer",
             "minimum": 0
           },
+          "scans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "document": {
+                  "$ref": "#/components/schemas/Document"
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "offerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "signatures": {
+                      "type": "object",
+                      "properties": {
+                        "participant": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                          "examples": [
+                            "2027-03-01"
+                          ]
+                        },
+                        "customer": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                          "examples": [
+                            "2027-03-01"
+                          ]
+                        },
+                        "transfergesellschaft": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                          "examples": [
+                            "2027-03-01"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "receivedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "receivedOn": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                      "examples": [
+                        "2027-03-01"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "offerId",
+                    "signatures",
+                    "receivedBy",
+                    "receivedOn"
+                  ],
+                  "additionalProperties": false
+                },
+                "counting": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "document",
+                "metadata",
+                "counting"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "receivers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
           "offers": {
             "type": "array",
             "items": {
@@ -15010,10 +15208,37 @@
                   "recordedAt"
                 ],
                 "additionalProperties": false
+              },
+              "dsvScanReceived": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "validOn": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "UTC timestamp (ISO 8601)"
+                  }
+                },
+                "required": [
+                  "validOn",
+                  "recordedAt"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
-              "dsvGenerated"
+              "dsvGenerated",
+              "dsvScanReceived"
             ],
             "additionalProperties": false
           },
@@ -15025,11 +15250,19 @@
               },
               "offer": {
                 "type": "boolean"
+              },
+              "uploadScan": {
+                "type": "boolean"
+              },
+              "sign": {
+                "type": "boolean"
               }
             },
             "required": [
               "generate",
-              "offer"
+              "offer",
+              "uploadScan",
+              "sign"
             ],
             "additionalProperties": false
           }
@@ -15038,6 +15271,8 @@
           "participationId",
           "track",
           "statusVersion",
+          "scans",
+          "receivers",
           "offers",
           "template",
           "deadline",
@@ -26109,6 +26344,107 @@
         }
       }
     },
+    "/api/v1/documents/{documentId}/dsv-review": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Review a DSV scan and confirm the external paper terms",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentReviewInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reviewed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/portal/documents": {
       "get": {
         "tags": [
@@ -29783,6 +30119,308 @@
         "responses": {
           "200": {
             "description": "The declined offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/scans": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Upload the signed offered paper with explicit receipt and signature dates",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "offerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "signatures": {
+                    "type": "object",
+                    "properties": {
+                      "participant": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                        "examples": [
+                          "2027-03-01"
+                        ]
+                      },
+                      "customer": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                        "examples": [
+                          "2027-03-01"
+                        ]
+                      },
+                      "transfergesellschaft": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                        "examples": [
+                          "2027-03-01"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "receivedBy": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "receivedOn": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "file": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string",
+                        "description": "The file, base64; decoded at most 10 MB"
+                      },
+                      "fileName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "content",
+                      "fileName"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "offerId",
+                  "signatures",
+                  "receivedBy",
+                  "receivedOn",
+                  "file"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/signed": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record the participant signature from counting evidence",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scanId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "statusVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "scanId",
+                  "statusVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed",
             "content": {
               "application/json": {
                 "schema": {

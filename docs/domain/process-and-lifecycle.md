@@ -1233,3 +1233,29 @@ lock. An offer and its audited status change commit together; the database refus
 status without the paper's offer record. Decline names the offer and status version; expiry and
 signature transitions close that same offer. A generation preceding an ended offer cannot be
 reused for a re-offer.
+
+### DSV scans and participant signature as built (7-2b)
+
+The PL or back office uploads a scan against the open offer, recording the actual dates visible
+for any of the participant, customer and Transfergesellschaft signatures, the receiving staff
+member and receipt date. Nothing is defaulted. Dates cannot be in the future (Berlin calendar);
+receipt cannot precede the participant's signature. A foreign offer is not found; an offer that
+has ended cannot receive a scan. The file follows the existing scanned, encrypted upload path.
+
+Review is final: accept with explicitly confirmed signature dates, or reject as `unreadable`,
+`wrong_document` or `incomplete`. External paper additionally requires confirmation that its
+terms match the recorded offer (`terms_mismatch`). Confirmed dates are separate
+`dsv_scan_signature` records; omitting a signature at review does not confirm the upload's date.
+The acceptance audit records signature kinds and terms confirmation, never signature dates.
+
+`dsv_facts` supplies `dsvScanReceived` only from accepted scans of the open or signed offer with
+a confirmed participant signature and receipt. Deleted, quarantined and invalidated scans supply
+no fact. `validOn` remains the actual participant signature date; `recordedAt` is the latest of
+acceptance, signature recording and quarantine lift. Lifting quarantine never substitutes its
+date for the signature date. Existing statuses are not reversed when evidence stops counting.
+
+“Als unterschrieben erfassen” names the exact counting scan and the displayed status version.
+The service checks evidence; `sign_dsv` checks it again under the participation lock, and
+`apply_status_change` independently refuses `dsv_signed` without the open offer's counting
+scan, including direct calls to the ordinary status function. There is no override.
+Full execution, original tracking and the TG entry evidence check remain the scope of 7-3.

@@ -8888,6 +8888,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/{documentId}/dsv-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review a DSV scan and confirm the external paper terms */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DocumentReviewInput"];
+                };
+            };
+            responses: {
+                /** @description Reviewed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Document"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/documents": {
         parameters: {
             query?: never;
@@ -12344,6 +12440,247 @@ export interface paths {
             };
             responses: {
                 /** @description The declined offer */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/dsv/scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload the signed offered paper with explicit receipt and signature dates */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        offerId: string;
+                        signatures: {
+                            /**
+                             * Format: date
+                             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                             * @example 2027-03-01
+                             */
+                            participant?: string;
+                            /**
+                             * Format: date
+                             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                             * @example 2027-03-01
+                             */
+                            customer?: string;
+                            /**
+                             * Format: date
+                             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                             * @example 2027-03-01
+                             */
+                            transfergesellschaft?: string;
+                        };
+                        /** Format: uuid */
+                        receivedBy: string;
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        receivedOn: string;
+                        file: {
+                            /** @description The file, base64; decoded at most 10 MB */
+                            content: string;
+                            fileName: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Uploaded */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Document"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/dsv/signed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record the participant signature from counting evidence */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        scanId: string;
+                        statusVersion: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Signed */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -17282,11 +17619,6 @@ export interface components {
             };
             warnings: components["schemas"]["SelfServiceWarning"][];
         };
-        DocumentList: {
-            documents: components["schemas"]["Document"][];
-            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form")[];
-            limits: components["schemas"]["DocumentLimits"];
-        };
         Document: {
             /** Format: uuid */
             id: string;
@@ -17339,32 +17671,30 @@ export interface components {
             liftQuarantine: boolean;
             requestCorrection: boolean;
         };
-        DocumentLimits: {
-            maxBytes: number;
-            maxLiveDocuments: number;
-            maxUploadsPerHour: number;
-        };
-        DocumentUploadInput: {
-            /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form";
-            fileName: string;
-            /** @description The file, base64; decoded at most 10 MB */
-            content: string;
-            origin?: components["schemas"]["ScanOrigin"];
-            /** Format: uuid */
-            generationDocumentId?: string;
-        };
-        /** @enum {string} */
-        ScanOrigin: "generated" | "external_paper";
-        DocumentOpening: {
-            url: string;
-            /**
-             * Format: date-time
-             * @description UTC timestamp (ISO 8601)
-             */
-            expiresAt: string;
-        };
         DocumentReviewInput: {
+            dsv?: {
+                signatures: {
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    participant?: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    customer?: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    transfergesellschaft?: string;
+                };
+                termsConfirmed?: boolean;
+            };
             /** @enum {string} */
             decision: "accepted" | "rejected";
             /** @enum {string} */
@@ -17412,6 +17742,68 @@ export interface components {
         };
         /** @enum {string} */
         Kug200bScanConfirmation: "declarations_ticked" | "mandatory_completed" | "signature_present";
+        DocumentList: {
+            documents: components["schemas"]["Document"][];
+            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form")[];
+            limits: components["schemas"]["DocumentLimits"];
+        };
+        DocumentLimits: {
+            maxBytes: number;
+            maxLiveDocuments: number;
+            maxUploadsPerHour: number;
+        };
+        DocumentUploadInput: {
+            dsv?: {
+                /** Format: uuid */
+                offerId: string;
+                signatures: {
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    participant?: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    customer?: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    transfergesellschaft?: string;
+                };
+                /** Format: uuid */
+                receivedBy: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                receivedOn: string;
+            };
+            /** @enum {string} */
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form";
+            fileName: string;
+            /** @description The file, base64; decoded at most 10 MB */
+            content: string;
+            origin?: components["schemas"]["ScanOrigin"];
+            /** Format: uuid */
+            generationDocumentId?: string;
+        };
+        /** @enum {string} */
+        ScanOrigin: "generated" | "external_paper";
+        DocumentOpening: {
+            url: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            expiresAt: string;
+        };
         DocumentQuarantineInput: {
             reasonCode: components["schemas"]["QuarantineReason"];
         };
@@ -18273,6 +18665,47 @@ export interface components {
             /** @enum {string} */
             track: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
             statusVersion: number;
+            scans: {
+                document: components["schemas"]["Document"];
+                metadata: {
+                    /** Format: uuid */
+                    offerId: string;
+                    signatures: {
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        participant?: string;
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        customer?: string;
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        transfergesellschaft?: string;
+                    };
+                    /** Format: uuid */
+                    receivedBy: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    receivedOn: string;
+                };
+                counting: boolean;
+            }[];
+            receivers: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            }[];
             offers: {
                 /** Format: uuid */
                 id: string;
@@ -18338,10 +18771,25 @@ export interface components {
                      */
                     recordedAt: string;
                 } | null;
+                dsvScanReceived: {
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    validOn: string;
+                    /**
+                     * Format: date-time
+                     * @description UTC timestamp (ISO 8601)
+                     */
+                    recordedAt: string;
+                } | null;
             };
             capabilities: {
                 generate: boolean;
                 offer: boolean;
+                uploadScan: boolean;
+                sign: boolean;
             };
         };
         DsvChecklistItem: {

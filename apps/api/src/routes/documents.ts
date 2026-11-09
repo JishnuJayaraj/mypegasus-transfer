@@ -155,6 +155,41 @@ export function documentRoutes(deps: Deps) {
     };
   }
 
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/documents/{documentId}/dsv-review",
+      tags: ["participations"],
+      summary: "Review a DSV scan and confirm the external paper terms",
+      middleware: staff,
+      request: {
+        params: DocumentParams,
+        body: { required: true, content: { "application/json": { schema: DocumentReviewInput } } },
+      },
+      responses: {
+        200: json(DocumentView, "Reviewed"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { documentId } = c.req.valid("param");
+      const { rows } = await db.execute<{ participation_id: string }>(
+        sql`select participation_id from document where id=${documentId}::uuid and type='dsv_signed_scan' and deleted_at is null`,
+      );
+      if (!rows[0]) return problem(c, "not-found") as never;
+      const found = await staffActor(c, rows[0].participation_id);
+      if ("response" in found) return found.response as never;
+      return service.review(c, found.actor, documentId, c.req.valid("json")) as never;
+    },
+  );
+
   // The portal: the participant's own documents of the types they may read.
 
   router.openapi(

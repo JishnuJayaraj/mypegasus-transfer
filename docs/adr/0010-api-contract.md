@@ -762,3 +762,22 @@ Import keys (`apps/api/src/imports/keys.ts`):
   `not_ta_tg`).
 - `ParticipationDetail.capabilities.viewDsv` offers the tab.
 
+
+#### DSV scans (7-2b)
+
+- `POST /participations/{participationId}/dsv/scans`: explicit `offerId`, `signatures` (optional
+  keys `participant`, `customer`, `transfergesellschaft`), `receivedBy`, `receivedOn`, and
+  `file { fileName, content }` (base64, existing upload limits). No default dates or receiver.
+- `POST /documents/{documentId}/dsv-review`: the document review body, with `dsv { signatures,
+  termsConfirmed? }` on acceptance; rejection uses `decision: rejected` and `reasonCode`.
+  The participation-scoped document review route accepts the same body.
+- `POST /participations/{participationId}/dsv/signed`: `scanId`, `statusVersion`; `409 stale_status`
+  on a changed status, `422 dsv_scan_missing` without counting evidence. Foreign document/offer
+  linkage is `404`; an ended offer returns `409 source_changed` on upload or review.
+- Existing document opening, quarantine, lift and delete routes apply under catalog 9.
+- `DsvView` adds scans with capabilities, receipt and signature metadata, receiver choices,
+  `dsvScanReceived` and explicit upload/sign capabilities. All writes recheck permissions/state.
+
+Dialogs capture the offer or scan and status version at opening, keep input after validation
+failure and protect dirty input on dismissal/navigation. Success and failure refresh the
+participation's related queries and the project's work list/dashboard.

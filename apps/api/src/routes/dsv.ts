@@ -11,6 +11,9 @@ import {
   DsvView,
   DsvOfferRequest,
   DsvDeclineRequest,
+  DocumentUploadInput,
+  DocumentView,
+  DsvScanMetadata,
   mayPinDsvTemplate,
   mayWorkDsv,
   type DocumentTarget,
@@ -20,13 +23,13 @@ import type { Context } from "hono";
 import { projectAccess } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
-import { storageUnavailable } from "../documents/service";
+import { documentService, type DocumentActor, storageUnavailable } from "../documents/service";
 import { dsvService, type DsvRead, type DsvRefusal } from "../forms/dsv";
 import { formRegistry } from "../forms/registry";
 import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
-import { requireSession, sessionUser } from "../session";
+import { requireSession, sessionUser, sessionHash } from "../session";
 import { auditContext } from "../sql";
 
 // The tab "DSV" (process-and-lifecycle.md, the DSV: generation; data-protection.md, generated forms
@@ -121,11 +124,38 @@ export function dsvRoutes(deps: Deps) {
     return { ok: true, subject, target };
   }
 
-  function viewOf(
+  const documents = documentService(deps);
+  async function viewOf(
     read: DsvRead,
     subject: StaffSubject,
     target: DocumentTarget,
-  ): z.infer<typeof DsvView> {
+  ): Promise<z.infer<typeof DsvView>> {
+    const actor: DocumentActor = {
+      subject,
+      target,
+      mode: normal,
+      context: sql`null::audit_context`,
+      session: { kind: "staff", hash: "" },
+      tokenHash: null,
+    };
+    const list = await documents.list(actor);
+    const { rows: scans } = await db.execute<{
+      id: string;
+      metadata: z.infer<typeof DsvScanMetadata>;
+      counting: boolean;
+    }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id),'{}'::jsonb) else d.dsv_signatures end) as metadata,
+      exists(select from dsv_facts(array[${target.participationId}::uuid]) f where f.document_id=d.id) as counting
+      from document d where d.participation_id=${target.participationId}::uuid and d.type='dsv_signed_scan' and d.dsv_offer_id is not null and d.deleted_at is null`);
+    const { rows: receivers } = await db.execute<{ id: string; name: string }>(
+      sql`select distinct u.id, u.display_name as name from staff_user u join project_membership m on m.staff_user_id=u.id where m.project_id=${target.projectId}::uuid and u.deactivated_at is null order by name`,
+    );
+    const { rows: facts } = await db.execute<{ validOn: string; recordedAt: string }>(
+      sql`select signed_on::text as "validOn", to_char(recorded_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "recordedAt" from dsv_facts(array[${target.participationId}::uuid]) order by recorded_at, document_id limit 1`,
+    );
+    const canWorkScan =
+      read.projectStatus === "active" &&
+      read.status === "informed" &&
+      read.dsvStatus === "dsv_offered";
     const today = clock.today();
     const blockers = service.blockers(read);
     const fact = service.generatedFact(read, today);
@@ -133,6 +163,11 @@ export function dsvRoutes(deps: Deps) {
       participationId: target.participationId,
       track: read.dsvStatus,
       statusVersion: read.statusVersion,
+      scans: scans.flatMap((scan) => {
+        const document = list.documents.find((d) => d.id === scan.id);
+        return document ? [{ document, metadata: scan.metadata, counting: scan.counting }] : [];
+      }),
+      receivers,
       offers: read.offers.map((offer) => ({
         ...offer,
         capabilities: {
@@ -182,6 +217,7 @@ export function dsvRoutes(deps: Deps) {
         },
       })),
       facts: {
+        dsvScanReceived: facts[0] ?? null,
         // The instant as stored (microseconds kept), from the generation the fact rests on.
         dsvGenerated: fact
           ? {
@@ -194,6 +230,8 @@ export function dsvRoutes(deps: Deps) {
           : null,
       },
       capabilities: {
+        uploadScan: canWorkScan && read.offers.some((offer) => offer.endedAs === null),
+        sign: canWorkScan,
         generate: read.projectType === "ta_tg" && blockers.length === 0,
         offer:
           read.projectType === "ta_tg" &&
@@ -224,7 +262,7 @@ export function dsvRoutes(deps: Deps) {
       if (!allowed.ok) return allowed.response as never;
       const read = await service.read(participationId);
       c.header("Cache-Control", "no-store");
-      return c.json(viewOf(read, allowed.subject, allowed.target), 200);
+      return c.json(await viewOf(read, allowed.subject, allowed.target), 200);
     },
   );
 
@@ -330,7 +368,7 @@ export function dsvRoutes(deps: Deps) {
         return offerRefusal(c, error) as never;
       }
       return c.json(
-        viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        await viewOf(await service.read(participationId), allowed.subject, allowed.target),
         201,
       );
     },
@@ -370,7 +408,122 @@ export function dsvRoutes(deps: Deps) {
         return offerRefusal(c, error) as never;
       }
       return c.json(
-        viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        await viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        200,
+      );
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/dsv/scans",
+      tags: ["participations"],
+      summary: "Upload the signed offered paper with explicit receipt and signature dates",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: DsvScanMetadata.extend({
+                file: DocumentUploadInput.pick({ content: true, fileName: true }),
+              }),
+            },
+          },
+        },
+      },
+      responses: {
+        201: json(DocumentView, "Uploaded"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      const { file, ...metadata } = c.req.valid("json");
+      return documents.upload(
+        c,
+        {
+          subject: allowed.subject,
+          target: allowed.target,
+          mode: normal,
+          context: context(c),
+          session: { kind: "staff", hash: sessionHash(c) },
+          tokenHash: null,
+        },
+        { type: "dsv_signed_scan", ...file, dsv: metadata },
+      ) as never;
+    },
+  );
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/dsv/signed",
+      tags: ["participations"],
+      summary: "Record the participant signature from counting evidence",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: z.strictObject({
+                scanId: z.uuid(),
+                statusVersion: z.number().int().nonnegative(),
+              }),
+            },
+          },
+        },
+      },
+      responses: {
+        200: json(DsvView, "Signed"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      const { rows } = await db.execute(
+        sql`select document_id from dsv_facts(array[${participationId}::uuid]) where document_id=${input.scanId}::uuid`,
+      );
+      if (!rows.length) {
+        const { rows: found } = await db.execute(
+          sql`select id from document where id=${input.scanId}::uuid and participation_id=${participationId}::uuid and type='dsv_signed_scan' and deleted_at is null`,
+        );
+        return (
+          found.length ? domainProblem(c, ["dsv_scan_missing"]) : problem(c, "not-found")
+        ) as never;
+      }
+      try {
+        await db.execute(
+          sql`select sign_dsv(${context(c)},${participationId}::uuid,${input.scanId}::uuid,${input.statusVersion}::integer)`,
+        );
+      } catch (error) {
+        return offerRefusal(c, error) as never;
+      }
+      return c.json(
+        await viewOf(await service.read(participationId), allowed.subject, allowed.target),
         200,
       );
     },
@@ -505,7 +658,12 @@ export function dsvRoutes(deps: Deps) {
 function offerRefusal(c: Context<AppEnv>, error: unknown) {
   const code = functionRefusal(error);
   if (code === "actor_not_allowed") return problem(c, "forbidden");
-  if (code === "offer_not_found" || code === "generation_not_found") return problem(c, "not-found");
+  if (
+    code === "document_not_found" ||
+    code === "offer_not_found" ||
+    code === "generation_not_found"
+  )
+    return problem(c, "not-found");
   if (code === "stale_status" || code === "source_changed")
     return problem(c, "conflict", {
       errors: [{ pointer: "", code, detail: "Read the tab again" }],
@@ -513,6 +671,7 @@ function offerRefusal(c: Context<AppEnv>, error: unknown) {
   if (
     code &&
     [
+      "dsv_scan_missing",
       "dsv_generation_stale",
       "offer_deadline_invalid",
       "terms_mismatch",

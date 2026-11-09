@@ -340,9 +340,11 @@ describe("the portal (data-protection.md, uploads)", () => {
     expect(await codes(upload(Buffer.concat([PDF, Buffer.alloc(10 * 1024 * 1024)])))).toEqual([
       "file_too_large",
     ]);
-    expect(await codes(upload(PDF, { type: "dsv_signed_scan" }))).toEqual([
-      "document_type_not_supported",
-    ]);
+    await expectProblem(
+      await portal.post("/documents", upload(PDF, { type: "dsv_signed_scan" })),
+      403,
+      "forbidden",
+    );
     expect(
       await codesOf(
         await portal.post("/documents", upload(PDF, { fileName: "x".repeat(201) })),
@@ -509,7 +511,10 @@ describe("staff (Q146)", () => {
   it("gives back office and the admin no document rights", async () => {
     for (const user of ["backOffice", "admin"]) {
       const list = await readJson(await staffRequest(user, "GET", path()), DocumentList);
-      expect(list).toMatchObject({ documents: [], addableTypes: [] });
+      expect(list).toMatchObject({
+        documents: [],
+        addableTypes: user === "backOffice" ? ["dsv_signed_scan"] : [],
+      });
       await expectProblem(await staffRequest(user, "POST", path(), upload(PDF)), 403, "forbidden");
       await expectProblem(
         await staffRequest(user, "POST", path(`/${documentId}/opening`)),

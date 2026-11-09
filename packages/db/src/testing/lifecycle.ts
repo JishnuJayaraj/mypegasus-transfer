@@ -148,3 +148,42 @@ export function baEvidence(
     confirmedOn: "2026-01-15",
   });
 }
+
+/** Synthetic accepted paper for tests whose subject is a later lifecycle transition. */
+export async function acceptedDsvScan(client: Pick<Client, "query">, participationId: string) {
+  const {
+    rows: [row],
+  } = await client.query(
+    `select o.id, (now() at time zone 'Europe/Berlin')::date::text as today from dsv_offer o where participation_id=$1 and ended_as is null`,
+    [participationId],
+  );
+  const {
+    rows: [scan],
+  } = await client.query("select gen_random_uuid() as id");
+  await call(client, "add_document", {
+    context: pl,
+    participationId,
+    id: scan.id,
+    type: "dsv_signed_scan",
+    mediaType: "application/pdf",
+    sizeBytes: 100,
+    contentSha256: "a".repeat(64),
+    fileName: null,
+    keyId: "b".repeat(16),
+    wrappedKey: Buffer.alloc(60),
+    dsv: JSON.stringify({
+      offerId: row.id,
+      receivedBy: seedStaffUserIds.projectLead,
+      receivedOn: row.today,
+      signatures: { participant: row.today },
+    }),
+  });
+  await call(client, "review_document", {
+    context: pl,
+    documentId: scan.id,
+    decision: "accepted",
+    reason: null,
+    dsv: JSON.stringify({ signatures: { participant: row.today }, termsConfirmed: true }),
+  });
+  return scan.id as string;
+}
