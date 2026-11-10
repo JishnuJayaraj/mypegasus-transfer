@@ -467,7 +467,8 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
       /** Every record with its actual day (the dialog lists them); complete only when `held`. */
       evidence: evidence?.evidence ?? ([] as ReconciliationEvidenceItem[]),
       held: evidence?.ok === true,
-      problems: evidence && !evidence.ok ? evidence.problems : ([] as ReconciliationEvidenceProblem[]),
+      problems:
+        evidence && !evidence.ok ? evidence.problems : ([] as ReconciliationEvidenceProblem[]),
     };
   }
 

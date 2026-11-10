@@ -1,5 +1,6 @@
 import { DsvContract } from "./dsv-contract";
 import { EntryClarification } from "./entry-clarification";
+import { TgEntryReconciliation } from "./reconciliation";
 import { DsvScans } from "./dsv-scans";
 import { DsvCustomerNotice } from "./dsv-customer-notice";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -245,6 +246,7 @@ export function DsvTab({ participationId }: { participationId: string }) {
       </Card>
       {/* A signed DSV that has not entered after its planned start: shown only then. */}
       {view.track === "dsv_signed" && <EntryClarification participationId={participationId} />}
+      {view.track === "dsv_signed" && <TgEntryReconciliation participationId={participationId} />}
       <DsvCustomerNotice view={view} />
       <DsvScans view={view} onOpen={open} />
       <DsvContract view={view} />

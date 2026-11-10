@@ -36,6 +36,7 @@ import {
 } from "../../api";
 import { StartAssistedMode } from "../../components/assisted-mode";
 import { AsuTab } from "../../components/asu-tab";
+import { ReconciliationDialog } from "../../components/reconciliation";
 import { DocumentsTab } from "../../components/documents-tab";
 import { DsvTab } from "../../components/dsv-tab";
 import { HistoryTab } from "../../components/history";
@@ -155,7 +156,7 @@ function ParticipationPage() {
   const worklist = useQuery(worklistQuery(api, projectId));
   const [panel, setPanel] = useState<OverviewPanel | null>(null);
   const [dialog, setDialog] = useState<
-    "remind" | "invite" | "assisted" | "withdraw" | "endReason" | null
+    "remind" | "invite" | "assisted" | "withdraw" | "endReason" | "reconcile" | null
   >(null);
   const [printed, setPrinted] = useState<RecoveryPrinted | null>(null);
   const fromList = useRouterState({ select: (state) => state.location.state.worklistSearch });
@@ -235,6 +236,10 @@ function ParticipationPage() {
             onClick: () => setDialog("endReason"),
           },
         ]
+      : []),
+    // process-and-lifecycle.md, the reconciliation (Q68 case 2): by its capability.
+    ...(detail.capabilities.reconcileTgEntry
+      ? [{ label: t("participant.actions.reconcile"), onClick: () => setDialog("reconcile") }]
       : []),
     ...(withdrawOffered(detail)
       ? [
@@ -381,6 +386,9 @@ function ParticipationPage() {
         />
       )}
       {dialog === "withdraw" && <WithdrawDialog detail={detail} onClose={() => setDialog(null)} />}
+      {dialog === "reconcile" && (
+        <ReconciliationDialog participationId={participationId} onClose={() => setDialog(null)} />
+      )}
       {dialog === "endReason" && (
         <EndReasonDialog detail={detail} onClose={() => setDialog(null)} />
       )}

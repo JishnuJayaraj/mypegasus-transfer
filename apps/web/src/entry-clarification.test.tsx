@@ -180,7 +180,7 @@ describe("Eintritt klären on the tab DSV", () => {
     const panel = await card();
     expect(panel.getByText(/offen seit 02.11.2026/)).toBeVisible();
     expect(panel.getByText(/Neuer Beginn mit Nachtrag/)).toBeVisible();
-    expect(panel.queryByText(/Abstimmung des Eintritts/)).toBeNull();
+    expect(panel.queryByText(/Eintritt nachträglich erfassen: Alle Voraussetzungen/)).toBeNull();
     expect(panel.getByText("Noch nichts dokumentiert.")).toBeVisible();
     const save = panel.getByRole("button", { name: "Erfassen" });
     expect(save).toBeDisabled();
@@ -226,7 +226,7 @@ describe("Eintritt klären on the tab DSV", () => {
   it("offers the reconciliation only when every fact held, and says so when no path is open", async () => {
     setup(state(null, { reconciliation: true, newStartDate: false }));
     const panel = await card();
-    expect(panel.getByText(/Abstimmung des Eintritts/)).toBeVisible();
+    expect(panel.getByText(/Eintritt nachträglich erfassen: Alle Voraussetzungen/)).toBeVisible();
     expect(panel.queryByText(/Neuer Beginn/)).toBeNull();
   });
 
@@ -385,7 +385,8 @@ describe("the escalated clarifications in Freigaben", () => {
     const mock = mockApi({
       "GET /api/v1/me": () => json(manager),
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
-      "GET /api/v1/reviews": () => json({ items: [], corrections: [], clarifications: items }),
+      "GET /api/v1/reviews": () =>
+        json({ items: [], corrections: [], clarifications: items, reconciliations: [] }),
       ...routes,
     });
     renderApp("/reviews", mock.api);

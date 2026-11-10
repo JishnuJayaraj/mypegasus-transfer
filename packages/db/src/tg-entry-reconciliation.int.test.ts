@@ -190,7 +190,11 @@ describe("reconcile_tg_entry", () => {
       stage: "requested",
       revision: 0,
     });
-    expect(row.evidence[0]).toMatchObject({ kind: "dsv_packet", id: s.packet, validOn: s.signedOn });
+    expect(row.evidence[0]).toMatchObject({
+      kind: "dsv_packet",
+      id: s.packet,
+      validOn: s.signedOn,
+    });
     // One status change, flagged for review and linked, and the reconciliation's own event.
     const [status] = await events(s.id, "status_changed");
     const changes = await owner.query(
@@ -309,19 +313,19 @@ describe("reconcile_tg_entry", () => {
   });
 });
 
-describe("the review, the reply and the resolution (Q216)", () => {
-  async function reconciled() {
-    const s = await signedWithPacket();
-    return { s, id: await reconcile(s) };
-  }
-  const stepsOf = async (id: string) =>
-    (
-      await owner.query(
-        "select seq, kind, code, source, by from tg_entry_reconciliation_step where reconciliation_id=$1 order by seq",
-        [id],
-      )
-    ).rows;
+async function reconciled() {
+  const s = await signedWithPacket();
+  return { s, id: await reconcile(s) };
+}
+const stepsOf = async (id: string) =>
+  (
+    await owner.query(
+      "select seq, kind, code, source, by from tg_entry_reconciliation_step where reconciliation_id=$1 order by seq",
+      [id],
+    )
+  ).rows;
 
+describe("the review, the reply and the resolution (Q216)", () => {
   it("closes with no objection, once", async () => {
     const { s, id } = await reconciled();
     await review(id, "no_objection");
@@ -409,12 +413,12 @@ describe("the review, the reply and the resolution (Q216)", () => {
     await expect(review(id, "no_objection", { source: "x" })).rejects.toMatchObject(
       failsWith("invalid_argument"),
     );
-    await expect(
-      review(id, "clarification_requested", { source: "a\nb" }),
-    ).rejects.toMatchObject(failsWith("invalid_argument"));
-    await expect(review(randomUUID(), "no_objection", { expectedRevision: 0 })).rejects.toMatchObject(
-      failsWith("reconciliation_not_found"),
+    await expect(review(id, "clarification_requested", { source: "a\nb" })).rejects.toMatchObject(
+      failsWith("invalid_argument"),
     );
+    await expect(
+      review(randomUUID(), "no_objection", { expectedRevision: 0 }),
+    ).rejects.toMatchObject(failsWith("reconciliation_not_found"));
   });
 
   it("compares the revision read under the lock", async () => {
@@ -424,9 +428,9 @@ describe("the review, the reply and the resolution (Q216)", () => {
       failsWith("stale_reconciliation"),
     );
     await reply(id);
-    await expect(review(id, "resolved_no_objection", { expectedRevision: 1 })).rejects.toMatchObject(
-      failsWith("stale_reconciliation"),
-    );
+    await expect(
+      review(id, "resolved_no_objection", { expectedRevision: 1 }),
+    ).rejects.toMatchObject(failsWith("stale_reconciliation"));
   });
 
   it("is never the PL who reconciled, even holding both roles (four_eyes)", async () => {
@@ -509,10 +513,11 @@ describe("grants (ADR-0002)", () => {
       app.query("update tg_entry_reconciliation set stage='no_objection' where id=$1", [id]),
     ).rejects.toMatchObject({ code: "42501" });
     await expect(
-      app.query(
-        "select record_audit_event($1, $2, 'reconciliation_reviewed', $3::audit_context)",
-        [seedProjectIds.werkNord, s.id, manager],
-      ),
+      app.query("select record_audit_event($1, $2, 'reconciliation_reviewed', $3::audit_context)", [
+        seedProjectIds.werkNord,
+        s.id,
+        manager,
+      ]),
     ).rejects.toMatchObject(failsWith("event_type_reserved"));
   });
 });

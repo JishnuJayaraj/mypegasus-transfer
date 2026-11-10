@@ -224,7 +224,7 @@ export function reconciliationRoutes(deps: Deps) {
       path: "/reconciliations/{reconciliationId}/review",
       tags: ["participations"],
       summary:
-        'Review a reconciliation (the regional operations manager of the project\'s region, never the PL who reconciled; Q80, Q216): `no_objection`, or `clarification_requested` with a reason code and a documented source; after the PL\'s reply `resolved_no_objection`, `escalated_to_dpo` or another request; an escalation stays open until `resolved_no_objection` on the DPO\'s documented instruction. Against the revision "Freigaben" showed. Never a status change, never a deadline',
+        "Review a reconciliation (the regional operations manager of the project's region, never the PL who reconciled; Q80, Q216): `no_objection`, or `clarification_requested` with a reason code and a documented source; after the PL's reply `resolved_no_objection`, `escalated_to_dpo` or another request; an escalation stays open until `resolved_no_objection` on the DPO's documented instruction. Against the revision \"Freigaben\" showed. Never a status change, never a deadline",
       description: [
         "Refusals:",
         "- `404` for a reconciliation the viewer can't see; `403` for a visible one the viewer may not review: any other role (`actor_not_allowed`), and the PL who reconciled (`four_eyes`).",

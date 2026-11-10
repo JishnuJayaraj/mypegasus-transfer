@@ -89,11 +89,15 @@ describe("reconciliationEvidence", () => {
 
 describe("sameEvidence", () => {
   const read = [
-    { kind: "dsv_packet" as const, id: "11111111-1111-4111-8111-111111111111", validOn: "2027-02-20" },
+    {
+      kind: "dsv_packet" as const,
+      id: "11111111-1111-4111-8111-111111111111",
+      validOn: "2027-02-20",
+    },
     { kind: "tl407" as const, id: "22222222-2222-4222-8222-222222222222", validOn: "2027-02-01" },
   ];
   it("is the same records with the same days, in any order", () => {
-    expect(sameEvidence(read, [...read].reverse())).toBe(true);
+    expect(sameEvidence(read, read.toReversed())).toBe(true);
   });
   it("differs on another record, another day, a missing or a duplicated one", () => {
     expect(sameEvidence(read, [read[0]!, { ...read[1]!, validOn: "2027-02-02" }])).toBe(false);
@@ -104,6 +108,16 @@ describe("sameEvidence", () => {
     expect(sameEvidence([read[0]!, read[0]!], read)).toBe(false);
   });
 });
+
+const review = (over: Partial<Parameters<typeof reviewReconciliation>[0]> = {}) =>
+  reviewReconciliation({
+    stage: "requested",
+    reconciledBy: "pl",
+    reviewer: "manager",
+    permitted: true,
+    outcome: "no_objection",
+    ...over,
+  });
 
 describe("the review's state machine (Q216)", () => {
   const stages: ReconciliationStage[] = [
@@ -137,16 +151,6 @@ describe("the review's state machine (Q216)", () => {
       "escalated_to_dpo",
     ]);
   });
-
-  const review = (over: Partial<Parameters<typeof reviewReconciliation>[0]> = {}) =>
-    reviewReconciliation({
-      stage: "requested",
-      reconciledBy: "pl",
-      reviewer: "manager",
-      permitted: true,
-      outcome: "no_objection",
-      ...over,
-    });
 
   it("refuses another role, the PL who reconciled, a closed stage and an outcome not open", () => {
     expect(review()).toEqual({ ok: true, next: "no_objection" });
@@ -193,6 +197,8 @@ describe("reconciliationTiming (the guard tg_start_date, kind reconciliation)", 
   });
 });
 
+const ok = (value: unknown) => ReconciliationReviewRequest.safeParse(value).success;
+
 describe("the requests", () => {
   it("needs the PL's confirmation and never presets it", () => {
     const evidence = ["dsv_packet", "asu_registration", "tl407"].map((kind, i) => ({
@@ -219,12 +225,16 @@ describe("the requests", () => {
   });
 
   it("needs a reason code and a source for a clarification, a source for a resolution", () => {
-    const ok = (value: unknown) => ReconciliationReviewRequest.safeParse(value).success;
     expect(ok({ outcome: "no_objection", revision: 0 })).toBe(true);
     expect(ok({ outcome: "no_objection", revision: 0, source: "x" })).toBe(false);
     expect(ok({ outcome: "clarification_requested", source: "Akte 3", revision: 0 })).toBe(false);
     expect(
-      ok({ outcome: "clarification_requested", code: "date_unclear", source: "Akte 3", revision: 0 }),
+      ok({
+        outcome: "clarification_requested",
+        code: "date_unclear",
+        source: "Akte 3",
+        revision: 0,
+      }),
     ).toBe(true);
     expect(ok({ outcome: "escalated_to_dpo", revision: 1 })).toBe(false);
     expect(ok({ outcome: "resolved_no_objection", source: "Weisung DSB 4", revision: 2 })).toBe(

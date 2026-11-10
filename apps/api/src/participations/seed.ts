@@ -120,14 +120,14 @@ const seedFactsProvider: GuardFactsProvider = {
   }),
   evidence: dbGuardFacts.evidence,
   entryEvidence: async (tx, input) => {
-    const recorded = await dbEntryEvidence(tx, input);
+    const records = await dbEntryEvidence(tx, input);
     const overlay = seedFacts[input.participationId] ?? {};
     const { asuRegisteredWithProof: asu, profilingDone: done } = overlay;
     return {
-      ...recorded,
-      asu: recorded.asu ?? (asu ? { id: overlayId(input.participationId, "a1"), ...asu } : null),
+      ...records,
+      asu: records.asu ?? (asu ? { id: overlayId(input.participationId, "a1"), ...asu } : null),
       tl407:
-        recorded.tl407 ?? (done ? { id: overlayId(input.participationId, "a2"), ...done } : null),
+        records.tl407 ?? (done ? { id: overlayId(input.participationId, "a2"), ...done } : null),
     };
   },
 };
@@ -299,7 +299,7 @@ const reconciledEntry = (participationId: string): Step => ({
     const read = await s.reconciliationState(pl, participationId);
     return s.reconcileTgEntry(pl, {
       participationId,
-      evidence: read.evidence.map(({ kind, id, validOn }) => ({ kind, id, validOn })),
+      evidence: read.evidence.map((e) => ({ kind: e.kind, id: e.id, validOn: e.validOn })),
       statusVersion: read.statusVersion,
       confirmed: true,
     });

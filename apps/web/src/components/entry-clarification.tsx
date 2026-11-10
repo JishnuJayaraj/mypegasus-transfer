@@ -19,7 +19,8 @@ import {
 } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { entryClarificationQuery, useApi } from "../api";
+import { entryClarificationQuery, tgEntryReconciliationQuery, useApi } from "../api";
+import { ReconciliationDialog } from "./reconciliation";
 
 // "Eintritt klären" on the tab "DSV" (process-and-lifecycle.md, the entry clarification; Q214, Q220
 // open): a signed DSV that has not entered after its planned TG start. The PL documents what is
@@ -44,6 +45,10 @@ export function EntryClarification({ participationId }: { participationId: strin
   const api = useApi();
   const queryClient = useQueryClient();
   const query = useQuery(entryClarificationQuery(api, participationId));
+  // The reconciliation's own capability decides its button (process-and-lifecycle.md, the
+  // reconciliation); the card names the path while its guards pass.
+  const reconciliation = useQuery(tgEntryReconciliationQuery(api, participationId));
+  const [reconciling, setReconciling] = useState(false);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string }>();
   const [code, setCode] = useState("");
   const [source, setSource] = useState("");
@@ -177,7 +182,23 @@ export function EntryClarification({ participationId }: { participationId: strin
         <section aria-labelledby="entry-paths">
           <h4 id="entry-paths">{t("entryClarification.paths.title")}</h4>
           <ul className="tp-list">
-            {actions.reconciliation && <li>{t("entryClarification.paths.reconciliation")}</li>}
+            {actions.reconciliation && (
+              <li>
+                {t("entryClarification.paths.reconciliation")}
+                {reconciliation.data?.capabilities.reconcile && (
+                  <div>
+                    <ActionButton
+                      size="md"
+                      kind="secondary"
+                      unavailableReason={null}
+                      onClick={() => setReconciling(true)}
+                    >
+                      {t("entryClarification.paths.reconcile")}
+                    </ActionButton>
+                  </div>
+                )}
+              </li>
+            )}
             {actions.newStartDate && <li>{t("entryClarification.paths.newStart")}</li>}
             {noPath && <li>{t("entryClarification.paths.none")}</li>}
           </ul>
@@ -316,6 +337,12 @@ export function EntryClarification({ participationId }: { participationId: strin
           </section>
         )}
       </Stack>
+      {reconciling && (
+        <ReconciliationDialog
+          participationId={participationId}
+          onClose={() => setReconciling(false)}
+        />
+      )}
       <Modal
         open={confirming}
         size="sm"

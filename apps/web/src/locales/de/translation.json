@@ -1936,9 +1936,7 @@
       "entry_clarification_instructed": "Eintritt: Weisung erfasst",
       "entry_clarification_requested": "Eintritt: Rückfrage an die Projektleitung",
       "dsv_customer_notified": "Kunde über die Aufhebung informiert",
-      "tg_entry_reconciled": "Eintritt nachträglich erfasst",
-      "reconciliation_reviewed": "Eintritt: nachträgliche Erfassung geprüft",
-      "reconciliation_replied": "Eintritt: Antwort auf die Rückfrage"
+      "tg_entry_reconciled": "Eintritt nachträglich erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -3793,7 +3791,7 @@
     "intro": "Die DSV ist unterschrieben, die Teilnahme ist aber nicht zum geplanten Beginn in die Transfergesellschaft eingetreten (offen seit {{date}}). Der Fall gehört der Projektleitung und bleibt offen, bis die Teilnahme nicht mehr „informiert“ ist. Er ändert keinen Status; ein Rücktritt oder eine Beendigung nach dem geplanten Beginn ist hier nicht vorgesehen (offene Frage Q220).",
     "paths": {
       "title": "Mögliche Wege",
-      "reconciliation": "Abstimmung des Eintritts: Alle Voraussetzungen lagen zum geplanten Beginn vor. Die Abstimmung wird in einer späteren Version angeboten.",
+      "reconciliation": "Eintritt nachträglich erfassen: Alle Voraussetzungen lagen zum geplanten Beginn vor, wurden aber erst danach erfasst.",
       "newStart": "Neuer Beginn mit Nachtrag: Der späteste Eintritt der Welle lässt noch einen neuen Beginn zu. Der Nachtrag muss vollständig unterschrieben sein.",
       "newStartLink": "Zu den Terminen der Teilnahme",
       "none": "Zurzeit erfüllt kein Weg seine Voraussetzungen. Dokumentieren Sie, was aussteht, und eskalieren Sie bei Bedarf.",

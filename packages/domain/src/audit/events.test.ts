@@ -939,7 +939,10 @@ describe("the other event types", () => {
         },
       },
     ],
-    ["reconciliation_reviewed", { details: { reconciliationId: otherId, outcome: "no_objection" } }],
+    [
+      "reconciliation_reviewed",
+      { details: { reconciliationId: otherId, outcome: "no_objection" } },
+    ],
     ["reconciliation_replied", { details: { reconciliationId: otherId, replyCode: "explained" } }],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);

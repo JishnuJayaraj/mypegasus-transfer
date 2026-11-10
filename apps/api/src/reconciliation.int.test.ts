@@ -27,8 +27,12 @@ import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing"
 const { app, db, logs } = testApp();
 const owner = createDb(testDatabaseUrls().owner);
 const { werkNord } = seedProjectIds;
-const { projectLead, consultant, backOffice, regionalOperationsManager: manager } =
-  seedStaffUserIds;
+const {
+  projectLead,
+  consultant,
+  backOffice,
+  regionalOperationsManager: manager,
+} = seedStaffUserIds;
 const w1 = seedWaves.find((wave) => wave.code === "W1")!;
 const staff = {} as Record<string, { Cookie: string }>;
 const sources = { request: "Vermerk Akte 12 vom 3.4.", reply: "Scan-Datum laut Eingangsbuch 7" };
@@ -84,7 +88,9 @@ async function missedEntry(
       })
     ).status,
   ).toBe(200);
-  const routed = (await (await request("GET", `/participations/${id}/asu`, projectLead)).json()) as {
+  const routed = (await (
+    await request("GET", `/participations/${id}/asu`, projectLead)
+  ).json()) as {
     route: { version: number };
   };
   const registered = await request("POST", `/participations/${id}/asu/registration`, projectLead, {
@@ -148,8 +154,8 @@ async function missedEntry(
     context: pl,
     participationId: id,
     scanId: packet,
-    statusVersion: (await sql("select status_version from participation where id=$1", [id]))
-      .rows[0].status_version,
+    statusVersion: (await sql("select status_version from participation where id=$1", [id])).rows[0]
+      .status_version,
   });
   await sql(
     "update participation set offer_deadline = berlin_today() - 20, tg_start = berlin_today() + $2::int where id = $1",
@@ -170,13 +176,12 @@ const body = (s: TgEntryReconciliationState, over: Record<string, unknown> = {})
   confirmed: true,
   ...over,
 });
-const reconcile = async (id: string, over: Record<string, unknown> = {}, as: string = projectLead) =>
-  request(
-    "POST",
-    `/participations/${id}/tg-entry-reconciliation`,
-    as,
-    body(await state(id), over),
-  );
+const reconcile = async (
+  id: string,
+  over: Record<string, unknown> = {},
+  as: string = projectLead,
+) =>
+  request("POST", `/participations/${id}/tg-entry-reconciliation`, as, body(await state(id), over));
 const queue = async (as: string = manager) =>
   readJson(await request("GET", "/reviews", as), ReviewQueue);
 const review = async (
@@ -255,7 +260,12 @@ describe("GET and POST /participations/{id}/tg-entry-reconciliation", () => {
     const { id } = await missedEntry();
     const s = await state(id);
     await expectProblem(
-      await request("POST", `/participations/${randomUUID()}/tg-entry-reconciliation`, projectLead, body(s)),
+      await request(
+        "POST",
+        `/participations/${randomUUID()}/tg-entry-reconciliation`,
+        projectLead,
+        body(s),
+      ),
       404,
       "not-found",
     );
@@ -283,13 +293,20 @@ describe("GET and POST /participations/{id}/tg-entry-reconciliation", () => {
       ),
     ).toEqual(["/statusVersion:stale_status"]);
     const changed = body(s, {
-      evidence: s.evidence.map((e) =>
-        e.kind === "dsv_packet" ? { kind: e.kind, id: randomUUID(), validOn: e.validOn } : e,
-      ).map(({ kind, id, validOn }) => ({ kind, id, validOn })),
+      evidence: s.evidence.map((e) => ({
+        kind: e.kind,
+        id: e.kind === "dsv_packet" ? randomUUID() : e.id,
+        validOn: e.validOn,
+      })),
     });
     expect(
       await errors(
-        await request("POST", `/participations/${id}/tg-entry-reconciliation`, projectLead, changed),
+        await request(
+          "POST",
+          `/participations/${id}/tg-entry-reconciliation`,
+          projectLead,
+          changed,
+        ),
         409,
       ),
     ).toEqual(["/evidence:source_changed"]);
@@ -304,9 +321,9 @@ describe("GET and POST /participations/{id}/tg-entry-reconciliation", () => {
       400,
       "validation-error",
     );
-    expect(
-      (await sql("select status from participation where id=$1", [id])).rows[0].status,
-    ).toBe("informed");
+    expect((await sql("select status from participation where id=$1", [id])).rows[0].status).toBe(
+      "informed",
+    );
   });
 
   it("refuses before the TG start and on it until that day's run completed", async () => {
@@ -334,26 +351,33 @@ describe("GET and POST /participations/{id}/tg-entry-reconciliation", () => {
     expect(read.problems).toEqual([{ fact: "profiling", code: "evidence_after_tg_start" }]);
     // Listed with its actual day; named anyway, it is refused by its guard.
     expect(read.evidence.map((e) => [e.kind, e.validOn])).toContainEqual(["tl407", await day(-1)]);
-    const evidence = read.evidence.map(({ kind, id: ref, validOn }) => ({ kind, id: ref, validOn }));
-    const res = await request("POST", `/participations/${id}/tg-entry-reconciliation`, projectLead, {
-      evidence,
-      statusVersion: read.statusVersion,
-      confirmed: true,
-    });
-    expect(await errors(res, 422)).toEqual([
-      ":profiling_done_or_approved_exception",
-    ]);
+    const evidence = read.evidence.map(({ kind, id: ref, validOn }) => ({
+      kind,
+      id: ref,
+      validOn,
+    }));
+    const res = await request(
+      "POST",
+      `/participations/${id}/tg-entry-reconciliation`,
+      projectLead,
+      {
+        evidence,
+        statusVersion: read.statusVersion,
+        confirmed: true,
+      },
+    );
+    expect(await errors(res, 422)).toEqual([":profiling_done_or_approved_exception"]);
   });
 });
 
-describe("the review in Freigaben, the reply and the resolution", () => {
-  async function reconciled() {
-    const missed = await missedEntry();
-    expect((await reconcile(missed.id)).status).toBe(201);
-    const reconciliationId = (await state(missed.id)).reconciliation!.id;
-    return { ...missed, reconciliationId };
-  }
+async function reconciled() {
+  const missed = await missedEntry();
+  expect((await reconcile(missed.id)).status).toBe(201);
+  const reconciliationId = (await state(missed.id)).reconciliation!.id;
+  return { ...missed, reconciliationId };
+}
 
+describe("the review in Freigaben, the reply and the resolution", () => {
   it("lists it without a participant id or name, by schema", async () => {
     const { id, reconciliationId } = await reconciled();
     const res = await request("GET", "/reviews", manager);
@@ -448,9 +472,9 @@ describe("the review in Freigaben, the reply and the resolution", () => {
       capabilities: { outcomes: ["resolved_no_objection"] },
     });
     expect(await caseItems(id)).toContain("reconciliation_clarification");
-    expect(
-      await errors(await review(reconciliationId, { outcome: "no_objection" }), 422),
-    ).toEqual(["/outcome:outcome_not_allowed"]);
+    expect(await errors(await review(reconciliationId, { outcome: "no_objection" }), 422)).toEqual([
+      "/outcome:outcome_not_allowed",
+    ]);
   });
 
   it("refuses the PL who reconciled, even holding the manager's role, and a stale revision", async () => {
@@ -462,10 +486,7 @@ describe("the review in Freigaben, the reply and the resolution", () => {
     const own = (await queue(projectLead)).reconciliations[0]!;
     expect(own.capabilities.outcomes).toEqual([]);
     expect(
-      await errors(
-        await review(reconciliationId, { outcome: "no_objection" }, projectLead),
-        403,
-      ),
+      await errors(await review(reconciliationId, { outcome: "no_objection" }, projectLead), 403),
     ).toEqual([":four_eyes"]);
     expect(
       await errors(

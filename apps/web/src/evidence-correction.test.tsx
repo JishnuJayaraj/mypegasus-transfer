@@ -242,7 +242,7 @@ describe("Freigaben: corrections", () => {
         }),
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
       "GET /api/v1/reviews": () =>
-        json({ items: [], corrections: [correction], clarifications: [] }),
+        json({ items: [], corrections: [correction], clarifications: [], reconciliations: [] }),
       [`POST ${decisionPath}`]: decision,
     });
     renderApp("/reviews", api);

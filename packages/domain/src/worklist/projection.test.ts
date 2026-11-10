@@ -229,7 +229,11 @@ describe("worklistProjection", () => {
     const row = (since: string | null, worksDsv = true) =>
       worklistProjection(
         facts({
-          dsv: { signedOn: "2027-02-20", fullyExecuted: true, reconciliationClarificationSince: since },
+          dsv: {
+            signedOn: "2027-02-20",
+            fullyExecuted: true,
+            reconciliationClarificationSince: since,
+          },
         }),
         entered,
         project,

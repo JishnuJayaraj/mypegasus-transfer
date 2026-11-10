@@ -143,9 +143,7 @@ export function ReconciliationDialog({
               lowContrast
             />
           )}
-          {state.tgStart && (
-            <p>{t("reconciliation.intro", { date: formatDate(state.tgStart) })}</p>
-          )}
+          {state.tgStart && <p>{t("reconciliation.intro", { date: formatDate(state.tgStart) })}</p>}
           <section aria-labelledby="reconciliation-evidence">
             <h4 id="reconciliation-evidence">{t("reconciliation.evidence.title")}</h4>
             {state.evidence.length === 0 ? (
@@ -232,7 +230,10 @@ export function TgEntryReconciliation({ participationId }: { participationId: st
       await cache.invalidateQueries({ queryKey: ["participations", participationId] });
     },
     onError: async (error) => {
-      setMessage({ kind: "error", text: t(`reconciliation.errors.${errorKey(error) as "failed"}`) });
+      setMessage({
+        kind: "error",
+        text: t(`reconciliation.errors.${errorKey(error) as "failed"}`),
+      });
       await cache.invalidateQueries({ queryKey: ["participations", participationId] });
     },
   });
