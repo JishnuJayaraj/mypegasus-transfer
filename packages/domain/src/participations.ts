@@ -182,6 +182,17 @@ export const ParticipationDetail = z
      */
     endReason: recorded(EndReason),
     endReasonSource: recorded(z.enum(["user", "system"])),
+    /**
+     * "Korrektur beantragen" for the field targets (data-protection.md, evidence corrections):
+     * `profilingDoneOn` while recorded, a manual `withdrawnOn`; `null` where the field holds no
+     * correctable value. Present only for a viewer who may request one (the PL).
+     */
+    dateCorrections: z
+      .strictObject({
+        profilingDoneOn: CorrectionState.nullable(),
+        withdrawnOn: CorrectionState.nullable(),
+      })
+      .optional(),
     /** The version a status-dependent write compares (compare-and-set). */
     statusVersion: z.int().min(0),
     entryWave: z

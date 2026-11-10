@@ -18,6 +18,7 @@ import {
   DocumentView,
   DsvScanMetadata,
   mayPinDsvTemplate,
+  mayRequestCorrection,
   mayWorkDsv,
   mayPerformOperation,
   dsvCustomerNoticeDue,
@@ -200,7 +201,7 @@ export function dsvRoutes(deps: Deps) {
       id: string;
       metadata: z.infer<typeof DsvScanMetadata>;
       counting: boolean;
-    }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id),'{}'::jsonb) else d.dsv_signatures end) as metadata,
+    }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id and superseded_by is null),'{}'::jsonb) else d.dsv_signatures end) as metadata,
       exists(select from dsv_facts(array[${target.participationId}::uuid]) f where f.document_id=d.id) as counting
       from document d where d.participation_id=${target.participationId}::uuid and d.type='dsv_signed_scan' and d.dsv_offer_id is not null and d.deleted_at is null`);
     // The cancellations of the signed contract (process-and-lifecycle.md, the cancellation).
@@ -208,7 +209,7 @@ export function dsvRoutes(deps: Deps) {
       id: string;
       metadata: z.infer<typeof DsvScanMetadata>;
       counting: boolean;
-    }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id),'{}'::jsonb) else d.dsv_signatures end) as metadata,
+    }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id and superseded_by is null),'{}'::jsonb) else d.dsv_signatures end) as metadata,
       exists(select from dsv_cancellation_facts(array[${target.participationId}::uuid]) f where f.document_id=d.id) as counting
       from document d where d.participation_id=${target.participationId}::uuid and d.type='dsv_cancellation' and d.dsv_offer_id is not null and d.deleted_at is null`);
     const cancellation = (await cancellationFacts(db, [target.participationId])).get(
@@ -245,6 +246,15 @@ export function dsvRoutes(deps: Deps) {
         from dsv_contract where participation_id = ${target.participationId}::uuid
         order by created_at desc, id limit 1`,
     );
+    // The signature-date supersessions awaiting their decision (process-and-lifecycle.md, the DSV
+    // signature-date supersession): no second request of the same offer, paper and signature.
+    const { rows: pendingSignatures } = await db.execute<{
+      offerId: string;
+      paper: "dsv_signed_scan" | "dsv_cancellation";
+      signature: "participant" | "customer" | "transfergesellschaft";
+    }>(sql`select dsv_offer_id as "offerId", signature_paper as paper, signature_kind as signature
+      from evidence_correction where participation_id = ${target.participationId}::uuid
+        and status = 'requested' and target_kind = 'dsv_signature'`);
     const open = read.projectStatus === "active" && read.status === "informed";
     const canWorkScan = open && read.dsvStatus === "dsv_offered";
     // The countersigned original is a scan of the signed offer, until the participation entered.
@@ -337,6 +347,15 @@ export function dsvRoutes(deps: Deps) {
               )!.generatedAt,
             }
           : null,
+      },
+      signatureCorrections: {
+        // The DSV's PL and back office, who read the scans (the correction-authority table).
+        mayRequest: mayRequestCorrection(
+          subject,
+          { kind: "document", documentType: "dsv_signed_scan", documentId: target.participationId },
+          target,
+        ),
+        pending: pendingSignatures,
       },
       capabilities: {
         uploadScan:

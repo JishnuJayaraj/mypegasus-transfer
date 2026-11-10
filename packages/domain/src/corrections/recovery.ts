@@ -13,6 +13,12 @@ export type ApprovedInvalidation = {
   decidedOn: IsoDate;
   target:
     | { kind: "asu_registration" }
+    /**
+     * An approved date correction (data-protection.md, evidence corrections: field targets and the
+     * DSV signature-date supersession): the corrected `profilingDoneOn`, or a superseded signature
+     * date of the DSV contract, may no longer support an entry already recorded.
+     */
+    | { kind: "date_correction"; subject: "profilingDoneOn" | "dsvSignature" }
     | {
         kind: "document";
         documentType: DocumentType;
@@ -45,6 +51,10 @@ export type RecoveryFacts = {
   }[];
   /** The current exception request is open on evidence that no longer counts. */
   exceptionUnsupported: boolean;
+  /** The current complete packet's validity (`dsvFullyExecuted`), null without one. */
+  fullyExecutedOn?: IsoDate | null;
+  /** The entry rested on an approved profiling exception, not on the completion. */
+  profilingExceptionApproved?: boolean;
 };
 
 const later = (a: string, b: string) => Date.parse(a) > Date.parse(b);
@@ -57,6 +67,25 @@ function asuRecovered(facts: RecoveryFacts, invalidation: ApprovedInvalidation, 
   return tgEntryDate === null || asu.validOn <= tgEntryDate;
 }
 
+/**
+ * After a date correction: an entry already recorded is still supported when the corrected fact
+ * is valid by the TG entry date. Before an entry nothing is unsupported (a missed entry is the
+ * reconciliation's or the entry clarification's). Never repaired: it clears only when the current
+ * facts support the entry again.
+ */
+function entryStillSupported(subject: "profilingDoneOn" | "dsvSignature", facts: RecoveryFacts) {
+  const { tgEntryDate } = facts;
+  if (tgEntryDate === null) return true;
+  if (subject === "profilingDoneOn") {
+    return (
+      facts.profilingExceptionApproved === true ||
+      (facts.profilingDoneOn !== null && facts.profilingDoneOn <= tgEntryDate)
+    );
+  }
+  const executed = facts.fullyExecutedOn ?? null;
+  return executed !== null && executed <= tgEntryDate;
+}
+
 /** Whether replacement evidence resolves one invalidation. */
 export function invalidationResolved(
   invalidation: ApprovedInvalidation,
@@ -64,6 +93,7 @@ export function invalidationResolved(
 ): boolean {
   const { target } = invalidation;
   if (target.kind === "asu_registration") return asuRecovered(facts, invalidation, true);
+  if (target.kind === "date_correction") return entryStillSupported(target.subject, facts);
   if (!target.signed) return true;
   const { documentType } = target;
   if (target.supportedRegistration) return asuRecovered(facts, invalidation, true);

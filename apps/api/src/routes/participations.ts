@@ -353,7 +353,48 @@ export function participationRoutes(deps: Deps) {
           endReasonSource: p.endReasonSource === "system" ? ("system" as const) : ("user" as const),
         }
       : {};
-    if (!detail.capabilities.viewDsv) return { ...detail, ...reason };
+    // "Korrektur beantragen" for `profilingDoneOn` and a manual `withdrawnOn` (data-protection.md,
+    // evidence corrections: field targets): the PL, while the field holds a value and no request
+    // of it is pending. The function checks the rules again under the lock.
+    const fieldTarget = (fieldKey: string) =>
+      mayRequestCorrection(subject, { kind: "field", fieldKey }, target);
+    let corrections = {};
+    if (fieldTarget("profilingDoneOn") || fieldTarget("withdrawnOn")) {
+      const {
+        rows: [state],
+      } = await db.execute<{
+        profiling_pending: boolean;
+        withdrawn_pending: boolean;
+        withdrawn_by: string | null;
+      }>(sql`select
+          exists (select from evidence_correction where participation_id = ${participationId}::uuid
+            and status = 'requested' and field_key = 'profilingDoneOn') as profiling_pending,
+          exists (select from evidence_correction where participation_id = ${participationId}::uuid
+            and status = 'requested' and field_key = 'withdrawnOn') as withdrawn_pending,
+          (select a.actor_type::text from audit_event a
+            where a.participation_id = ${participationId}::uuid and a.event_type = 'status_changed'
+              and a.field = 'status' and a.to_value = 'withdrawn'
+            order by a.occurred_at desc, a.seq desc limit 1) as withdrawn_by`);
+      const profilingRecorded = p.profilingStatus === "profiling_done" && p.profilingDoneOn !== null;
+      const manualWithdrawal = p.status === "withdrawn" && state!.withdrawn_by === "user";
+      corrections = {
+        dateCorrections: {
+          profilingDoneOn: profilingRecorded
+            ? {
+                pending: state!.profiling_pending,
+                mayRequest: fieldTarget("profilingDoneOn") && !state!.profiling_pending,
+              }
+            : null,
+          withdrawnOn: manualWithdrawal
+            ? {
+                pending: state!.withdrawn_pending,
+                mayRequest: fieldTarget("withdrawnOn") && !state!.withdrawn_pending,
+              }
+            : null,
+        },
+      };
+    }
+    if (!detail.capabilities.viewDsv) return { ...detail, ...reason, ...corrections };
     // The signature and full-execution days of the counting scans (the tab "DSV" viewers only).
     const {
       rows: [dsv],
@@ -364,6 +405,7 @@ export function participationRoutes(deps: Deps) {
     return {
       ...detail,
       ...reason,
+      ...corrections,
       dsvSignedOn: dsv?.signed_on ?? null,
       dsvFullyExecutedOn: dsv?.executed_on ?? null,
       dsvCancellationValidOn: cancellation?.validOn ?? null,

@@ -947,8 +947,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `agentur_submission_original_retained` | `profiling` | no | no | `originalSentOn` |
 | `ba_report_recorded` | `dsv` | no | no | `kind`, `outcome`, `reportedOn`, `reason` |
 | `exception_evidence_recorded` | `profiling` | no | no | `kind` |
-| `evidence_correction_requested` | `case` | no | no | `targetKind`, `action`, `reason` |
-| `evidence_correction_decided` | `case` | no | no | `targetKind`, `action`, `reason`, `decision` |
+| `evidence_correction_requested` | `case` | no | no | `targetKind`, `action`, `reason`, `fieldKey`, `paper`, `signatureKind` |
+| `evidence_correction_decided` | `case` | no | no | `targetKind`, `action`, `reason`, `fieldKey`, `paper`, `signatureKind`, `decision` |
 | `dsv_form_generated` | `dsv` | no | no | `templateVersion`, `deadlineKind` |
 | `dsv_template_pinned` | project-level | no | no | — |
 | `dsv_original_recorded` | `dsv` | no | no | `field`, `location` |

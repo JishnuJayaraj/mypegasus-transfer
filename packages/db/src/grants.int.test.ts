@@ -338,6 +338,8 @@ const helpers = [
   "participant_step_up_method",
   "record_step_up",
   "fail_step_up",
+  "field_correction_problem",
+  "signature_correction_problem",
   "assisted_mode_roles",
   "assisted_sensitive_fields",
   "lock_assisted_mode",

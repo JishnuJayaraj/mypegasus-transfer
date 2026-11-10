@@ -1,6 +1,7 @@
 import { DocumentView } from "../documents/api";
 import { DsvScanMetadata } from "./scans";
 import { z } from "zod";
+import { DsvSignatureKind, DsvSignaturePaper } from "../corrections/model";
 import { isoDate } from "../iso-date";
 import { DsvStatus } from "../lifecycle/enums";
 import {
@@ -161,6 +162,21 @@ export const DsvView = z
       dsvFullyExecuted: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
       /** The counting cancellation: valid on its latest actual signature, recorded when it counted. */
       dsvCancellation: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
+    }),
+    /**
+     * "Korrektur beantragen" for a signature date on accepted paper (process-and-lifecycle.md, the
+     * DSV signature-date supersession): whether the viewer may request one, and the requests
+     * awaiting their decision (offer, paper, signature; never a date).
+     */
+    signatureCorrections: z.strictObject({
+      mayRequest: z.boolean(),
+      pending: z.array(
+        z.strictObject({
+          offerId: z.uuid(),
+          paper: DsvSignaturePaper,
+          signature: DsvSignatureKind,
+        }),
+      ),
     }),
     capabilities: z.strictObject({
       generate: z.boolean(),

@@ -1217,6 +1217,7 @@ export {
 } from "./profiling/exception-evidence";
 export {
   correctionRequestable,
+  CorrectableField,
   CorrectionAction,
   CorrectionReason,
   CorrectionReviewItem,
@@ -1226,6 +1227,12 @@ export {
   CorrectionState,
   CorrectionStatus,
   CorrectionTargetKind,
+  DsvSignatureKind,
+  DsvSignaturePaper,
+  fieldCorrectionProblem,
+  signatureCorrectionProblem,
+  type DateCorrectionProblem,
+  type FieldCorrectionFacts,
   EvidenceCorrectionDecisionInput,
   EvidenceCorrectionRequested,
   EvidenceCorrectionRequestInput,
@@ -1234,6 +1241,7 @@ export {
   normaliseCorrectionSource,
   type EvidenceCorrectionKind,
 } from "./corrections/model";
+export type { EvidenceCorrectionTarget } from "./access/corrections";
 export {
   evidenceInvalidatedSince,
   invalidationResolved,
