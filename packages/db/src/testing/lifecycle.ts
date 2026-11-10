@@ -255,3 +255,29 @@ export async function backdateDsvScans(
     [participationId, day],
   );
 }
+
+/**
+ * The review row `reconcile_tg_entry` writes before its status change (process-and-lifecycle.md, the
+ * reconciliation), inserted as the owner for a test that calls the status function with the entry
+ * kind `reconciliation` directly: without it the function refuses (`reconciliation_missing`). The
+ * evidence is synthetic; the reconciliation's own tests go through `reconcile_tg_entry`.
+ */
+export async function pendingReconciliation(
+  owner: Pick<Client, "query">,
+  participationId: string,
+  effectiveDate: string,
+) {
+  const evidence = ["dsv_packet", "asu_registration", "tl407"].map((kind) => ({
+    kind,
+    id: "00000000-0000-4000-8000-00000000000" + (kind.length % 10),
+    validOn: effectiveDate,
+    recordedAt: `${effectiveDate}T09:00:00.000Z`,
+  }));
+  await owner.query(
+    `insert into tg_entry_reconciliation (project_id, participation_id, effective_date, evidence,
+       confirmed, reconciled_by)
+     select project_id, id, $2, $3, true, $4 from participation where id = $1
+     on conflict (participation_id) do nothing`,
+    [participationId, effectiveDate, JSON.stringify(evidence), seedStaffUserIds.projectLead],
+  );
+}

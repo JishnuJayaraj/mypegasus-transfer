@@ -4,6 +4,7 @@ import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   EntryInstructionCode,
   EntryRequestCode,
+  ReconciliationReasonCode,
   correctionSourceMaxLength,
   normaliseCorrectionSource,
 } from "@transfer/domain";
@@ -24,6 +25,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { reviewsQuery, useApi } from "../api";
 import { RouteError } from "../components/route-error";
+import { reconciliationStepText } from "../components/reconciliation";
 import { SELF_SERVICE_NAMESPACE } from "@transfer/self-service-ui";
 import { usePageTitle } from "../page-title";
 
@@ -107,7 +109,7 @@ function ReviewsPage() {
       reason: t(`history.reasons.${item.reason}`),
       date: formatDate(item.requestedOn),
     });
-  const { items, corrections, clarifications } = query.data;
+  const { items, corrections, clarifications, reconciliations } = query.data;
   return (
     <>
       <PageHeader title={t("reviews.title")} />
@@ -175,6 +177,13 @@ function ReviewsPage() {
         />
         <ClarificationQueue
           clarifications={clarifications}
+          onDecided={async (result) => {
+            setMessage(result);
+            await queryClient.invalidateQueries({ queryKey: reviewsQuery(api).queryKey });
+          }}
+        />
+        <ReconciliationQueue
+          reconciliations={reconciliations}
           onDecided={async (result) => {
             setMessage(result);
             await queryClient.invalidateQueries({ queryKey: reviewsQuery(api).queryKey });
@@ -555,6 +564,203 @@ function ClarificationQueue(props: {
               onChange={(event) => setSource(event.target.value)}
             />
             <p>{t(`reviews.clarifications.dialog.${dialog.mode}.final`)}</p>
+          </Stack>
+        )}
+      </Modal>
+    </>
+  );
+}
+
+type Reconciliation = components["schemas"]["ReviewQueue"]["reconciliations"][number];
+type Outcome = Reconciliation["capabilities"]["outcomes"][number];
+
+/**
+ * The open reconciliations of a missed TG entry (process-and-lifecycle.md, the reconciliation; Q80,
+ * Q216): per reconciliation the project, the TG start, the evidence's kinds with their valid and
+ * recorded days, the review's steps with their documented sources and the day the review is due
+ * (informational), never a name or the participation. "Ohne Einwand" and "Rückfrage" (a reason code
+ * and one source line); after the PL's reply "Erledigt" or "An DSB eskaliert" (a source line); an
+ * escalation is resolved on the DPO's documented instruction. The buttons are the viewer's
+ * outcomes (none for the PL who reconciled); the API checks them again. Nothing reverses the entry.
+ */
+function ReconciliationQueue(props: {
+  reconciliations: Reconciliation[];
+  onDecided: (message: { kind: "success" | "error"; text: string }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  // The dialog keeps the reconciliation and the revision it opened for.
+  const [dialog, setDialog] = useState<{ item: Reconciliation; outcome: Outcome }>();
+  const [code, setCode] = useState("");
+  const [source, setSource] = useState("");
+  const [shownInvalid, setShownInvalid] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const label = (item: Reconciliation) =>
+    t("reviews.reconciliations.item", {
+      project: item.projectName,
+      date: formatDate(item.tgStart),
+    });
+  const normalised = normaliseCorrectionSource(source);
+  const sourceValid = normalised !== null && normalised.length <= correctionSourceMaxLength;
+  const needsCode = dialog?.outcome === "clarification_requested";
+  const needsSource = dialog !== undefined && dialog.outcome !== "no_objection";
+  const close = () => {
+    setDialog(undefined);
+    setCode("");
+    setSource("");
+    setShownInvalid(false);
+  };
+  const stepText = (step: Reconciliation["steps"][number]) => reconciliationStepText(t, step);
+
+  async function record({ item, outcome }: NonNullable<typeof dialog>) {
+    if ((needsCode && code === "") || (needsSource && !sourceValid)) {
+      setShownInvalid(true);
+      return;
+    }
+    setBusy(true);
+    let result: { kind: "success" | "error"; text: string };
+    try {
+      const body =
+        outcome === "no_objection"
+          ? { outcome, revision: item.revision }
+          : outcome === "clarification_requested"
+            ? {
+                outcome,
+                code: code as components["schemas"]["ReconciliationReasonCode"],
+                source,
+                revision: item.revision,
+              }
+            : { outcome, source, revision: item.revision };
+      const { error } = await api.POST("/api/v1/reconciliations/{reconciliationId}/review", {
+        params: { path: { reconciliationId: item.id } },
+        body,
+      });
+      if (error) throw error;
+      result = { kind: "success", text: t(`reviews.reconciliations.messages.${outcome}`) };
+    } catch (error) {
+      result = {
+        kind: "error",
+        text: t(`reviews.reconciliations.messages.${clarificationMessage(error)}` as never, {
+          defaultValue: t("reviews.reconciliations.messages.failed"),
+        }),
+      };
+    } finally {
+      setBusy(false);
+      close();
+    }
+    await props.onDecided(result);
+  }
+
+  return (
+    <>
+      <SimpleTable
+        title={t("reviews.reconciliations.listTitle")}
+        columns={(["project", "tgStart", "evidence", "stage", "history", "actions"] as const).map(
+          (key) => ({ key, header: t(`reviews.reconciliations.columns.${key}`) }),
+        )}
+        rows={props.reconciliations.map((item) => ({
+          id: item.id,
+          project: item.projectName,
+          tgStart: formatDate(item.tgStart),
+          evidence: (
+            <ul className="tp-list">
+              {item.evidence.map((e) => (
+                <li key={e.kind}>
+                  {t("reconciliation.evidence.days", {
+                    kind: t(`reconciliation.evidenceKinds.${e.kind}`),
+                    valid: formatDate(e.validOn),
+                    recorded: formatDate(e.recordedOn),
+                  })}
+                </li>
+              ))}
+            </ul>
+          ),
+          stage: t("reviews.reconciliations.stageOn", {
+            stage: t(`reconciliation.stages.${item.stage}`),
+            reconciled: formatDate(item.reconciledOn),
+            due: formatDate(item.reviewDueOn),
+          }),
+          history:
+            item.steps.length === 0 ? (
+              "–"
+            ) : (
+              <ol className="tp-list">
+                {item.steps.map((step, index) => (
+                  <li key={index}>{stepText(step)}</li>
+                ))}
+              </ol>
+            ),
+          actions:
+            item.capabilities.outcomes.length > 0 ? (
+              <>
+                {item.capabilities.outcomes.map((outcome) => (
+                  <Button
+                    key={outcome}
+                    kind="ghost"
+                    size="sm"
+                    disabled={busy}
+                    aria-label={`${t(`reviews.reconciliations.outcomes.${outcome}`)}: ${label(item)}`}
+                    onClick={() => setDialog({ item, outcome })}
+                  >
+                    {t(`reviews.reconciliations.outcomes.${outcome}`)}
+                  </Button>
+                ))}
+              </>
+            ) : (
+              t(
+                item.stage === "clarification_requested"
+                  ? "reviews.reconciliations.awaitingReply"
+                  : "reviews.reconciliations.ownReconciliation",
+              )
+            ),
+        }))}
+        emptyState={t("reviews.reconciliations.empty")}
+      />
+      <Modal
+        key={dialog ? `${dialog.outcome}-${dialog.item.id}-${dialog.item.revision}` : "none"}
+        open={dialog !== undefined}
+        size="sm"
+        modalHeading={dialog ? t(`reviews.reconciliations.outcomes.${dialog.outcome}`) : ""}
+        primaryButtonText={t("reviews.reconciliations.dialog.confirm")}
+        secondaryButtonText={t("reviews.reconciliations.dialog.cancel")}
+        primaryButtonDisabled={busy}
+        onRequestClose={close}
+        onRequestSubmit={() => dialog && void record(dialog)}
+      >
+        {dialog && (
+          <Stack gap={4}>
+            <p>{label(dialog.item)}</p>
+            {needsCode && (
+              <Select
+                id="reconciliation-review-code"
+                labelText={t("reviews.reconciliations.dialog.code")}
+                value={code}
+                invalid={shownInvalid && code === ""}
+                invalidText={t("reviews.reconciliations.dialog.choose")}
+                onChange={(event) => setCode(event.target.value)}
+              >
+                <SelectItem value="" text="" />
+                {ReconciliationReasonCode.options.map((option) => (
+                  <SelectItem
+                    key={option}
+                    value={option}
+                    text={t(`reconciliation.reasonCodes.${option}`)}
+                  />
+                ))}
+              </Select>
+            )}
+            {needsSource && (
+              <TextInput
+                id="reconciliation-review-source"
+                labelText={t("reviews.reconciliations.dialog.source")}
+                value={source}
+                maxLength={correctionSourceMaxLength}
+                invalid={shownInvalid && !sourceValid}
+                invalidText={t("reviews.reconciliations.dialog.enterSource")}
+                onChange={(event) => setSource(event.target.value)}
+              />
+            )}
+            <p>{t(`reviews.reconciliations.dialog.final.${dialog.outcome}`)}</p>
           </Stack>
         )}
       </Modal>

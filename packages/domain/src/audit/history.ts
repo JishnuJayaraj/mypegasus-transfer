@@ -234,6 +234,11 @@ export const auditProjection: {
   entry_clarification_requested: shown("case", { details: ["requestCode"] }),
   // The customer notice of a cancellation-based withdrawal: the day only.
   dsv_customer_notified: shown("dsv", { details: ["notifiedOn"] }),
+  // The reconciliation: its effective date (the event's) and the evidence kinds; its review and
+  // the PL's reply are the regional review's, never in a history (Q157).
+  tg_entry_reconciled: shown("case", { details: ["evidenceKinds"] }),
+  reconciliation_reviewed: review,
+  reconciliation_replied: review,
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "decision"],
   }),

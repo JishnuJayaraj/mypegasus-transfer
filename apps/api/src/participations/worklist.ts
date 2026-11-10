@@ -53,6 +53,7 @@ import { attemptsOf, submissionSettingsOf } from "./tl407-submissions";
 import { consultantsOf, listStatesOf } from "./list-states";
 import { loadSelfServiceRecords } from "./self-service";
 import { exceptionOf } from "./status-service";
+import { reconciliationClarificationsOf } from "./reconciliation";
 import { utc } from "../sql";
 
 // The work list snapshot (data-protection.md, the work list and the dashboard): the viewer's
@@ -196,6 +197,10 @@ export async function loadWorklist(
         found!.type === "ta_tg" &&
         mayWorkDsv(subject, { projectId, regionId, participationId: null }).ok;
       const dsvFacts = worksDsv ? await dsvStatesOf(tx, ids) : new Map<string, DsvListFacts>();
+      // "Rückfrage zum Eintritt" (process-and-lifecycle.md, the reconciliation): until resolved.
+      const clarifications = worksDsv
+        ? await reconciliationClarificationsOf(tx, ids)
+        : new Map<string, string>();
       // Every participation's dated facts in one read where the provider can (the TL 407's).
       const inputs = rows.map(({ p }) => ({
         participationId: p.id,
@@ -243,11 +248,14 @@ export async function loadWorklist(
                 endDate,
                 knowledgeDate,
               }),
-              dsv: dsvFacts.get(p.id) ?? {
-                signedOn: null,
-                fullyExecuted: false,
-                unresolvedClarificationOpenedOn: null,
-                customerNotice: { withdrawnOn: null, notifiedOn: null },
+              dsv: {
+                ...(dsvFacts.get(p.id) ?? {
+                  signedOn: null,
+                  fullyExecuted: false,
+                  unresolvedClarificationOpenedOn: null,
+                  customerNotice: { withdrawnOn: null, notifiedOn: null },
+                }),
+                reconciliationClarificationSince: clarifications.get(p.id) ?? null,
               },
               kug200b: {
                 channel: asuStates.get(p.id)!.channel,

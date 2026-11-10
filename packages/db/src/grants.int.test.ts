@@ -91,6 +91,10 @@ const statusFunctions = [
   "escalate_entry_clarification",
   "record_clarification_instruction",
   "request_entry_clarification_reply",
+  // Slice 7, PR 7-6: the reconciliation, its review and the PL's reply
+  "reconcile_tg_entry",
+  "review_reconciliation",
+  "reply_reconciliation_clarification",
   "lock_participation",
   "create_participation",
   "change_participation_status",

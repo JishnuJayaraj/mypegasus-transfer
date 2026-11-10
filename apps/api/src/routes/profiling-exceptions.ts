@@ -20,6 +20,7 @@ import { loadRelease } from "../projects/template-pins";
 import { createStatusService, StatusServiceError } from "../participations/status-service";
 import { correctionReviewItemsOf } from "../participations/evidence-corrections";
 import { clarificationReviewItemsOf } from "../participations/entry-clarification";
+import { reconciliationReviewItemsOf } from "../participations/reconciliation";
 import { reviewItemsOf } from "../participations/profiling-exceptions";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
@@ -321,7 +322,7 @@ export function profilingExceptionRoutes(deps: Deps) {
       path: "/reviews",
       tags: ["participations"],
       summary:
-        "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; no name, case data, evidence content or corrected value",
+        "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; no name, case data, evidence content or corrected value",
       middleware,
       responses: {
         200: json(ReviewQueue, "The pending requests"),
@@ -337,6 +338,7 @@ export function profilingExceptionRoutes(deps: Deps) {
           items: await reviewItemsOf(db, subject),
           corrections: await correctionReviewItemsOf(db, subject),
           clarifications: await clarificationReviewItemsOf(db, subject),
+          reconciliations: await reconciliationReviewItemsOf(db, subject),
         },
         200,
       ) as never;

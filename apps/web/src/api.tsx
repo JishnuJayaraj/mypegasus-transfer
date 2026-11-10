@@ -301,6 +301,21 @@ export const entryClarificationQuery = (api: ApiClient, participationId: string)
       ),
   });
 
+/**
+ * The reconciliation of a missed TG entry (the PL and back office): the evidence with its days,
+ * why it is closed now, the recorded reconciliation with its review's steps.
+ */
+export const tgEntryReconciliationQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "tg-entry-reconciliation"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/tg-entry-reconciliation", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 /** The staff accounts with their org roles (the global admin), page by page. */
 export const staffAccountsQuery = (api: ApiClient) =>
   infiniteQueryOptions({

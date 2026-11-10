@@ -88,7 +88,9 @@ export const WorklistCapabilities = z.strictObject({
  * item, the filter and the dashboard tile count the same participations); `entry_clarification`
  * from the day after the planned TG start for a signed DSV still `informed` (`dsv/clarification.ts`);
  * `dsv_customer_notice` from the withdrawal of a signed DSV until the customer notice is recorded
- * (`dsv/cancellation.ts`), the one DSV item a terminal participation keeps.
+ * (`dsv/cancellation.ts`), the one DSV item a terminal participation keeps;
+ * `reconciliation_clarification` from the manager's first request on a reconciliation until it is
+ * resolved (`dsv/reconciliation.ts`).
  */
 export const WorklistCaseItem = z
   .strictObject({
@@ -106,6 +108,11 @@ export const WorklistCaseItem = z
        * until the PL records the notice (`dsvCustomerNoticeDue`).
        */
       "dsv_customer_notice",
+      /**
+       * "Rückfrage zum Eintritt": the manager's clarification of a reconciliation, dated by its
+       * first request, until the manager resolves it (an escalation stays open too).
+       */
+      "reconciliation_clarification",
     ]),
     date: isoDate,
   })
@@ -194,6 +201,11 @@ export type WorklistFacts = Pick<
     unresolvedClarificationOpenedOn?: IsoDate | null;
     /** The withdrawal's day and the recorded customer notice (`dsvCustomerNoticeDue`). */
     customerNotice?: { withdrawnOn: IsoDate | null; notifiedOn: IsoDate | null };
+    /**
+     * The Berlin day the manager first asked for a clarification of the reconciliation, while it
+     * is open (`reconciliationClarificationOpen`); null otherwise.
+     */
+    reconciliationClarificationSince?: IsoDate | null;
   };
   appointments: {
     bookings: readonly AppointmentItemBooking[];
@@ -261,6 +273,10 @@ function dsvCaseItems(
     ? dsvCustomerNoticeDue({ status, dsvStatus, ...facts.dsv.customerNotice })
     : null;
   if (noticeDue !== null) items.push({ kind: "dsv_customer_notice", date: noticeDue });
+  const clarification = facts.dsv.reconciliationClarificationSince ?? null;
+  if (clarification !== null) {
+    items.push({ kind: "reconciliation_clarification", date: clarification });
+  }
   return items;
 }
 

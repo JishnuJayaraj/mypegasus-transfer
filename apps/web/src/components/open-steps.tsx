@@ -101,12 +101,13 @@ export function stepTarget(step: OpenStep): StepTarget {
     case "case":
       // The ASU record holds the knowledge date and the Kug 200b offer (asu-tab.tsx); an
       // invalidated evidence document is replaced among the documents; the signed DSV's packet and
-      // its entry clarification and the customer notice of its cancellation are worked on the tab
-      // "DSV".
+      // its entry clarification, the customer notice of its cancellation and the reply to the
+      // reconciliation's clarification are worked on the tab "DSV".
       if (
         step.kind === "dsv_not_fully_executed" ||
         step.kind === "entry_clarification" ||
-        step.kind === "dsv_customer_notice"
+        step.kind === "dsv_customer_notice" ||
+        step.kind === "reconciliation_clarification"
       ) {
         return { tab: "dsv" };
       }

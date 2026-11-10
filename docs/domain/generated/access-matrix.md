@@ -957,6 +957,9 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `entry_clarification_instructed` | `case` | no | no | `instructionCode` |
 | `entry_clarification_requested` | `case` | no | no | `requestCode` |
 | `dsv_customer_notified` | `dsv` | no | no | `notifiedOn` |
+| `tg_entry_reconciled` | `case` | no | no | `evidenceKinds` |
+| `reconciliation_reviewed` | `review` | no | no | — |
+| `reconciliation_replied` | `review` | no | no | — |
 
 ## Aggregates
 

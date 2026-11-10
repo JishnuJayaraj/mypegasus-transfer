@@ -2,6 +2,7 @@ import { sql, type Database } from "@transfer/db";
 import { asuStatesOf } from "./asu";
 import {
   approvedExceptionFact,
+  type EntryEvidence,
   type DatedFact,
   type EvidenceFact,
   type GuardFacts,
@@ -29,7 +30,18 @@ export interface GuardFactsProvider {
   ): Promise<RequestEvidence | undefined>;
   /** The facts of many participations in one read (the work list), in the inputs' order. */
   many?(tx: Transaction, inputs: readonly FactsInput[]): Promise<GuardFacts[]>;
+  /**
+   * The records the entry facts rest on (the reconciliation's evidence, process-and-lifecycle.md,
+   * the reconciliation); `dbEntryEvidence` unless a provider overlays synthetic facts.
+   */
+  entryEvidence?(tx: Transaction, input: EntryEvidenceInput): Promise<EntryEvidence>;
 }
+
+export type EntryEvidenceInput = FactsInput & {
+  facts: GuardFacts;
+  /** The participation's current exception request, the evidence of an approved exception. */
+  exceptionRequestId: string | null;
+};
 
 type FactsInput = Parameters<GuardFactsProvider["facts"]>[1];
 
@@ -260,3 +272,55 @@ export const dbGuardFacts: GuardFactsProvider = {
     return all;
   },
 };
+
+/**
+ * The records behind the entry facts (process-and-lifecycle.md, the reconciliation): the counting
+ * complete packet of the signed offer (the earliest valid, as the database checks it), the current
+ * ASU registration while it gives `asuRegisteredWithProof`, the usable TL 407 scan that supports
+ * `profilingDoneOn` while `profilingDone` holds, and the approved exception while it counts. Each
+ * with the day it is valid from and when it counted; read after the participation is locked.
+ */
+export async function dbEntryEvidence(
+  tx: Transaction,
+  { participationId, currentRequest, facts, exceptionRequestId }: EntryEvidenceInput,
+): Promise<EntryEvidence> {
+  const { rows: packets } = await tx.execute<{
+    document_id: string;
+    executed_on: string;
+    recorded_at: string;
+  }>(sql`select f.document_id, f.executed_on::text, ${utcText("f.recorded_at")} as recorded_at
+    from dsv_facts(${`{${participationId}}`}::uuid[]) f join dsv_offer o on o.id = f.offer_id
+    where o.ended_as = 'signed' and f.executed_on is not null
+    order by f.executed_on, f.recorded_at, f.document_id limit 1`);
+  const packet = packets[0];
+  const asu = (await asuStatesOf(tx, [participationId])).get(participationId)!;
+  let tl407: EntryEvidence["tl407"] = null;
+  if (facts.profilingDone) {
+    const { rows } = await tx.execute<{ id: string }>(sql`select d.id from document d
+      join participation p on p.id = d.participation_id
+      where d.participation_id = ${participationId}::uuid and d.type = 'tl407_signed_scan'
+        and d.review_state = 'accepted' and d.deleted_at is null and d.quarantined_at is null
+        and d.invalidated_by_correction is null
+        and greatest(d.signed_on, d.countersigned_on) <= p.profiling_done_on
+      order by greatest(d.reviewed_at, coalesce(d.quarantine_lifted_at, d.reviewed_at)), d.id
+      limit 1`);
+    if (rows[0]) tl407 = { id: rows[0].id, ...facts.profilingDone };
+  }
+  return {
+    packet: packet
+      ? {
+          id: packet.document_id,
+          validOn: packet.executed_on,
+          recordedAt: new Date(packet.recorded_at),
+        }
+      : null,
+    asu: asu.registration && asu.fact ? { id: asu.registration.id, ...asu.fact } : null,
+    tl407,
+    exception:
+      facts.profilingExceptionApproved &&
+      currentRequest?.status === "approved" &&
+      exceptionRequestId !== null
+        ? { id: exceptionRequestId, ...facts.profilingExceptionApproved }
+        : null,
+  };
+}

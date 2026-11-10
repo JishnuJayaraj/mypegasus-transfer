@@ -3,6 +3,12 @@ import { AsuProofKind, AttestationSource } from "../asu/model";
 import { DocumentType } from "../documents/catalog";
 import { EntryInstructionCode, EntryPendingCode, EntryRequestCode } from "../dsv/clarification";
 import { DsvTemplateVersion } from "../dsv/generation";
+import {
+  ReconciliationEvidenceKind,
+  ReconciliationOutcome,
+  ReconciliationReasonCode,
+  ReconciliationReplyCode,
+} from "../dsv/reconciliation";
 import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
@@ -251,6 +257,12 @@ export const AuditEventType = z.enum([
   // The customer informed of a cancellation-based withdrawal (process-and-lifecycle.md, the
   // customer notice; Q46), written only by `record_customer_notice`
   "dsv_customer_notified",
+  // The reconciliation of a TG entry and its review (process-and-lifecycle.md, the reconciliation;
+  // Q68, Q80, Q216), written only by `reconcile_tg_entry`, `review_reconciliation` and
+  // `reply_reconciliation_clarification`; codes, never the documented source
+  "tg_entry_reconciled",
+  "reconciliation_reviewed",
+  "reconciliation_replied",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -379,6 +391,9 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "entry_clarification_instructed",
   "entry_clarification_requested",
   "dsv_customer_notified",
+  "tg_entry_reconciled",
+  "reconciliation_reviewed",
+  "reconciliation_replied",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1635,6 +1650,35 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ clarificationId: z.uuid(), requestCode: EntryRequestCode }),
+  }),
+  /**
+   * The PL reconciled a missed TG entry (Q68 case 2): the effective date (the TG start) and the
+   * kinds of evidence it rests on; the status change is its own event, flagged for review.
+   */
+  event("tg_entry_reconciled", {
+    ...ofParticipation,
+    actor: staffActor,
+    effectiveDate: isoDate,
+    details: z.strictObject({
+      reconciliationId: z.uuid(),
+      evidenceKinds: z.array(ReconciliationEvidenceKind).min(1).max(3),
+    }),
+  }),
+  /** The region's manager reviewed it: the outcome and a clarification's reason code only. */
+  event("reconciliation_reviewed", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      reconciliationId: z.uuid(),
+      outcome: ReconciliationOutcome,
+      reasonCode: ReconciliationReasonCode.optional(),
+    }),
+  }),
+  /** The PL replied to the manager's clarification: the reply code only, never the source. */
+  event("reconciliation_replied", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ reconciliationId: z.uuid(), replyCode: ReconciliationReplyCode }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

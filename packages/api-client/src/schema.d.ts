@@ -14018,6 +14018,366 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/tg-entry-reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The reconciliation of a missed TG entry (the PL and back office): the effective TG start, the evidence of every entry fact with its actual day and when it was recorded (the complete packet, the ASU registration with proof, the TL 407 or the approved exception), what doesn't hold on the TG start, why the reconciliation is closed now, the recorded reconciliation with its review's steps, and the viewer's capabilities */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The reconciliation as the viewer may work it */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TgEntryReconciliationState"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Enter a missed participation with its TG start as the effective date (the project's PL; Q68 case 2): for an informed ta_tg participation after its effective TG start, or on it once that day's lifecycle run completed, when every entry fact was valid on the TG start though recorded later. The request names the evidence the dialog listed, the status version read and the PL's confirmation; the server recomputes the evidence under the lock. One reconciliation and the status change (flagged for review by the region's manager) in one transaction
+         * @description Refusals:
+         *     - `403` for anyone but a PL of the project.
+         *     - `409` at `/statusVersion` (`stale_status`): the participation changed since it was read; at `/evidence` (`source_changed`): the evidence differs from what the dialog listed.
+         *     - `422` with the failed guards at their codes: `tg_start_date` (before the TG start, or on it before that day's run completed), `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception` (each valid on the TG start); `not_informed`, `project_not_active`, `evidence_incomplete`, `evidence_after_tg_start` at `/evidence`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TgEntryReconciliationRequest"];
+                };
+            };
+            responses: {
+                /** @description Reconciled: the reconciliation now */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TgEntryReconciliationState"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconciliations/{reconciliationId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review a reconciliation (the regional operations manager of the project's region, never the PL who reconciled; Q80, Q216): `no_objection`, or `clarification_requested` with a reason code and a documented source; after the PL's reply `resolved_no_objection`, `escalated_to_dpo` or another request; an escalation stays open until `resolved_no_objection` on the DPO's documented instruction. Against the revision "Freigaben" showed. Never a status change, never a deadline
+         * @description Refusals:
+         *     - `404` for a reconciliation the viewer can't see; `403` for a visible one the viewer may not review: any other role (`actor_not_allowed`), and the PL who reconciled (`four_eyes`).
+         *     - `409 stale_reconciliation` at `/revision`: read "Freigaben" again.
+         *     - `422`: `not_awaiting` (with the PL, or closed), `outcome_not_allowed` at `/outcome`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    reconciliationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReconciliationReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconciliations/{reconciliationId}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply to the manager's clarification of a reconciliation (a PL of the project; Q216): a reply code with a documented source, against the revision read. Supplementing evidence happens through its own operations; the reply changes no status
+         * @description Refusals:
+         *     - `404` for a reconciliation the viewer can't see; `403` for anyone but a PL of the project.
+         *     - `409 stale_reconciliation` at `/revision`.
+         *     - `422`: `not_awaiting` (no clarification awaits a reply).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    reconciliationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReconciliationReplyRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{kind}": {
         parameters: {
             query?: never;
@@ -15480,7 +15840,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; no name, case data, evidence content or corrected value */
+        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; no name, case data, evidence content or corrected value */
         get: {
             parameters: {
                 query?: never;
@@ -16766,6 +17126,7 @@ export interface components {
                 viewDsv: boolean;
                 withdraw: boolean;
                 correctEndReason: boolean;
+                reconcileTgEntry: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -17005,7 +17366,7 @@ export interface components {
             deadlineState?: components["schemas"]["DeadlineState"];
             flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "dsv_signed_not_entered_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any" | "cutoff_case";
             /** @enum {string} */
-            caseItem?: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification" | "dsv_customer_notice";
+            caseItem?: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification" | "dsv_customer_notice" | "reconciliation_clarification";
             portal?: components["schemas"]["PortalReach"];
             appointment?: components["schemas"]["AppointmentFilter"];
             /** @enum {string} */
@@ -17089,7 +17450,7 @@ export interface components {
         };
         WorklistCaseItem: {
             /** @enum {string} */
-            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification" | "dsv_customer_notice";
+            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification" | "dsv_customer_notice" | "reconciliation_clarification";
             /**
              * Format: date
              * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
@@ -17607,7 +17968,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested" | "dsv_customer_notified";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested" | "dsv_customer_notified" | "tg_entry_reconciled";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -20339,6 +20700,146 @@ export interface components {
             statusVersion: number;
             revision: number;
         };
+        TgEntryReconciliationState: {
+            /** Format: uuid */
+            participationId: string;
+            statusVersion: number;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tgStart: string | null;
+            evidence: {
+                kind: components["schemas"]["ReconciliationEvidenceKind"];
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                validOn: string;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                recordedAt: string;
+            }[];
+            problems: {
+                fact: components["schemas"]["ReconciliationFact"];
+                code: string;
+            }[];
+            reconciliation: components["schemas"]["TgEntryReconciliationView"];
+            capabilities: {
+                reconcile: boolean;
+                reply: boolean;
+            };
+            refusal: components["schemas"]["ReconciliationRefusal"];
+        };
+        /** @enum {string} */
+        ReconciliationEvidenceKind: "dsv_packet" | "asu_registration" | "tl407" | "profiling_exception";
+        /** @enum {string} */
+        ReconciliationFact: "dsv_packet" | "asu_registration" | "profiling";
+        TgEntryReconciliationView: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            effectiveDate: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            reconciledOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            reviewDueOn: string;
+            evidence: components["schemas"]["ReconciliationEvidenceDays"][];
+            stage: components["schemas"]["ReconciliationStage"];
+            revision: number;
+            steps: components["schemas"]["ReconciliationStep"][];
+        } | null;
+        ReconciliationEvidenceDays: {
+            kind: components["schemas"]["ReconciliationEvidenceKind"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            validOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            recordedOn: string;
+        };
+        /** @enum {string} */
+        ReconciliationStage: "requested" | "no_objection" | "clarification_requested" | "replied" | "escalated_to_dpo" | "resolved_no_objection";
+        ReconciliationStep: {
+            /** @enum {string} */
+            kind: "no_objection" | "clarification_requested" | "replied" | "resolved_no_objection" | "escalated_to_dpo";
+            code: components["schemas"]["ReconciliationReasonCode"] | components["schemas"]["ReconciliationReplyCode"] | null;
+            source: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            on: string;
+        };
+        /** @enum {string} */
+        ReconciliationReasonCode: "evidence_unclear" | "date_unclear" | "other_documented";
+        /** @enum {string} */
+        ReconciliationReplyCode: "evidence_supplemented" | "explained" | "correction_requested";
+        /** @enum {string|null} */
+        ReconciliationRefusal: "actor_not_allowed" | "project_not_active" | "not_informed" | "tg_start_missing" | "before_tg_start" | "run_not_completed" | "dsv_not_signed" | "evidence_incomplete" | null;
+        TgEntryReconciliationRequest: {
+            evidence: components["schemas"]["ReconciliationEvidenceRef"][];
+            statusVersion: number;
+            /** @enum {boolean} */
+            confirmed: true;
+        };
+        ReconciliationEvidenceRef: {
+            kind: components["schemas"]["ReconciliationEvidenceKind"];
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            validOn: string;
+        };
+        ReconciliationReviewRequest: {
+            /** @enum {string} */
+            outcome: "no_objection";
+            revision: number;
+        } | {
+            /** @enum {string} */
+            outcome: "clarification_requested";
+            code: components["schemas"]["ReconciliationReasonCode"];
+            source: string;
+            revision: number;
+        } | {
+            /** @enum {string} */
+            outcome: "resolved_no_objection" | "escalated_to_dpo";
+            source: string;
+            revision: number;
+        };
+        ReconciliationReplyRequest: {
+            code: components["schemas"]["ReconciliationReplyCode"];
+            source: string;
+            revision: number;
+        };
         ExportLink: {
             url: string;
             /**
@@ -20673,6 +21174,7 @@ export interface components {
                 };
             }[];
             clarifications: components["schemas"]["EntryClarificationReviewItem"][];
+            reconciliations: components["schemas"]["ReconciliationReviewItem"][];
         };
         /** @enum {string} */
         CorrectionTargetKind: "document" | "asu_registration" | "ba_reporting_task";
@@ -20711,6 +21213,40 @@ export interface components {
                 answer: boolean;
             };
         };
+        ReconciliationReviewItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tgStart: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            reconciledOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            reviewDueOn: string;
+            evidence: components["schemas"]["ReconciliationEvidenceDays"][];
+            stage: components["schemas"]["ReconciliationStage"];
+            revision: number;
+            steps: components["schemas"]["ReconciliationStep"][];
+            capabilities: {
+                outcomes: components["schemas"]["ReconciliationOutcome"][];
+            };
+        };
+        /** @enum {string} */
+        ReconciliationOutcome: "no_objection" | "clarification_requested" | "resolved_no_objection" | "escalated_to_dpo";
         EvidenceCorrectionRequested: {
             /** Format: uuid */
             correctionId: string;

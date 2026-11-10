@@ -195,6 +195,7 @@ const options = {
     viewDsv: true,
     withdraw: true,
     correctEndReason: false,
+    reconcileTgEntry: false,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
 } as const;
@@ -238,6 +239,7 @@ describe("participationDetail", () => {
         viewDsv: true,
         withdraw: true,
         correctEndReason: false,
+        reconcileTgEntry: false,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
     });

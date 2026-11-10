@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CorrectionReviewItem } from "../corrections/model";
 import { EntryClarificationReviewItem } from "../dsv/clarification";
+import { ReconciliationReviewItem } from "../dsv/reconciliation";
 import type { Subject } from "../access/decide";
 import { isoDate, type IsoDate } from "../iso-date";
 import { ProfilingExceptionReason, ProfilingExceptionStatus } from "../lifecycle/enums";
@@ -196,13 +197,21 @@ export const ReviewItem = z.object({
 });
 export type ReviewItem = z.infer<typeof ReviewItem>;
 
-/** "Freigaben": the pending profiling exceptions, evidence corrections and escalated entry clarifications, each oldest first. */
+/**
+ * "Freigaben": the pending profiling exceptions, evidence corrections, escalated entry
+ * clarifications and open reconciliations, each oldest first.
+ */
 export const ReviewQueue = z
   .object({
     items: z.array(ReviewItem),
     corrections: z.array(CorrectionReviewItem),
     /** The escalated entry clarifications awaiting the manager's instruction. */
     clarifications: z.array(EntryClarificationReviewItem),
+    /**
+     * The reconciliations of a missed TG entry still open (Q80, Q216): awaiting the review, the
+     * PL's reply to a clarification, or the resolution of a reply or an escalation.
+     */
+    reconciliations: z.array(ReconciliationReviewItem),
   })
   .meta({ id: "ReviewQueue" });
 

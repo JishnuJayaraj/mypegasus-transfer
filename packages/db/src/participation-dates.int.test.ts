@@ -1,4 +1,4 @@
-import { acceptedDsvScan } from "./testing";
+import { acceptedDsvScan, pendingReconciliation } from "./testing";
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
@@ -211,6 +211,7 @@ describe("set_participation_dates (AC-37, AC-48)", () => {
 
   it("refuses a new start after TG entry", async () => {
     const id = await signed();
+    await pendingReconciliation(owner, id, "2027-03-01");
     await changeStatus(app, id, {
       field: "status",
       from: "informed",
@@ -273,6 +274,7 @@ describe("immutability (R41, R42)", () => {
 /** Signed and entered on 01.03.2027 (a reconciliation, so no facts are needed). */
 async function entered() {
   const id = await signed();
+  await pendingReconciliation(owner, id, "2027-03-01");
   await changeStatus(app, id, {
     field: "status",
     from: "informed",

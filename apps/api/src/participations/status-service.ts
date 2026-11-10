@@ -50,11 +50,24 @@ import {
   type Track,
   type TransitionContext,
   withdrawalProblem,
+  reconciliationEvidence,
+  reconciliationTiming,
+  sameEvidence,
+  type EntryEvidence,
+  type ReconciliationEvidenceItem,
+  type ReconciliationEvidenceProblem,
+  type ReconciliationEvidenceRef,
+  type ReconciliationRefusal,
 } from "@transfer/domain";
 import type { SQL } from "drizzle-orm";
 import { functionRefusal } from "../database-errors";
 import { jobNames } from "../jobs/names";
-import { dbGuardFacts, type GuardFactsProvider, type Transaction } from "./guard-facts";
+import {
+  dbEntryEvidence,
+  dbGuardFacts,
+  type GuardFactsProvider,
+  type Transaction,
+} from "./guard-facts";
 
 /**
  * The status service (plan 5.4): the only TypeScript caller of the status functions. Each call is
@@ -142,7 +155,12 @@ const notFound = new Set([
   // An evidence document the PL named that isn't one of this participation's (D30).
   "document_not_found",
 ]);
-const stale = new Set(["stale_status", "request_not_current", "source_changed"]);
+const stale = new Set([
+  "stale_status",
+  "stale_status_version",
+  "request_not_current",
+  "source_changed",
+]);
 /** The evidence functions' state refusals (data-protection.md, exception evidence): a 422. */
 const domainCodes = new Set([
   "not_informed",
@@ -151,6 +169,11 @@ const domainCodes = new Set([
   "ba_confirmation_missing",
   "confirmation_in_future",
   "reference_invalid",
+  // The reconciliation (process-and-lifecycle.md, the reconciliation).
+  "evidence_after_tg_start",
+  "evidence_incomplete",
+  "tg_start_missing",
+  "confirmation_required",
 ]);
 
 /** A refusal of a status function (`P0001`, the code is the message) as a service error. */
@@ -400,6 +423,54 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
     if (!permission.ok) fail("forbidden", permission.because);
   }
 
+  /**
+   * The reconciliation as it stands for the actor (process-and-lifecycle.md, the reconciliation;
+   * Q68 case 2): the TG start, the evidence of every entry fact valid on it (or why not), and the
+   * first reason it is closed now: the permission, the project, the status, the day (after the TG
+   * start, or on it once that day's run completed), the DSV track and the evidence. Inside the
+   * caller's transaction, after `load`.
+   */
+  async function reconciliationCheck(tx: Transaction, actor: ServiceActor, loaded: Loaded) {
+    const { context, p, exception } = loaded;
+    const edge = edges.find(
+      (e) => e.track === "main" && e.to === "active_in_tg" && e.kind === "reconciliation",
+    )!;
+    const tgStart = effectiveTgStart(context.participation, context.wave);
+    const guardFacts = await facts.facts(tx, {
+      participationId: p.id,
+      currentRequest: exception,
+    });
+    const input = {
+      participationId: p.id,
+      currentRequest: exception,
+      facts: guardFacts,
+      exceptionRequestId: loaded.request?.id ?? null,
+    };
+    const records: EntryEvidence = await (facts.entryEvidence ?? dbEntryEvidence)(tx, input);
+    const evidence = tgStart === null ? null : reconciliationEvidence(records, tgStart);
+    const runCompleted = await lifecycleRunCompleted(tx, context.today);
+    const timing = reconciliationTiming(tgStart, context.today, runCompleted);
+    let refusal: ReconciliationRefusal | null = null;
+    if (!mayPerformTransition(actor, edge, loaded.target).ok) refusal = "actor_not_allowed";
+    else if (loaded.projectStatus !== "active") refusal = "project_not_active";
+    else if (context.projectType !== "ta_tg" || context.current.status !== "informed") {
+      refusal = "not_informed";
+    } else if (timing !== null) refusal = timing;
+    else if (context.current.dsvStatus !== "dsv_signed") refusal = "dsv_not_signed";
+    else if (!evidence?.ok) refusal = "evidence_incomplete";
+    return {
+      edge,
+      tgStart,
+      guardFacts,
+      runCompleted,
+      refusal,
+      /** Every record with its actual day (the dialog lists them); complete only when `held`. */
+      evidence: evidence?.evidence ?? ([] as ReconciliationEvidenceItem[]),
+      held: evidence?.ok === true,
+      problems: evidence && !evidence.ok ? evidence.problems : ([] as ReconciliationEvidenceProblem[]),
+    };
+  }
+
   /** Loads the participation of a request and checks the request is its current one. */
   async function loadRequest(tx: Transaction, requestId: string, actor: ServiceActor) {
     const request = await selectFirst(
@@ -567,6 +638,79 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
               p_offer_deadline => ${change.offerDeadline ?? null}::date,
               p_effective_date => ${effectiveDate}::date,
               p_scheduled_at => ${change.scheduledAt?.toISOString() ?? null}::timestamptz)`,
+          ),
+        };
+      });
+    },
+
+    /**
+     * The reconciliation's state for the dialog: the evidence with its actual days and why
+     * "Eintritt nachträglich erfassen" is closed, as `reconcileTgEntry` decides it. A read.
+     */
+    reconciliationState(actor: ServiceActor, participationId: string) {
+      return transaction(async (tx) => {
+        const loaded = await load(tx, participationId, actor, false);
+        const check = await reconciliationCheck(tx, actor, loaded);
+        return {
+          statusVersion: loaded.p.statusVersion,
+          tgStart: check.tgStart,
+          evidence: check.evidence,
+          problems: check.problems,
+          refusal: check.refusal,
+        };
+      });
+    },
+
+    /**
+     * The PL's reconciliation of a missed TG entry (process-and-lifecycle.md, the reconciliation;
+     * Q68 case 2): under the participation's lock the permission (403), the status version read
+     * (409), the guards with the entry kind `reconciliation` (422 with the failed guards: the day
+     * and every fact valid on the TG start), then the evidence recomputed and compared with the
+     * evidence the dialog listed (409 `source_changed`). `reconcile_tg_entry` writes the row and
+     * the status change together, the TG start as the effective date, and checks the packet again.
+     */
+    reconcileTgEntry(
+      actor: ServiceActor,
+      input: {
+        participationId: string;
+        evidence: readonly ReconciliationEvidenceRef[];
+        statusVersion: number;
+        confirmed: boolean;
+      },
+      correlation: Correlation = {},
+    ): Promise<{ reconciliationId: string }> {
+      return transaction(async (tx) => {
+        const loaded = await load(tx, input.participationId, actor);
+        const check = await reconciliationCheck(tx, actor, loaded);
+        if (check.refusal === "actor_not_allowed") fail("forbidden", "actor_not_allowed");
+        if (check.refusal === "project_not_active") fail("domain", "project_not_active");
+        if (loaded.p.statusVersion !== input.statusVersion) fail("stale", "stale_status");
+        if (check.refusal === "not_informed") fail("domain", "not_informed");
+        const guard = canTransition("main", "informed", "active_in_tg", {
+          ...loaded.context,
+          entryKind: "reconciliation",
+          scheduledRunCompleted: check.runCompleted,
+          facts: check.guardFacts,
+        });
+        if (!guard.ok) fail("domain", guard.code, guard.failedGuards);
+        // The guards read the same facts; a fact without its record (none in production) refuses.
+        if (!check.held) fail("domain", "evidence_incomplete");
+        const current = check.evidence.map(({ kind, id, validOn }) => ({ kind, id, validOn }));
+        if (!sameEvidence(input.evidence, current)) fail("stale", "source_changed");
+        if (!input.confirmed) fail("domain", "confirmation_required");
+        const evidence = check.evidence.map((e) => ({
+          kind: e.kind,
+          id: e.id,
+          validOn: e.validOn,
+          recordedAt: e.recordedAt.toISOString(),
+        }));
+        return {
+          reconciliationId: await call(
+            tx,
+            sql`reconcile_tg_entry(p_context => ${audit(actor, correlation)},
+              p_participation_id => ${input.participationId}::uuid,
+              p_status_version => ${input.statusVersion}::integer,
+              p_evidence => ${JSON.stringify(evidence)}::jsonb, p_confirmed => true)`,
           ),
         };
       });

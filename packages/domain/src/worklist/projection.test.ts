@@ -224,6 +224,26 @@ describe("worklistProjection", () => {
     expect(row(due, true, unsigned)).toEqual([]);
   });
 
+  it("keeps the reconciliation's clarification on the list of an entered participation until resolved (Q216)", () => {
+    const entered = snapshot({ current: state("active_in_tg", "profiling_done", "dsv_signed") });
+    const row = (since: string | null, worksDsv = true) =>
+      worklistProjection(
+        facts({
+          dsv: { signedOn: "2027-02-20", fullyExecuted: true, reconciliationClarificationSince: since },
+        }),
+        entered,
+        project,
+        "2027-03-10",
+        now,
+        viewer({ worksDsv }),
+      ).caseItems;
+    expect(row("2027-03-04")).toEqual([
+      { kind: "reconciliation_clarification", date: "2027-03-04" },
+    ]);
+    expect(row(null)).toEqual([]);
+    expect(row("2027-03-04", false)).toEqual([]);
+  });
+
   it("offers the DSV bulk generation to the viewer who may, in an open ta_tg participation", () => {
     const s = snapshot({ wave: null });
     const row = (v: Partial<WorklistViewer>, p: WorklistProject = project) =>
