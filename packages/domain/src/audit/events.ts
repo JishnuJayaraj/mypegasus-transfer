@@ -35,7 +35,14 @@ import { Kug200bBatchArtifact, kug200bBatchMax } from "../asu/batches";
 import { AgenturSubmissionChannel } from "../asu/batches-api";
 import { AgenturRejectionReason } from "../profiling/submissions";
 import { kug200bDeclarations, ScanOrigin } from "../documents/scans";
-import { CorrectionAction, CorrectionReason, CorrectionTargetKind } from "../corrections/model";
+import {
+  CorrectableField,
+  CorrectionAction,
+  CorrectionReason,
+  CorrectionTargetKind,
+  DsvSignatureKind,
+  DsvSignaturePaper,
+} from "../corrections/model";
 import { DocumentDeleteReason, DocumentReviewReason, QuarantineReason } from "../documents/state";
 import {
   ActivationChannel,
@@ -1555,7 +1562,8 @@ export const AuditEvent = z.discriminatedUnion("type", [
   }),
   /**
    * A correction requested (data-protection.md, evidence corrections): its id, the target's kind,
-   * the action and the reason code; never the documented source, a corrected value or a file.
+   * the action and the reason code; a field correction's field key, a signature supersession's
+   * paper and signature kind; never the documented source, a corrected value, a date or a file.
    */
   event("evidence_correction_requested", {
     ...ofParticipation,
@@ -1565,6 +1573,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
       targetKind: CorrectionTargetKind,
       action: CorrectionAction,
       reason: CorrectionReason,
+      fieldKey: CorrectableField.optional(),
+      paper: DsvSignaturePaper.optional(),
+      signatureKind: DsvSignatureKind.optional(),
     }),
   }),
   /**
@@ -1579,6 +1590,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
       targetKind: CorrectionTargetKind,
       action: CorrectionAction,
       reason: CorrectionReason,
+      fieldKey: CorrectableField.optional(),
+      paper: DsvSignaturePaper.optional(),
+      signatureKind: DsvSignatureKind.optional(),
       decision: z.enum(["approved", "rejected"]),
     }),
   }),

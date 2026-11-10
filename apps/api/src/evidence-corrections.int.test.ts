@@ -245,6 +245,8 @@ describe("a BA outcome superseded (Q190, Q207 (6))", () => {
         documentType: null,
         reportingKind: "planned_end_changed",
         wrongPerson: null,
+        fieldKey: null,
+        signatureKind: null,
         reason: "documented_internal_error",
         source,
         requestedOn: await day(),

@@ -1503,3 +1503,41 @@ date, else `reconciliation_missing`) and `record_audit_event` (diff against 0102
 packet) → `tg_entry_reconciliation` (the project's lock first, exclusive for the review). The day
 of a reconciliation is the status service's (the injected clock and the day's `job_run`), as every
 guard's day is; the database checks the packet's validity, not the clock.
+
+## Amendment 2026-11-10: date corrections (Slice 7, PR 7-8)
+
+Migrations `0105_date_corrections.sql` (generated) and `0106_date_correction_functions.sql`
+(hand-written, the 0088 hardening); data-protection.md (evidence corrections: date corrections)
+holds the rules, Q232 the readings.
+
+- **Table:** `correction_target_kind` gains `field` and `dsv_signature`; `evidence_correction` gains
+  `field_key` (CHECK: `profilingDoneOn` or `withdrawnOn`), `dsv_offer_id` (FK), `signature_paper`
+  (`dsv_signed_scan` or `dsv_cancellation`, text: an enum cast isn't immutable in the index),
+  `signature_kind`, `corrected_on` and `original_on`; the target CHECK takes one of five targets by
+  kind (compared as text, the values are new in the run), the action CHECK makes both new kinds
+  `supersede`, and the pending index covers the field (participation and key) and the signature
+  (offer, paper and kind). The append-only trigger function covers the new columns.
+- **Signature rows:** `dsv_scan_signature` gains `superseded_by` and `correction_id` (FKs to the
+  correction); `dsv_signature_once` becomes a partial unique index over the current rows. Upgrade
+  tested from a database at 0104 with an existing correction and signature row
+  (`date-corrections-migration.int.test.ts`): both keep their targets and facts.
+- **Recreated functions and their diffs:** `request_evidence_correction` (DROP/CREATE: four
+  parameters `p_field_key`, `p_corrected_on`, `p_signature_paper`, `p_signature_kind` with defaults;
+  the two shapes, the offer locked after its paper's documents, the rules through
+  `field_correction_problem` / `signature_correction_problem`, the original stored, `fieldKey` /
+  `paper` / `signatureKind` in the audit details; and `dsv_form` now refused like the other working
+  copies, as the authority table says), `decide_evidence_correction` (DROP/CREATE, same signature
+  re-created for its body: the two approvals, the rules re-checked against the original,
+  `target_corrected` when it moved; the field written with no other column, or the signature rows
+  superseded and replaced and `dsv_contract`'s retained dates followed), `tl407_facts` (the
+  completion's recording instant also not before the latest approved `profilingDoneOn`
+  correction), `dsv_facts` and `dsv_cancellation_facts` (current signature rows only; the packet's
+  participant date compared among the contract's own scans), `assert_dsv_participant_date` (current
+  rows, the contract's scans only). Grants again for the two writes. New: `field_status_change`
+  (SECURITY DEFINER, granted: the actor type and instant of the change that recorded the field, so
+  the views needn't read `audit_event`), and the internal helpers `field_correction_problem` and
+  `signature_correction_problem`. `record_audit_event` is unchanged: no new event type (the two
+  correction events gain detail keys, their projection rows updated).
+- **Grants:** `transfer_app` writes neither participation column, the signature rows nor the
+  corrections directly (tested); the decision is the one write of `profiling_done_on` and
+  `withdrawn_on` besides the status function.

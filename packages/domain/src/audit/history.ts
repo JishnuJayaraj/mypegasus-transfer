@@ -219,8 +219,11 @@ export const auditProjection: {
   ba_report_recorded: shown("dsv", { details: ["kind", "outcome", "reportedOn", "reason"] }),
   exception_evidence_recorded: shown("profiling", { details: ["kind"] }),
   // Evidence corrections (data-protection.md, evidence corrections): the target's kind, the
-  // action, the reason code and the decision; never the source or a corrected value.
-  evidence_correction_requested: shown("case", { details: ["targetKind", "action", "reason"] }),
+  // action, the reason code and the decision; a field correction's field key, a signature
+  // supersession's paper and signature kind; never the source, a corrected value or a date.
+  evidence_correction_requested: shown("case", {
+    details: ["targetKind", "action", "reason", "fieldKey", "paper", "signatureKind"],
+  }),
   // The DSV's generation (process-and-lifecycle.md, the DSV): in the DSV stream, by its template
   // version and how its deadline was chosen; the pin is project-level.
   dsv_form_generated: shown("dsv", { details: ["templateVersion", "deadlineKind"] }),
@@ -240,7 +243,7 @@ export const auditProjection: {
   reconciliation_reviewed: review,
   reconciliation_replied: review,
   evidence_correction_decided: shown("case", {
-    details: ["targetKind", "action", "reason", "decision"],
+    details: ["targetKind", "action", "reason", "fieldKey", "paper", "signatureKind", "decision"],
   }),
 };
 

@@ -24,7 +24,8 @@ export const documentCorrection = {
 /**
  * The pending corrections in "Freigaben" (data-protection.md, evidence corrections; D29): those of
  * the projects of the manager's regions, oldest first; per item the project, the target's kind
- * and category, the action, the reason, the documented source and the dates, and whether the
+ * and category (a field's key, a signature's paper and kind), the action, the reason, the
+ * documented source and the dates, and whether the
  * viewer may decide it (never their own request). No name, no file, no corrected value.
  */
 export async function correctionReviewItemsOf(
@@ -42,17 +43,26 @@ export async function correctionReviewItemsOf(
     document_type: CorrectionReviewItem["documentType"];
     reporting_kind: CorrectionReviewItem["reportingKind"];
     wrong_person: boolean | null;
+    field_key: CorrectionReviewItem["fieldKey"];
+    signature_kind: CorrectionReviewItem["signatureKind"];
     reason: CorrectionReviewItem["reason"];
     source: string;
     requested_on: string;
     requested_by: string;
     target_recorded_on: string;
   }>(sql`select c.id as correction_id, c.project_id, pr.name as project_name, pr.region_id,
-      c.participation_id, c.target_kind, c.action, d.type as document_type,
-      t.reporting_kind, c.wrong_person, c.reason, c.source, c.requested_by,
+      c.participation_id, c.target_kind, c.action, coalesce(d.type::text, c.signature_paper)
+        as document_type, t.reporting_kind, c.wrong_person, c.field_key, c.signature_kind,
+      c.reason, c.source, c.requested_by,
       to_char(c.requested_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as requested_on,
-      to_char(coalesce(d.reviewed_at, g.recorded_at, t.decided_at) at time zone 'Europe/Berlin',
-        'YYYY-MM-DD') as target_recorded_on
+      -- A field: when its status change was recorded; a signature: when its rows were.
+      to_char(coalesce(d.reviewed_at, g.recorded_at, t.decided_at,
+        (select f.occurred_at from field_status_change(c.participation_id, c.field_key) f
+          where c.field_key is not null),
+        (select min(s.recorded_at) from dsv_scan_signature s join document x on x.id = s.document_id
+          where x.dsv_offer_id = c.dsv_offer_id and x.type::text = c.signature_paper
+            and s.kind = c.signature_kind), c.requested_at)
+        at time zone 'Europe/Berlin', 'YYYY-MM-DD') as target_recorded_on
     from evidence_correction c
     join project pr on pr.id = c.project_id
     left join document d on d.id = c.document_id
@@ -71,6 +81,8 @@ export async function correctionReviewItemsOf(
       documentType: row.document_type,
       reportingKind: row.reporting_kind,
       wrongPerson: row.wrong_person,
+      fieldKey: row.field_key,
+      signatureKind: row.signature_kind,
       reason: row.reason,
       source: row.source,
       requestedOn: row.requested_on,

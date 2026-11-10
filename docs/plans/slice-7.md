@@ -425,6 +425,14 @@ notifications of a cancellation: Q230 (open, with Q46).
 clarifications) and gains `reconciliations`, whose open clarifications are in it by their stage.
 Readings: Q231 (assumed).
 
+**7-8 as built:** the plan's functions and routes. The signature target names its paper beside the
+offer (`supersede_dsv_signature { offerId, paper, signature, signedOn }`), since the contract and its
+cancellation share the signed offer; `dsv_cancellation_facts` and `assert_dsv_participant_date` were
+recreated too (current rows), `record_audit_event` was not (no new event type: the two correction
+events gain detail keys), and `field_status_change` lets the views read who recorded a field without
+reading `audit_event`. `dsv_contract`'s retained dates follow an approved supersession. Readings:
+Q232 (assumed).
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether
@@ -742,7 +750,8 @@ Enum values are added in their PR's generated migration and compared as text in 
   architecture/overview.md.
 - 7-5: process-and-lifecycle.md (cancellation, withdrawal, end reason, customer notice).
 - 7-6: process-and-lifecycle.md (the reconciliation), data-protection.md (its review and reply).
-- 7-8: data-protection.md (evidence corrections: the two field targets).
+- 7-8: data-protection.md (evidence corrections: the two field targets and the signature
+  supersession), process-and-lifecycle.md (date corrections as built), ADR-0002, ADR-0010.
 - 7-9: process-and-lifecycle.md (the manual contact statuses).
 - 7-7a: ADR-0002 (`transfer_retention`, its grants and the trigger path), ADR-0008, ADR-0011,
   ADR-0006 (`FileStorage.list`), data-protection.md (retention as built, funding, settlement dates),

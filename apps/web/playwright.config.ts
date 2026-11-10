@@ -27,8 +27,15 @@ export default defineConfig({
     // The suite on Desktop Chrome (1280×720).
     {
       name: "desktop",
-      testIgnore: ["shell.spec.ts", "projects.spec.ts"],
+      testIgnore: ["shell.spec.ts", "projects.spec.ts", "date-corrections.spec.ts"],
       dependencies: ["project-count"],
+    },
+    // date-corrections.spec.ts reconciles a participation of Werk Nord, which "Freigaben" lists until
+    // its review closes; reconciliation.spec.ts reads that queue, so it runs after the suite.
+    {
+      name: "after-desktop",
+      testMatch: "date-corrections.spec.ts",
+      dependencies: ["desktop"],
     },
     // The shell smoke test at 1440, 768 and 375px (ui-patterns.md, tables and reflow): each test sets
     // its viewport; 375px stands in for 400 % zoom of a 1280px window.

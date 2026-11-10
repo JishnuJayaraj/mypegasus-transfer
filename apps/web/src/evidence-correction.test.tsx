@@ -215,6 +215,62 @@ describe("Korrektur beantragen (D29)", () => {
   });
 });
 
+describe("Korrektur beantragen for a date (data-protection.md, evidence corrections: field targets)", () => {
+  it("asks for the truthful withdrawal date from the page's actions, nothing preset", async () => {
+    const withdrawn = {
+      ...detail,
+      status: "withdrawn",
+      dates: { ...detail.dates, withdrawnOn: "2026-11-05" },
+      dateCorrections: {
+        profilingDoneOn: null,
+        withdrawnOn: { pending: false, mayRequest: true },
+      },
+    };
+    const { calls } = setup(() => withdrawn, {
+      [`POST ${correctionsPath}`]: () =>
+        json({ correctionId: "00000000-0000-4000-e000-000000000002" }, 201),
+    });
+    const menu = await screen.findByRole("button", { name: "Aktionen" });
+    await userEvent.click(menu);
+    await userEvent.click(
+      within(document.getElementById(menu.getAttribute("aria-controls")!)!).getByText(
+        "Rückzugsdatum korrigieren",
+      ),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Korrektur beantragen" });
+    expect(within(dialog).getByText("Betrifft: Zurückgezogen am")).toBeVisible();
+    const confirm = within(dialog).getByRole("button", { name: "Beantragen" });
+    expect(within(dialog).getByLabelText("Richtiges Datum")).toHaveValue("");
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText("Grund"),
+      "documented_internal_error",
+    );
+    await userEvent.type(within(dialog).getByLabelText("Dokumentierte Quelle"), "Akte 4");
+    expect(confirm).toBeDisabled();
+    await userEvent.type(within(dialog).getByLabelText("Richtiges Datum"), "02.11.2026");
+    await userEvent.click(confirm);
+    expect(
+      await screen.findByText("Korrektur beantragt. Sie wird in den Freigaben entschieden."),
+    ).toBeInTheDocument();
+    expect(bodies(calls, `POST ${correctionsPath}`)).toEqual([
+      {
+        correction: "correct_field",
+        field: "withdrawnOn",
+        value: "2026-11-02",
+        reason: "documented_internal_error",
+        source: "Akte 4",
+      },
+    ]);
+  });
+
+  it("offers nothing without the capability", async () => {
+    setup(() => ({ ...detail, status: "withdrawn" }));
+    await section();
+    expect(screen.queryByRole("button", { name: "Aktionen" })).toBeNull();
+    expect(screen.queryByText("Rückzugsdatum korrigieren")).toBeNull();
+  });
+});
+
 describe("Freigaben: corrections", () => {
   const correction = {
     correctionId: "00000000-0000-4000-e000-000000000001",
@@ -225,6 +281,8 @@ describe("Freigaben: corrections", () => {
     documentType: null,
     reportingKind: null,
     wrongPerson: null,
+    fieldKey: null,
+    signatureKind: null,
     reason: "corrected_source_document",
     source: "BA-Schreiben vom 02.11.",
     requestedOn: "2026-11-05",
@@ -270,6 +328,39 @@ describe("Freigaben: corrections", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Freigeben" }));
     expect(await screen.findByText("Korrektur freigegeben.")).toBeInTheDocument();
     expect(bodies(calls, `POST ${decisionPath}`)).toEqual([{ decision: "approve" }]);
+  });
+
+  it("names a field correction by its field and a signature by its paper and kind, never a date", async () => {
+    const { api } = mockApi({
+      "GET /api/v1/me": () =>
+        json({
+          ...staffUsers[1],
+          orgRoles: [{ role: "regional_operations_manager", regionId: "r-1" }],
+        }),
+      "GET /api/v1/dev/staff-users": () => json(staffUsers),
+      "GET /api/v1/reviews": () =>
+        json({
+          items: [],
+          corrections: [
+            { ...correction, targetKind: "field", fieldKey: "profilingDoneOn" },
+            {
+              ...correction,
+              correctionId: "00000000-0000-4000-e000-000000000003",
+              targetKind: "dsv_signature",
+              documentType: "dsv_signed_scan",
+              signatureKind: "participant",
+            },
+          ],
+          clarifications: [],
+          reconciliations: [],
+        }),
+    });
+    renderApp("/reviews", api);
+    const table = await screen.findByRole("table", { name: "Beantragte Korrekturen" });
+    expect(within(table).getByText("Datum: Profiling abgeschlossen am")).toBeInTheDocument();
+    expect(
+      within(table).getByText(/^Unterschriftsdatum: .+, Unterschrift Teilnehmer·in$/),
+    ).toBeInTheDocument();
   });
 
   it("says so when the correction was decided meanwhile", async () => {

@@ -2787,6 +2787,54 @@
               null
             ]
           },
+          "dateCorrections": {
+            "type": "object",
+            "properties": {
+              "profilingDoneOn": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "pending": {
+                    "type": "boolean"
+                  },
+                  "mayRequest": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "pending",
+                  "mayRequest"
+                ],
+                "additionalProperties": false
+              },
+              "withdrawnOn": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "pending": {
+                    "type": "boolean"
+                  },
+                  "mayRequest": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "pending",
+                  "mayRequest"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "profilingDoneOn",
+              "withdrawnOn"
+            ],
+            "additionalProperties": false
+          },
           "statusVersion": {
             "type": "integer",
             "minimum": 0
@@ -15652,6 +15700,43 @@
             ],
             "additionalProperties": false
           },
+          "signatureCorrections": {
+            "type": "object",
+            "properties": {
+              "mayRequest": {
+                "type": "boolean"
+              },
+              "pending": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "offerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "paper": {
+                      "$ref": "#/components/schemas/DsvSignaturePaper"
+                    },
+                    "signature": {
+                      "$ref": "#/components/schemas/DsvSignatureKind"
+                    }
+                  },
+                  "required": [
+                    "offerId",
+                    "paper",
+                    "signature"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "mayRequest",
+              "pending"
+            ],
+            "additionalProperties": false
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -15706,6 +15791,7 @@
           "generations",
           "contract",
           "facts",
+          "signatureCorrections",
           "capabilities"
         ],
         "additionalProperties": false
@@ -15905,6 +15991,21 @@
           "sentToCustomerOn"
         ],
         "additionalProperties": false
+      },
+      "DsvSignaturePaper": {
+        "type": "string",
+        "enum": [
+          "dsv_signed_scan",
+          "dsv_cancellation"
+        ]
+      },
+      "DsvSignatureKind": {
+        "type": "string",
+        "enum": [
+          "participant",
+          "customer",
+          "transfergesellschaft"
+        ]
       },
       "DsvGenerationResult": {
         "type": "object",
@@ -18258,6 +18359,22 @@
                     null
                   ]
                 },
+                "fieldKey": {
+                  "$ref": "#/components/schemas/CorrectableField"
+                },
+                "signatureKind": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/DsvSignatureKind"
+                    },
+                    {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  ]
+                },
                 "wrongPerson": {
                   "type": [
                     "boolean",
@@ -18306,6 +18423,8 @@
                 "action",
                 "documentType",
                 "reportingKind",
+                "fieldKey",
+                "signatureKind",
                 "wrongPerson",
                 "reason",
                 "source",
@@ -18340,7 +18459,9 @@
         "enum": [
           "document",
           "asu_registration",
-          "ba_reporting_task"
+          "ba_reporting_task",
+          "field",
+          "dsv_signature"
         ]
       },
       "CorrectionAction": {
@@ -18348,6 +18469,17 @@
         "enum": [
           "invalidate",
           "supersede"
+        ]
+      },
+      "CorrectableField": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "profilingDoneOn",
+          "withdrawnOn",
+          null
         ]
       },
       "CorrectionReason": {
@@ -18674,6 +18806,89 @@
             "required": [
               "correction",
               "taskId",
+              "reason",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "correction": {
+                "type": "string",
+                "enum": [
+                  "correct_field"
+                ]
+              },
+              "field": {
+                "$ref": "#/components/schemas/CorrectableField"
+              },
+              "value": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/CorrectionReason"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "correction",
+              "field",
+              "value",
+              "reason",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "correction": {
+                "type": "string",
+                "enum": [
+                  "supersede_dsv_signature"
+                ]
+              },
+              "offerId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "paper": {
+                "$ref": "#/components/schemas/DsvSignaturePaper"
+              },
+              "signature": {
+                "$ref": "#/components/schemas/DsvSignatureKind"
+              },
+              "signedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/CorrectionReason"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "correction",
+              "offerId",
+              "paper",
+              "signature",
+              "signedOn",
               "reason",
               "source"
             ],

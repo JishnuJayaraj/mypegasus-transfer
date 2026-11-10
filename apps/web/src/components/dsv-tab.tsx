@@ -53,7 +53,13 @@ const ok = <T,>(result: { data?: T; error?: unknown }) => {
 const codeOf = (error: unknown) =>
   error instanceof ApiProblemError ? error.problem.errors?.[0]?.code : undefined;
 
-export function DsvTab({ participationId }: { participationId: string }) {
+export function DsvTab({
+  participationId,
+  projectId,
+}: {
+  participationId: string;
+  projectId: string;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
@@ -248,11 +254,11 @@ export function DsvTab({ participationId }: { participationId: string }) {
       {view.track === "dsv_signed" && <EntryClarification participationId={participationId} />}
       {view.track === "dsv_signed" && <TgEntryReconciliation participationId={participationId} />}
       <DsvCustomerNotice view={view} />
-      <DsvScans view={view} onOpen={open} />
+      <DsvScans view={view} projectId={projectId} onOpen={open} />
       <DsvContract view={view} />
       {/* The cancellation of the signed contract (process-and-lifecycle.md, the cancellation). */}
       {(view.track === "dsv_signed" || view.cancellations.length > 0) && (
-        <DsvScans view={view} onOpen={open} paper="cancellation" />
+        <DsvScans view={view} projectId={projectId} onOpen={open} paper="cancellation" />
       )}
       <Card title={t("dsv.generations.title")} level={3}>
         <SimpleTable

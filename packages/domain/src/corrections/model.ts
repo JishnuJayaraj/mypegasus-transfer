@@ -3,7 +3,7 @@ import { mayPerformOperation, type PermissionTarget } from "../access/permission
 import type { Subject } from "../access/decide";
 import type { EvidenceCorrectionTarget } from "../access/corrections";
 import { DocumentType } from "../documents/catalog";
-import { isoDate } from "../iso-date";
+import { isoDate, type IsoDate } from "../iso-date";
 import { BaReportingKind } from "../projects/participation-dates";
 
 // Approved append-only corrections of wrong evidence (data-protection.md, evidence corrections;
@@ -27,7 +27,7 @@ export type CorrectionReason = z.infer<typeof CorrectionReason>;
 
 /** What a correction targets in this slice. */
 export const CorrectionTargetKind = z
-  .enum(["document", "asu_registration", "ba_reporting_task"])
+  .enum(["document", "asu_registration", "ba_reporting_task", "field", "dsv_signature"])
   .meta({ id: "CorrectionTargetKind" });
 export type CorrectionTargetKind = z.infer<typeof CorrectionTargetKind>;
 
@@ -65,6 +65,28 @@ export const CorrectionSource = z
 const base = { reason: CorrectionReason, source: CorrectionSource };
 
 /**
+ * The fields a field correction may target (data-protection.md, evidence corrections: field
+ * targets): the dates the entry guard, the reconciliation and the deletion clock read. Every other
+ * field of the correction-authority table waits for its own operation.
+ */
+export const CorrectableField = z
+  .enum(["profilingDoneOn", "withdrawnOn"])
+  .meta({ id: "CorrectableField" });
+export type CorrectableField = z.infer<typeof CorrectableField>;
+
+/** A confirmed signature on DSV paper (process-and-lifecycle.md, the DSV signature). */
+export const DsvSignatureKind = z
+  .enum(["participant", "customer", "transfergesellschaft"])
+  .meta({ id: "DsvSignatureKind" });
+export type DsvSignatureKind = z.infer<typeof DsvSignatureKind>;
+
+/** The DSV paper whose signature date is superseded: the contract or its cancellation. */
+export const DsvSignaturePaper = z
+  .enum(["dsv_signed_scan", "dsv_cancellation"])
+  .meta({ id: "DsvSignaturePaper" });
+export type DsvSignaturePaper = z.infer<typeof DsvSignaturePaper>;
+
+/**
  * `POST /participations/{id}/evidence-corrections`: the target the PL reviewed, by its id, what
  * the approval would do and the corrected fact where there is one. Nothing has a default: the PL
  * chooses each value (`wrongPerson` too).
@@ -93,6 +115,26 @@ export const EvidenceCorrectionRequestInput = z
     z.strictObject({
       correction: z.literal("supersede_ba_report"),
       taskId: z.uuid(),
+      ...base,
+    }),
+    /** A wrong `profilingDoneOn` or manual `withdrawnOn`: the truthful date (data-protection.md). */
+    z.strictObject({
+      correction: z.literal("correct_field"),
+      field: CorrectableField,
+      value: isoDate,
+      ...base,
+    }),
+    /**
+     * A wrong signature date on accepted DSV paper of the offer, as the paper shows it: superseded
+     * on every accepted scan of that paper showing the signature (process-and-lifecycle.md, the DSV
+     * signature-date supersession).
+     */
+    z.strictObject({
+      correction: z.literal("supersede_dsv_signature"),
+      offerId: z.uuid(),
+      paper: DsvSignaturePaper,
+      signature: DsvSignatureKind,
+      signedOn: isoDate,
       ...base,
     }),
   ])
@@ -126,7 +168,97 @@ export function correctionShape(kind: EvidenceCorrectionKind): {
       return { targetKind: "asu_registration", action: "supersede" };
     case "supersede_ba_report":
       return { targetKind: "ba_reporting_task", action: "supersede" };
+    case "correct_field":
+      return { targetKind: "field", action: "supersede" };
+    case "supersede_dsv_signature":
+      return { targetKind: "dsv_signature", action: "supersede" };
   }
+}
+
+/** Why a date correction is refused (the function refuses the same under the lock). */
+export type DateCorrectionProblem = {
+  code:
+    | "field_not_recorded"
+    | "correction_unchanged"
+    | "corrected_on_in_future"
+    | "effective_date_before_signature"
+    | "withdrawal_by_system"
+    | "effective_date_before_cancellation"
+    | "signature_not_shown"
+    | "signature_date_mismatch"
+    | "received_before_signature";
+  field: "value" | "signedOn" | "field" | "signature";
+};
+
+/** What a field correction is checked against, as recorded now. */
+export type FieldCorrectionFacts =
+  | {
+      field: "profilingDoneOn";
+      /** The recorded date; null while the profiling track isn't `profiling_done`. */
+      current: IsoDate | null;
+      /** The earliest later signature date of the usable accepted TL 407 scans (Q191). */
+      tl407SignedOn: IsoDate | null;
+    }
+  | {
+      field: "withdrawnOn";
+      /** The recorded date; null while the participation isn't `withdrawn`. */
+      current: IsoDate | null;
+      /** Who withdrew it: a system withdrawal's date is derived, never corrected. */
+      withdrawnBy: "user" | "system" | null;
+      /** A withdrawal of a signed DSV (D10's rule applies): the counting cancellation's validity. */
+      signedDsv: boolean;
+      cancellationValidOn: IsoDate | null;
+    };
+
+/**
+ * A field correction's rules (data-protection.md, evidence corrections: field targets): the field
+ * holds a value, the corrected date differs and isn't in the future; `profilingDoneOn` not before
+ * the usable TL 407's later signature date (Q191); `withdrawnOn` only for a manual withdrawal and,
+ * for a signed DSV, not before the cancellation's validity.
+ */
+export function fieldCorrectionProblem(
+  facts: FieldCorrectionFacts,
+  value: IsoDate,
+  today: IsoDate,
+): DateCorrectionProblem | null {
+  if (facts.current === null) return { code: "field_not_recorded", field: "field" };
+  if (facts.field === "withdrawnOn" && facts.withdrawnBy !== "user") {
+    return { code: "withdrawal_by_system", field: "field" };
+  }
+  if (value === facts.current) return { code: "correction_unchanged", field: "value" };
+  if (value > today) return { code: "corrected_on_in_future", field: "value" };
+  if (facts.field === "profilingDoneOn") {
+    return facts.tl407SignedOn === null || value < facts.tl407SignedOn
+      ? { code: "effective_date_before_signature", field: "value" }
+      : null;
+  }
+  return facts.signedDsv &&
+    (facts.cancellationValidOn === null || value < facts.cancellationValidOn)
+    ? { code: "effective_date_before_cancellation", field: "value" }
+    : null;
+}
+
+/**
+ * A signature-date supersession's rules (process-and-lifecycle.md, the DSV signature-date
+ * supersession): the accepted scans of the paper show the signature, all with one date; the
+ * corrected date differs, isn't in the future and keeps the paper's order (received not before the
+ * participant's signature).
+ */
+export function signatureCorrectionProblem(
+  scans: readonly { signedOn: IsoDate; receivedOn: IsoDate }[],
+  signature: DsvSignatureKind,
+  value: IsoDate,
+  today: IsoDate,
+): DateCorrectionProblem | null {
+  if (scans.length === 0) return { code: "signature_not_shown", field: "signature" };
+  const dates = new Set(scans.map((scan) => scan.signedOn));
+  if (dates.size > 1) return { code: "signature_date_mismatch", field: "signature" };
+  if (dates.has(value)) return { code: "correction_unchanged", field: "signedOn" };
+  if (value > today) return { code: "corrected_on_in_future", field: "signedOn" };
+  if (signature === "participant" && scans.some((scan) => scan.receivedOn < value)) {
+    return { code: "received_before_signature", field: "signedOn" };
+  }
+  return null;
 }
 
 /**
@@ -140,13 +272,21 @@ export const CorrectionReviewItem = z.object({
   projectName: z.string(),
   targetKind: CorrectionTargetKind,
   action: CorrectionAction,
+  /** The document's type, or for a signature supersession the paper's. */
   documentType: DocumentType.nullable(),
   reportingKind: BaReportingKind.nullable(),
+  /** A field correction's field key (never its value). */
+  fieldKey: CorrectableField.nullable(),
+  /** A signature supersession's signature kind (never a date). */
+  signatureKind: DsvSignatureKind.nullable(),
   wrongPerson: z.boolean().nullable(),
   reason: CorrectionReason,
   source: z.string(),
   requestedOn: isoDate,
-  /** The Berlin day the target was recorded (accepted, registered or closed). */
+  /**
+   * The Berlin day the target was recorded (accepted, registered or closed; a field's status
+   * change; a signature's recording).
+   */
   targetRecordedOn: isoDate,
   capabilities: z.object({ decide: z.boolean() }),
 });

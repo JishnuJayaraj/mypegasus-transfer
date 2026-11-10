@@ -151,6 +151,9 @@ export type BaReportingTaskView = z.infer<typeof BaReportingTaskView>;
 
 const recorded = <T extends z.ZodType>(schema: T) => schema.nullable().optional();
 
+/** A field correction's state ("Korrektur beantragen" and a pending request), as `CorrectionState`. */
+const fieldCorrectionState = z.strictObject({ pending: z.boolean(), mayRequest: z.boolean() });
+
 /**
  * One participation for its detail page (data-protection.md, "Participation detail"). The
  * case data (statuses, wave, dates) is shown only to a viewer who may read all of it; each person
@@ -182,6 +185,18 @@ export const ParticipationDetail = z
      */
     endReason: recorded(EndReason),
     endReasonSource: recorded(z.enum(["user", "system"])),
+    /**
+     * "Korrektur beantragen" for the field targets (data-protection.md, evidence corrections):
+     * `profilingDoneOn` while recorded, a manual `withdrawnOn`; `null` where the field holds no
+     * correctable value. Present only for a viewer who may request one (the PL).
+     */
+    dateCorrections: z
+      .strictObject({
+        // Its own shape: a nullable `CorrectionState` would make every use of that schema nullable.
+        profilingDoneOn: fieldCorrectionState.nullable(),
+        withdrawnOn: fieldCorrectionState.nullable(),
+      })
+      .optional(),
     /** The version a status-dependent write compares (compare-and-set). */
     statusVersion: z.int().min(0),
     entryWave: z

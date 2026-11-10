@@ -229,7 +229,14 @@ function useTargetLabel() {
           ? t(`participant.tasks.kinds.${item.reportingKind}`)
           : "";
     const kind = t(`corrections.targets.${item.targetKind}`);
-    return category ? `${kind}: ${category}` : kind;
+    // A date correction names its field or its signature (never a date): Q209 (5).
+    const detail =
+      item.fieldKey !== null
+        ? t(`corrections.fields.${item.fieldKey}`)
+        : item.signatureKind !== null
+          ? `${category}, ${t(`corrections.signatures.${item.signatureKind}`)}`
+          : category;
+    return detail ? `${kind}: ${detail}` : kind;
   };
 }
 

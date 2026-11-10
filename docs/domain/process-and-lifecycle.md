@@ -1450,3 +1450,36 @@ request until it is resolved the PL's work list has "Rückfrage zum Eintritt"
 (`reconciliation_clarification`). Nothing reverses the entry; a wrong entry is corrected only
 through what Q220 and Slice 8 provide. The events `reconciliation_reviewed` and
 `reconciliation_replied` are in the `review` stream (never in a history), codes only.
+
+### Date corrections as built (7-8)
+
+*(Q88 assumed, Q191 accepted, Q209 accepted; readings Q232; Q220 stays open.)*
+
+**A wrong `profilingDoneOn`** (the profiling track) is corrected only by an approved field correction
+(data-protection.md, evidence corrections: date corrections): "Korrektur beantragen" beside
+"Abgeschlossen am" on the tab "Profiling" (the PL), approved by the regional operations manager of the
+region in "Freigaben". The corrected date is not in the future and not before the later actual
+signature date of a usable accepted TL 407 (Q191). The status stays `profiling_done`; the corrected
+fact is recorded at the approval: `tl407_facts` gives `profilingDone` valid on the corrected date and
+recorded at the latest of the supporting scan's availability, the status change and the approval. A
+scheduled entry run before the approval keeps what it saw (the snapshot rule); a later run or "Eintritt
+nachträglich erfassen" uses the corrected date, so a start missed on the wrong date is reconciled
+(the reconciliation as built, 7-6).
+
+**A wrong manual `withdrawnOn`** ("Rückzugsdatum korrigieren" in the page header's actions, the PL):
+not for a system withdrawal (its date is derived), not in the future, and for a withdrawal of a signed
+DSV not before the cancellation's validity. The status and the end reason stay.
+
+**A wrong DSV signature date** is superseded, never edited: "Korrektur beantragen" beside each
+signature of an accepted scan on the tab "DSV" (the PL or back office), approved in "Freigaben". The
+approval appends a linked replacement signature row on every accepted scan of that paper (the
+contract's scans, or the cancellation's) showing the signature, with the corrected actual date,
+recorded at the approval; the original row stays. `dsvSignedOn`, the packet's validity and the
+cancellation's validity read the current rows (`recordedAt` the later of the acceptance or lift and
+the approval), so no scheduled run before the approval counts the corrected date; the contract's
+retained dates follow it. The corrected date keeps the paper's order (received not before the
+participant's signature). When a corrected date no longer supports an entry already recorded (a
+packet now completed after the TG entry date, a completion now after it), the PL's work list shows
+"Nachweis ungültig" until the current facts support it again; it is resolved through the
+reconciliation rules or the entry clarification, never repaired, and Q220 decides what else exists for
+an entry that stays unsupported.

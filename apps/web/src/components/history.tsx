@@ -270,8 +270,16 @@ export function HistoryTab({
       // action, the reason and the decision; never the source or a corrected value.
       case "evidence_correction_requested":
       case "evidence_correction_decided": {
+        // A date correction's field key or signature kind, never a value or a date.
+        const field = text(details.fieldKey);
+        const signature = text(details.signatureKind);
+        const subject = field
+          ? coded("corrections.fields", field)
+          : signature
+            ? coded("corrections.signatures", signature)
+            : null;
         const correction = t("history.correction", {
-          target: coded("corrections.targets", text(details.targetKind) ?? ""),
+          target: `${coded("corrections.targets", text(details.targetKind) ?? "")}${subject ? ` (${subject})` : ""}`,
           action: coded("corrections.actions", text(details.action) ?? ""),
           reason: coded("corrections.reasons", text(details.reason) ?? ""),
         });

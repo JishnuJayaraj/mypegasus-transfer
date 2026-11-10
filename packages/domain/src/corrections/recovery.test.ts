@@ -180,3 +180,41 @@ describe("a DSV scan's invalidation (D8)", () => {
     ).toBe(true);
   });
 });
+
+const correction = (subject: "profilingDoneOn" | "dsvSignature"): ApprovedInvalidation => ({
+  ...decided,
+  target: { kind: "date_correction", subject },
+});
+
+describe("date corrections and an entry already recorded (Nachweis ungültig)", () => {
+  const entered = { ...none, tgEntryDate: "2026-04-01" };
+
+  it("raises nothing before an entry", () => {
+    expect(invalidationResolved(correction("profilingDoneOn"), none)).toBe(true);
+    expect(invalidationResolved(correction("dsvSignature"), none)).toBe(true);
+  });
+
+  it("raises it while the corrected profilingDoneOn is after the entry, clears it once supported", () => {
+    const item = correction("profilingDoneOn");
+    expect(evidenceInvalidatedSince([item], { ...entered, profilingDoneOn: "2026-04-02" })).toBe(
+      "2026-11-05",
+    );
+    expect(invalidationResolved(item, entered)).toBe(false);
+    expect(invalidationResolved(item, { ...entered, profilingDoneOn: "2026-04-01" })).toBe(true);
+    expect(
+      invalidationResolved(item, {
+        ...entered,
+        profilingDoneOn: "2026-04-02",
+        profilingExceptionApproved: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("raises it while the packet is now completed after the entry, or none counts", () => {
+    const item = correction("dsvSignature");
+    expect(invalidationResolved(item, { ...entered, fullyExecutedOn: "2026-04-02" })).toBe(false);
+    expect(invalidationResolved(item, { ...entered, fullyExecutedOn: null })).toBe(false);
+    expect(invalidationResolved(item, entered)).toBe(false);
+    expect(invalidationResolved(item, { ...entered, fullyExecutedOn: "2026-04-01" })).toBe(true);
+  });
+});

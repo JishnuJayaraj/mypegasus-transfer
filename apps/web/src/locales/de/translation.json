@@ -1117,7 +1117,8 @@
       "assisted": "Assistierte Erfassung starten",
       "withdraw": "Zurückziehen",
       "correctEndReason": "Grund korrigieren",
-      "reconcile": "Eintritt nachträglich erfassen"
+      "reconcile": "Eintritt nachträglich erfassen",
+      "correctWithdrawnOn": "Rückzugsdatum korrigieren"
     },
     "withdrawal": {
       "title": "Zurückziehen",
@@ -3397,7 +3398,9 @@
           "invalidate_document_wrong_person": "Der Nachweis wird für ungültig erklärt und die Datei gelöscht; der Verlauf bleibt.",
           "invalidate_asu_registration": "Die ASU-Meldung wird für ungültig erklärt; sie bleibt im Verlauf.",
           "supersede_asu_registration": "Die ASU-Meldung wird mit dem beantragten Datum ersetzt, erfasst zum Zeitpunkt der Freigabe.",
-          "supersede_ba_reporting_task": "Das Ergebnis der BA-Meldung wird durch eine neue, offene BA-Meldung ersetzt."
+          "supersede_ba_reporting_task": "Das Ergebnis der BA-Meldung wird durch eine neue, offene BA-Meldung ersetzt.",
+          "supersede_field": "Das Datum wird durch das beantragte ersetzt, gültig ab der Freigabe; das bisherige bleibt im Verlauf. Kein Status ändert sich.",
+          "supersede_dsv_signature": "Das Unterschriftsdatum wird auf jedem angenommenen Scan des Papiers durch das beantragte ersetzt, erfasst zum Zeitpunkt der Freigabe; das bisherige bleibt im Verlauf."
         },
         "source": "Quelle: {{source}}",
         "noStatus": "Kein Status, keine Frist und kein Datum der Teilnahme wird dadurch geändert.",
@@ -3517,7 +3520,9 @@
     "targets": {
       "document": "Unterlage",
       "asu_registration": "ASU-Meldung",
-      "ba_reporting_task": "BA-Meldung"
+      "ba_reporting_task": "BA-Meldung",
+      "field": "Datum",
+      "dsv_signature": "Unterschriftsdatum"
     },
     "actions": {
       "invalidate": "für ungültig erklären",
@@ -3552,7 +3557,10 @@
       "final": "Die Korrektur gilt erst, wenn die Regionale Betriebsleitung sie freigibt. Kein Status wird dadurch zurückgesetzt.",
       "confirm": "Beantragen",
       "cancel": "Abbrechen",
-      "kug200bOnlyInvalidate": "Auf dem Weg Kug 200b ist das Meldedatum das der Sammelmeldung. Die Meldung kann nur für ungültig erklärt werden; danach wird sie neu erfasst."
+      "kug200bOnlyInvalidate": "Auf dem Weg Kug 200b ist das Meldedatum das der Sammelmeldung. Die Meldung kann nur für ungültig erklärt werden; danach wird sie neu erfasst.",
+      "correctedOn": "Richtiges Datum",
+      "fieldHint": "Das richtige Datum, wie es die Quelle belegt. Das bisherige Datum bleibt im Verlauf; nach der Freigabe gilt das richtige Datum ab dann, kein Status ändert sich.",
+      "signatureHint": "Das Datum, wie es auf dem Papier steht. Es ersetzt das erfasste Datum auf jedem angenommenen Scan dieses Papiers; das bisherige bleibt im Verlauf."
     },
     "messages": {
       "requested": "Korrektur beantragt. Sie wird in den Freigaben entschieden.",
@@ -3566,9 +3574,26 @@
         "task_pending": "Eine offene BA-Meldung wird erfasst, nicht korrigiert.",
         "asu_route_kug200b": "Auf dem Weg Kug 200b ist das Meldedatum das der Sammelmeldung; die Meldung kann nur für ungültig erklärt werden.",
         "registered_on_in_future": "Das Meldedatum darf nicht in der Zukunft liegen.",
-        "correction_unchanged": "Das Meldedatum ist schon so erfasst.",
-        "source_invalid": "Bitte die Quelle in einer Zeile angeben."
+        "correction_unchanged": "Das Datum ist schon so erfasst.",
+        "source_invalid": "Bitte die Quelle in einer Zeile angeben.",
+        "field_not_recorded": "Für dieses Datum ist nichts erfasst, das korrigiert werden kann.",
+        "corrected_on_in_future": "Das Datum darf nicht in der Zukunft liegen.",
+        "effective_date_before_signature": "Das Datum darf nicht vor der Unterschrift auf dem angenommenen TL 407 liegen.",
+        "withdrawal_by_system": "Das Datum eines automatischen Rückzugs ist abgeleitet und wird nicht korrigiert.",
+        "effective_date_before_cancellation": "Das Datum darf nicht vor der Gültigkeit des Aufhebungsvertrags liegen.",
+        "signature_not_shown": "Auf keinem angenommenen Scan ist diese Unterschrift bestätigt.",
+        "signature_date_mismatch": "Die Scans zeigen für diese Unterschrift verschiedene Daten.",
+        "received_before_signature": "Das Papier wurde vor diesem Datum entgegengenommen."
       }
+    },
+    "fields": {
+      "profilingDoneOn": "Profiling abgeschlossen am",
+      "withdrawnOn": "Zurückgezogen am"
+    },
+    "signatures": {
+      "participant": "Unterschrift Teilnehmer·in",
+      "customer": "Unterschrift Kunde",
+      "transfergesellschaft": "Unterschrift Transfergesellschaft"
     }
   },
   "dsv": {

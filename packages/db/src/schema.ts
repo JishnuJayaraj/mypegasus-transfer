@@ -2954,6 +2954,15 @@ export const evidenceCorrection = pgTable(
     wrongPerson: boolean("wrong_person"),
     /** An ASU supersession's corrected actual registration date. */
     correctedRegisteredOn: dateColumn("corrected_registered_on"),
+    /** A field correction's field (`profilingDoneOn`, `withdrawnOn`; data-protection.md). */
+    fieldKey: text("field_key"),
+    /** A DSV signature supersession's offer, paper and signature kind. */
+    dsvOfferId: uuid("dsv_offer_id").references((): AnyPgColumn => dsvOffer.id),
+    signaturePaper: text("signature_paper"),
+    signatureKind: text("signature_kind"),
+    /** A field or signature correction's corrected date and the original it replaces. */
+    correctedOn: dateColumn("corrected_on"),
+    originalOn: dateColumn("original_on"),
     reason: correctionReason("reason").notNull(),
     /** Where it is documented: one normalised line, no name or health detail. */
     source: text("source").notNull(),
@@ -2975,15 +2984,18 @@ export const evidenceCorrection = pgTable(
     index("evidence_correction_participation_idx").on(t.participationId),
     // One pending request per target.
     uniqueIndex("evidence_correction_one_pending_idx")
-      .on(sql`coalesce(document_id, asu_registration_id, ba_reporting_task_id)`)
+      .on(
+        sql`coalesce(document_id::text, asu_registration_id::text, ba_reporting_task_id::text, participation_id::text || '/' || field_key, dsv_offer_id::text || '/' || signature_paper || '/' || signature_kind)`,
+      )
       .where(sql`status = 'requested'`),
     check(
       "evidence_correction_target",
-      sql`num_nonnulls(${t.documentId}, ${t.asuRegistrationId}, ${t.baReportingTaskId}) = 1 and (${t.targetKind} = 'document') = (${t.documentId} is not null) and (${t.targetKind} = 'asu_registration') = (${t.asuRegistrationId} is not null) and (${t.targetKind} = 'ba_reporting_task') = (${t.baReportingTaskId} is not null)`,
+      // The target kinds compared as text: 'field' and 'dsv_signature' are added in the same run.
+      sql`num_nonnulls(${t.documentId}, ${t.asuRegistrationId}, ${t.baReportingTaskId}, ${t.fieldKey}, ${t.dsvOfferId}) = 1 and (${t.targetKind}::text = 'document') = (${t.documentId} is not null) and (${t.targetKind}::text = 'asu_registration') = (${t.asuRegistrationId} is not null) and (${t.targetKind}::text = 'ba_reporting_task') = (${t.baReportingTaskId} is not null) and (${t.targetKind}::text = 'field') = (${t.fieldKey} is not null) and (${t.targetKind}::text = 'dsv_signature') = (${t.dsvOfferId} is not null) and (${t.fieldKey} is null or ${t.fieldKey} in ('profilingDoneOn', 'withdrawnOn')) and (${t.dsvOfferId} is not null) = (${t.signaturePaper} is not null) and (${t.dsvOfferId} is not null) = (${t.signatureKind} is not null) and (${t.signaturePaper} is null or ${t.signaturePaper} in ('dsv_signed_scan', 'dsv_cancellation')) and (${t.signatureKind} is null or ${t.signatureKind} in ('participant', 'customer', 'transfergesellschaft')) and (${t.targetKind}::text in ('field', 'dsv_signature')) = (${t.correctedOn} is not null) and (${t.correctedOn} is not null) = (${t.originalOn} is not null)`,
     ),
     check(
       "evidence_correction_action",
-      sql`(${t.targetKind} <> 'document' or ${t.action} = 'invalidate') and (${t.targetKind} <> 'ba_reporting_task' or ${t.action} = 'supersede') and (${t.targetKind} = 'document') = (${t.wrongPerson} is not null) and (${t.targetKind} = 'asu_registration' and ${t.action} = 'supersede') = (${t.correctedRegisteredOn} is not null)`,
+      sql`(${t.targetKind}::text <> 'document' or ${t.action} = 'invalidate') and (${t.targetKind}::text not in ('ba_reporting_task', 'field', 'dsv_signature') or ${t.action} = 'supersede') and (${t.targetKind}::text = 'document') = (${t.wrongPerson} is not null) and (${t.targetKind}::text = 'asu_registration' and ${t.action} = 'supersede') = (${t.correctedRegisteredOn} is not null)`,
     ),
     check(
       "evidence_correction_source",
@@ -3480,6 +3492,12 @@ export const dsvScanSignature = pgTable("dsv_scan_signature", {
   kind: text("kind").notNull(),
   signedOn: dateColumn("signed_on").notNull(),
   recordedAt: instant("recorded_at").notNull().defaultNow(),
+  /**
+   * The approved signature-date correction that superseded this row (process-and-lifecycle.md, the
+   * DSV signature-date supersession); the replacement row names it as `correction_id`.
+   */
+  supersededBy: uuid("superseded_by").references((): AnyPgColumn => evidenceCorrection.id),
+  correctionId: uuid("correction_id").references((): AnyPgColumn => evidenceCorrection.id),
 });
 
 /**

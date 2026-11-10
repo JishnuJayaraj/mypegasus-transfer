@@ -3,6 +3,7 @@ import {
   asuRegistration,
   baReportingTask,
   document,
+  dsvOffer,
   eq,
   evidenceCorrection,
   participation,
@@ -12,6 +13,8 @@ import {
 import {
   correctionShape,
   documentsHidden,
+  fieldCorrectionProblem,
+  signatureCorrectionProblem,
   EvidenceCorrectionDecisionInput,
   EvidenceCorrectionRequested,
   EvidenceCorrectionRequestInput,
@@ -21,8 +24,10 @@ import {
   maySeeReview,
   mayRequestCorrection,
   readableDocumentTypes,
+  type DateCorrectionProblem,
   type DocumentType,
   type EvidenceCorrectionRequestInput as RequestInput,
+  type EvidenceCorrectionTarget,
   type Subject,
 } from "@transfer/domain";
 import type { Context } from "hono";
@@ -59,8 +64,33 @@ const fields: Record<string, string> = {
   correction_unchanged: "registeredOn",
 };
 
+/** A date correction's refusals point at its own fields (the request's shape decides which). */
+const dateCodes = new Set([
+  "field_not_recorded",
+  "correction_unchanged",
+  "corrected_on_in_future",
+  "effective_date_before_signature",
+  "withdrawal_by_system",
+  "effective_date_before_cancellation",
+  "signature_not_shown",
+  "signature_date_mismatch",
+  "received_before_signature",
+]);
+function pointerOf(code: string, input: RequestInput | undefined): string | null {
+  if (!dateCodes.has(code)) return fields[code] ?? null;
+  if (input?.correction === "correct_field") {
+    return code === "field_not_recorded" || code === "withdrawal_by_system" ? "field" : "value";
+  }
+  if (input?.correction === "supersede_dsv_signature") {
+    return code === "signature_not_shown" || code === "signature_date_mismatch"
+      ? "signature"
+      : "signedOn";
+  }
+  return fields[code] ?? null;
+}
+
 /** The functions' refusals as their problems (allowlisted), or rethrown. */
-function refused(c: Context<AppEnv>, error: unknown) {
+function refused(c: Context<AppEnv>, error: unknown, input?: RequestInput) {
   const code = functionRefusal(error);
   switch (code) {
     case "actor_not_allowed":
@@ -81,7 +111,15 @@ function refused(c: Context<AppEnv>, error: unknown) {
     case "asu_route_kug200b":
     case "target_corrected":
     case "correction_pending":
-      return domainProblem(c, [{ code, field: fields[code] ?? null }]);
+    case "field_not_recorded":
+    case "corrected_on_in_future":
+    case "effective_date_before_signature":
+    case "withdrawal_by_system":
+    case "effective_date_before_cancellation":
+    case "signature_not_shown":
+    case "signature_date_mismatch":
+    case "received_before_signature":
+      return domainProblem(c, [{ code, field: pointerOf(code, input) }]);
     default:
       throw error;
   }
@@ -103,9 +141,33 @@ async function targetOf(
   | { kind: "document"; id: string; documentType: DocumentType }
   | { kind: "asu_registration"; id: string }
   | { kind: "ba_reporting_task"; id: string }
+  | { kind: "field"; fieldKey: string }
+  | { kind: "dsv_signature"; id: string; documentType: DocumentType }
   | undefined
 > {
   const { participationId, projectId } = target;
+  // A field of the participation the viewer sees: its correction is the authority table's.
+  if (input.correction === "correct_field") return { kind: "field", fieldKey: input.field };
+  if (input.correction === "supersede_dsv_signature") {
+    // The offer of this participation, seen by whoever reads its paper or may request the
+    // correction of its signatures (the DSV's PL and back office).
+    if (documentsHidden(subject, target)) return undefined;
+    const [found] = await db
+      .select({ participationId: dsvOffer.participationId })
+      .from(dsvOffer)
+      .where(eq(dsvOffer.id, input.offerId));
+    if (found?.participationId !== participationId) return undefined;
+    const sees =
+      readableDocumentTypes(subject, target, normal).includes(input.paper) ||
+      mayRequestCorrection(
+        subject,
+        { kind: "document", documentType: input.paper, documentId: input.offerId },
+        target,
+      );
+    return sees
+      ? { kind: "dsv_signature", id: input.offerId, documentType: input.paper }
+      : undefined;
+  }
   if (input.correction === "invalidate_document") {
     if (documentsHidden(subject, target)) return undefined;
     const [found] = await db
@@ -146,6 +208,87 @@ async function targetOf(
       target,
     );
   return sees ? { kind: "asu_registration", id: input.registrationId } : undefined;
+}
+
+/** The authority table's target for a request's target (`mayRequestCorrection`). */
+function authorityOf(
+  target: NonNullable<Awaited<ReturnType<typeof targetOf>>>,
+): EvidenceCorrectionTarget {
+  switch (target.kind) {
+    case "document":
+    case "dsv_signature":
+      return { kind: "document", documentType: target.documentType, documentId: target.id };
+    case "asu_registration":
+      return { kind: "asu_registration", registrationId: target.id };
+    case "ba_reporting_task":
+      return { kind: "ba_reporting_task", taskId: target.id };
+    case "field":
+      return { kind: "field", fieldKey: target.fieldKey };
+  }
+}
+
+/**
+ * The domain's rules for a date correction on the values recorded now (data-protection.md,
+ * evidence corrections: field targets and the DSV signature-date supersession); the function
+ * checks the same under the lock.
+ */
+async function dateProblem(
+  db: Deps["db"],
+  participationId: string,
+  input: RequestInput,
+  today: string,
+): Promise<DateCorrectionProblem | null> {
+  if (input.correction === "correct_field") {
+    const { rows } = await db.execute<{
+      profiling_done_on: string | null;
+      withdrawn_on: string | null;
+      tl407_signed_on: string | null;
+      withdrawn_by: "user" | "system" | null;
+      signed_dsv: boolean;
+      cancellation_valid_on: string | null;
+    }>(sql`select
+        case when p.profiling_status = 'profiling_done' then p.profiling_done_on::text end
+          as profiling_done_on,
+        case when p.status = 'withdrawn' then p.withdrawn_on::text end as withdrawn_on,
+        (select min(greatest(d.signed_on, d.countersigned_on))::text from document d
+          where d.participation_id = p.id and d.type = 'tl407_signed_scan'
+            and d.review_state = 'accepted' and d.deleted_at is null
+            and d.quarantined_at is null and d.invalidated_by_correction is null) as tl407_signed_on,
+        (select actor_type from field_status_change(p.id, 'withdrawnOn')) as withdrawn_by,
+        p.dsv_status = 'dsv_signed' as signed_dsv,
+        (select min(f.valid_on)::text from dsv_cancellation_facts(array[p.id]) f)
+          as cancellation_valid_on
+      from participation p where p.id = ${participationId}::uuid`);
+    const row = rows[0]!;
+    return fieldCorrectionProblem(
+      input.field === "profilingDoneOn"
+        ? {
+            field: "profilingDoneOn",
+            current: row.profiling_done_on,
+            tl407SignedOn: row.tl407_signed_on,
+          }
+        : {
+            field: "withdrawnOn",
+            current: row.withdrawn_on,
+            withdrawnBy: row.withdrawn_by,
+            signedDsv: row.signed_dsv,
+            cancellationValidOn: row.cancellation_valid_on,
+          },
+      input.value,
+      today,
+    );
+  }
+  if (input.correction === "supersede_dsv_signature") {
+    const { rows } = await db.execute<{ signedOn: string; receivedOn: string }>(sql`select
+        s.signed_on::text as "signedOn", d.dsv_received_on::text as "receivedOn"
+      from document d join dsv_scan_signature s on s.document_id = d.id
+        and s.kind = ${input.signature} and s.superseded_by is null
+      where d.dsv_offer_id = ${input.offerId}::uuid and d.type::text = ${input.paper}
+        and d.participation_id = ${participationId}::uuid and d.review_state = 'accepted'
+        and d.deleted_at is null and d.invalidated_by_correction is null`);
+    return signatureCorrectionProblem(rows, input.signature, input.signedOn, today);
+  }
+  return null;
 }
 
 export function evidenceCorrectionRoutes(deps: Deps) {
@@ -197,33 +340,33 @@ export function evidenceCorrectionRoutes(deps: Deps) {
       const target = { projectId: found.projectId, regionId, participationId };
       const correctionTarget = await targetOf(db, subject, target, input);
       if (!correctionTarget) return problem(c, "not-found") as never;
-      const authority =
-        correctionTarget.kind === "document"
-          ? ({
-              kind: "document",
-              documentType: correctionTarget.documentType,
-              documentId: correctionTarget.id,
-            } as const)
-          : correctionTarget.kind === "asu_registration"
-            ? ({ kind: "asu_registration", registrationId: correctionTarget.id } as const)
-            : ({ kind: "ba_reporting_task", taskId: correctionTarget.id } as const);
+      const authority = authorityOf(correctionTarget);
       if (!mayRequestCorrection(subject, authority, target)) {
         return problem(c, "forbidden") as never;
       }
+      const problemNow = await dateProblem(db, participationId, input, deps.clock.today());
+      if (problemNow) {
+        return domainProblem(c, [{ code: problemNow.code, field: problemNow.field }]) as never;
+      }
       const { targetKind, action } = correctionShape(input.correction);
+      const targetId = correctionTarget.kind === "field" ? null : correctionTarget.id;
       let correctionId: string;
       try {
         const { rows } = await db.execute<{ result: string }>(sql`select
           request_evidence_correction(p_context => ${context(c)},
             p_participation_id => ${participationId}::uuid,
             p_target_kind => ${targetKind}::correction_target_kind,
-            p_action => ${action}::correction_action, p_target_id => ${correctionTarget.id}::uuid,
+            p_action => ${action}::correction_action, p_target_id => ${targetId}::uuid,
             p_wrong_person => ${input.correction === "invalidate_document" ? input.wrongPerson : null}::boolean,
             p_corrected_registered_on => ${input.correction === "supersede_asu_registration" ? input.registeredOn : null}::date,
-            p_reason => ${input.reason}::correction_reason, p_source => ${input.source}) as result`);
+            p_reason => ${input.reason}::correction_reason, p_source => ${input.source},
+            p_field_key => ${input.correction === "correct_field" ? input.field : null}::text,
+            p_corrected_on => ${input.correction === "correct_field" ? input.value : input.correction === "supersede_dsv_signature" ? input.signedOn : null}::date,
+            p_signature_paper => ${input.correction === "supersede_dsv_signature" ? input.paper : null}::text,
+            p_signature_kind => ${input.correction === "supersede_dsv_signature" ? input.signature : null}::text) as result`);
         correctionId = rows[0]!.result;
       } catch (error) {
-        return refused(c, error) as never;
+        return refused(c, error, input) as never;
       }
       logger.info(
         {
@@ -233,6 +376,11 @@ export function evidenceCorrectionRoutes(deps: Deps) {
           targetKind,
           action,
           reason: input.reason,
+          ...(input.correction === "correct_field" && { fieldKey: input.field }),
+          ...(input.correction === "supersede_dsv_signature" && {
+            paper: input.paper,
+            signatureKind: input.signature,
+          }),
         },
         "evidence correction requested",
       );

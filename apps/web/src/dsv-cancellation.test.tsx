@@ -80,6 +80,7 @@ const view = (overrides: object = {}) => ({
   scans: [],
   cancellations: [],
   customerNotice: null,
+  signatureCorrections: { mayRequest: false, pending: [] },
   receivers: [{ id: staffUsers[1]!.id, name: "Projektleitung" }],
   offers: [
     {

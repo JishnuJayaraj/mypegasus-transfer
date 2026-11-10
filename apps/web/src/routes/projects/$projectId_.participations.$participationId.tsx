@@ -1,3 +1,4 @@
+import { useCorrectionRequest } from "../../components/evidence-correction";
 import {
   EndReasonDialog,
   WithdrawDialog,
@@ -160,6 +161,7 @@ function ParticipationPage() {
   >(null);
   const [printed, setPrinted] = useState<RecoveryPrinted | null>(null);
   const fromList = useRouterState({ select: (state) => state.location.state.worklistSearch });
+  const withdrawnOnCorrection = useCorrectionRequest({ participationId, projectId });
   // The loader refuses a participant of another project; the cache can't change that later.
   if (detail.projectId !== projectId) {
     return <InlineNotification kind="error" title={t("participant.notFound")} hideCloseButton />;
@@ -237,6 +239,20 @@ function ParticipationPage() {
           },
         ]
       : []),
+    // A wrong manual withdrawal date (data-protection.md, evidence corrections: field targets).
+    ...(detail.dateCorrections?.withdrawnOn?.mayRequest
+      ? [
+          {
+            label: t("participant.actions.correctWithdrawnOn"),
+            onClick: () =>
+              withdrawnOnCorrection.open({
+                kind: "field",
+                id: "withdrawnOn",
+                label: t("corrections.fields.withdrawnOn"),
+              }),
+          },
+        ]
+      : []),
     // process-and-lifecycle.md, the reconciliation (Q68 case 2): by its capability.
     ...(detail.capabilities.reconcileTgEntry
       ? [{ label: t("participant.actions.reconcile"), onClick: () => setDialog("reconcile") }]
@@ -293,7 +309,7 @@ function ParticipationPage() {
         return <AsuTab detail={detail} />;
       // The DSV (process-and-lifecycle.md, the DSV): the PL and back office in `ta_tg`.
       case "dsv":
-        return <DsvTab participationId={participationId} />;
+        return <DsvTab participationId={participationId} projectId={projectId} />;
       case "documents":
         return <DocumentsTab detail={detail} />;
       // The bookings (data-protection.md, appointments).
@@ -385,6 +401,7 @@ function ParticipationPage() {
           onClose={() => setDialog(null)}
         />
       )}
+      {withdrawnOnCorrection.element}
       {dialog === "withdraw" && <WithdrawDialog detail={detail} onClose={() => setDialog(null)} />}
       {dialog === "reconcile" && (
         <ReconciliationDialog participationId={participationId} onClose={() => setDialog(null)} />

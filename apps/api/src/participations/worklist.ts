@@ -407,7 +407,8 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
     participation_id: string;
     decided_at: string;
     decided_on: string;
-    target_kind: "document" | "asu_registration";
+    target_kind: "document" | "asu_registration" | "field" | "dsv_signature";
+    field_key: string | null;
     document_type: DocumentType | null;
     signed: boolean | null;
     supported_registration: boolean;
@@ -416,7 +417,7 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
     select c.participation_id,
       to_char(c.decided_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as decided_at,
       to_char(c.decided_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as decided_on,
-      c.target_kind, d.type as document_type, pol.signed,
+      c.target_kind, c.field_key, d.type as document_type, pol.signed,
       exists (select from asu_registration g
           left join agentur_submission s on s.id = g.agentur_submission_id
         where g.participation_id = c.participation_id
@@ -424,13 +425,17 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
       -- A DSV scan supported its offer's signatures with their actual dates (D8).
       case when d.type = 'dsv_signed_scan' then jsonb_build_object('offerId', d.dsv_offer_id,
         'signatures', coalesce((select jsonb_object_agg(x.kind, x.signed_on::text)
-          from dsv_scan_signature x where x.document_id = d.id), '{}'::jsonb)) end as dsv
+          from dsv_scan_signature x where x.document_id = d.id and x.superseded_by is null), '{}'::jsonb)) end as dsv
     from evidence_correction c
     left join document d on d.id = c.document_id
     left join document_type_policy pol
       on pol.type = d.type and pol.catalog_version = d.catalog_version
     where c.participation_id = any(${list}::uuid[])
-      and c.status = 'approved' and c.action = 'invalidate'
+      and c.status = 'approved' and (c.action = 'invalidate'
+        -- A date correction may leave an entry already recorded unsupported (data-protection.md,
+        -- evidence corrections: field targets and the signature supersession).
+        or (c.target_kind = 'field' and c.field_key = 'profilingDoneOn')
+        or (c.target_kind = 'dsv_signature' and c.signature_paper = 'dsv_signed_scan'))
     order by c.decided_at`);
   const withInvalidations = [...new Set(corrections.map((c) => c.participation_id))];
   if (withInvalidations.length === 0) return result;
@@ -440,10 +445,15 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
     tg_entry_date: string | null;
     profiling_done_on: string | null;
     exception_unsupported: boolean;
+    exception_approved: boolean;
+    fully_executed_on: string | null;
   }>(sql`
     select p.id, p.tg_entry_date::text, p.profiling_done_on::text,
       coalesce(r.status::text in ('requested', 'approved')
-        and not exception_evidence_usable(r.evidence_record_id), false) as exception_unsupported
+        and not exception_evidence_usable(r.evidence_record_id), false) as exception_unsupported,
+      coalesce(r.status::text = 'approved', false) as exception_approved,
+      (select min(f.executed_on)::text from dsv_facts(array[p.id]) f
+        where f.executed_on is not null) as fully_executed_on
     from participation p
     left join profiling_exception_request r on r.id = p.profiling_exception_request_id
     where p.id = any(${scoped}::uuid[])`);
@@ -459,7 +469,7 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
       greatest(signed_on, countersigned_on)::text as signed_on,
       case when type = 'dsv_signed_scan' then jsonb_build_object('offerId', dsv_offer_id,
         'signatures', coalesce((select jsonb_object_agg(x.kind, x.signed_on::text)
-          from dsv_scan_signature x where x.document_id = document.id), '{}'::jsonb)) end as dsv
+          from dsv_scan_signature x where x.document_id = document.id and x.superseded_by is null), '{}'::jsonb)) end as dsv
     from document
     where participation_id = any(${scoped}::uuid[]) and deleted_at is null
       and review_state = 'accepted' and quarantined_at is null
@@ -473,6 +483,8 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
         tgEntryDate: p.tg_entry_date,
         profilingDoneOn: p.profiling_done_on,
         exceptionUnsupported: p.exception_unsupported,
+        profilingExceptionApproved: p.exception_approved,
+        fullyExecutedOn: p.fully_executed_on,
         documents: documents
           .filter((d) => d.participation_id === p.id)
           .map((d) => ({
@@ -489,15 +501,20 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
       decidedAt: c.decided_at,
       decidedOn: c.decided_on,
       target:
-        c.target_kind === "asu_registration"
-          ? { kind: "asu_registration" }
-          : {
-              kind: "document",
-              documentType: c.document_type!,
-              signed: c.signed === true,
-              supportedRegistration: c.supported_registration,
-              ...(c.dsv && { dsv: c.dsv }),
-            },
+        c.target_kind === "field" || c.target_kind === "dsv_signature"
+          ? {
+              kind: "date_correction",
+              subject: c.target_kind === "field" ? "profilingDoneOn" : "dsvSignature",
+            }
+          : c.target_kind === "asu_registration"
+            ? { kind: "asu_registration" }
+            : {
+                kind: "document",
+                documentType: c.document_type!,
+                signed: c.signed === true,
+                supportedRegistration: c.supported_registration,
+                ...(c.dsv && { dsv: c.dsv }),
+              },
     });
   }
   return result;

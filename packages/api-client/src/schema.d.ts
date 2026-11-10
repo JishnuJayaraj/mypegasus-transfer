@@ -16988,6 +16988,16 @@ export interface components {
             endReason?: "declined_profiling" | "declined_dsv" | "no_response" | "never_contacted" | "not_informed" | "placed_direct" | "self_employed" | "retirement" | "other_measure" | "deceased" | "other" | "placed_permanent" | "placed_fixed_term" | "apprenticeship_or_study" | "max_duration_reached" | "own_termination_without_job" | "terminated_by_tg" | "long_term_illness_reduced_earning_capacity" | null;
             /** @enum {string|null} */
             endReasonSource?: "user" | "system" | null;
+            dateCorrections?: {
+                profilingDoneOn: {
+                    pending: boolean;
+                    mayRequest: boolean;
+                } | null;
+                withdrawnOn: {
+                    pending: boolean;
+                    mayRequest: boolean;
+                } | null;
+            };
             statusVersion: number;
             entryWave: {
                 /** Format: uuid */
@@ -20388,6 +20398,15 @@ export interface components {
                     recordedAt: string;
                 } | null;
             };
+            signatureCorrections: {
+                mayRequest: boolean;
+                pending: {
+                    /** Format: uuid */
+                    offerId: string;
+                    paper: components["schemas"]["DsvSignaturePaper"];
+                    signature: components["schemas"]["DsvSignatureKind"];
+                }[];
+            };
             capabilities: {
                 generate: boolean;
                 offer: boolean;
@@ -20471,6 +20490,10 @@ export interface components {
              */
             sentToCustomerOn: string | null;
         } | null;
+        /** @enum {string} */
+        DsvSignaturePaper: "dsv_signed_scan" | "dsv_cancellation";
+        /** @enum {string} */
+        DsvSignatureKind: "participant" | "customer" | "transfergesellschaft";
         DsvGenerationResult: {
             /** Format: uuid */
             documentId: string;
@@ -21154,6 +21177,8 @@ export interface components {
                 documentType: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form" | null;
                 /** @enum {string|null} */
                 reportingKind: "later_entry" | "planned_end_changed" | "early_exit" | null;
+                fieldKey: components["schemas"]["CorrectableField"];
+                signatureKind: components["schemas"]["DsvSignatureKind"] & (string | null);
                 wrongPerson: boolean | null;
                 reason: components["schemas"]["CorrectionReason"];
                 source: string;
@@ -21177,9 +21202,11 @@ export interface components {
             reconciliations: components["schemas"]["ReconciliationReviewItem"][];
         };
         /** @enum {string} */
-        CorrectionTargetKind: "document" | "asu_registration" | "ba_reporting_task";
+        CorrectionTargetKind: "document" | "asu_registration" | "ba_reporting_task" | "field" | "dsv_signature";
         /** @enum {string} */
         CorrectionAction: "invalidate" | "supersede";
+        /** @enum {string|null} */
+        CorrectableField: "profilingDoneOn" | "withdrawnOn" | null;
         /** @enum {string} */
         CorrectionReason: "ba_legal_reference" | "data_subject_rectification" | "corrected_source_document" | "documented_internal_error";
         EntryClarificationReviewItem: {
@@ -21284,6 +21311,33 @@ export interface components {
             correction: "supersede_ba_report";
             /** Format: uuid */
             taskId: string;
+            reason: components["schemas"]["CorrectionReason"];
+            source: string;
+        } | {
+            /** @enum {string} */
+            correction: "correct_field";
+            field: components["schemas"]["CorrectableField"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            value: string;
+            reason: components["schemas"]["CorrectionReason"];
+            source: string;
+        } | {
+            /** @enum {string} */
+            correction: "supersede_dsv_signature";
+            /** Format: uuid */
+            offerId: string;
+            paper: components["schemas"]["DsvSignaturePaper"];
+            signature: components["schemas"]["DsvSignatureKind"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            signedOn: string;
             reason: components["schemas"]["CorrectionReason"];
             source: string;
         };
