@@ -269,6 +269,20 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // The reconciliation of a missed TG entry (Q68 case 2): the effective date, the evidence's kinds,
+  // record ids and days, the PL's confirmation, the review's stage. `case_internal`.
+  tg_entry_reconciliation: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  // Every step of its review (the manager's outcomes, the PL's replies) with its code and one
+  // documented source line (Q209's rules, Q216): `case_internal`, never in a history or a log.
+  tg_entry_reconciliation_step: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   dsv_offer: {
     retentionClass: "participation_record",
     dataClass: "internal",
@@ -961,6 +975,8 @@ const withoutFields = new Set([
   "entry_clarification",
   "entry_clarification_step",
   "dsv_customer_notice",
+  "tg_entry_reconciliation",
+  "tg_entry_reconciliation_step",
   "dsv_scan_signature",
   // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
   // declarations to the BA).

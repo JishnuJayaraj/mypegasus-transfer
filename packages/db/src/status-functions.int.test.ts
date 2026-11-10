@@ -1,4 +1,4 @@
-import { acceptedDsvScan } from "./testing";
+import { acceptedDsvScan, pendingReconciliation } from "./testing";
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
@@ -349,6 +349,7 @@ describe("change_participation_status (AC-16)", () => {
 
     it("refuses the special-category exit reason (Q66) and records a storable one", async () => {
       const signed = await signedParticipation();
+      await pendingReconciliation(owner, signed, "2027-03-01");
       await changeStatus(app, signed, {
         field: "status",
         from: "informed",
@@ -467,8 +468,21 @@ describe("change_participation_status (AC-16)", () => {
       });
     });
 
+    it("refuses a reconciliation without its review row, whoever calls the status function", async () => {
+      const signed = await signedParticipation();
+      await expect(
+        changeStatus(app, signed, { ...entry, entryKind: "reconciliation" }),
+      ).rejects.toMatchObject(failsWith("reconciliation_missing"));
+      // A row for another effective date doesn't cover it either.
+      await pendingReconciliation(owner, signed, "2027-02-28");
+      await expect(
+        changeStatus(app, signed, { ...entry, entryKind: "reconciliation" }),
+      ).rejects.toMatchObject(failsWith("reconciliation_missing"));
+    });
+
     it("flags a reconciliation for review", async () => {
       const signed = await signedParticipation();
+      await pendingReconciliation(owner, signed, "2027-03-01");
       await changeStatus(app, signed, { ...entry, entryKind: "reconciliation" });
       expect((await events(signed)).at(-1)).toMatchObject({
         actor_type: "user",
@@ -795,6 +809,7 @@ describe("profiling exception requests (Q94, round 16)", () => {
     const id = await signedParticipation();
     const requestId = await request(id);
     await decide(requestId, true);
+    await pendingReconciliation(owner, id, "2027-03-01");
     await changeStatus(app, id, {
       field: "status",
       from: "informed",
@@ -1076,6 +1091,7 @@ describe("correct_end_reason (Q72, round 10)", () => {
   it("refuses the special-category reason (Q66) and participations without an end reason", async () => {
     const id = await signedParticipation();
     await expect(correct(id, "other")).rejects.toMatchObject(failsWith("no_end_reason"));
+    await pendingReconciliation(owner, id, "2027-03-01");
     await changeStatus(app, id, {
       field: "status",
       from: "informed",
@@ -1195,6 +1211,7 @@ describe("effective dates in the function (round 18)", () => {
 
   it("never records an exit before the TG entry", async () => {
     const id = await signedParticipation();
+    await pendingReconciliation(owner, id, "2027-03-01");
     await changeStatus(app, id, {
       field: "status",
       from: "informed",

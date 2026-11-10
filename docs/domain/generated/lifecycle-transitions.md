@@ -112,6 +112,7 @@ their slices (3, 5, 7).
 | `recordClarificationInstruction` | Regional operations manager | — |
 | `requestEntryClarificationReply` | Regional operations manager | — |
 | `recordCustomerNotice` | PL | — |
+| `replyReconciliation` | PL | — |
 
 `requestEvidenceCorrection` (`request_evidence_correction`) by target, from the
 correction-authority table (round 12, Q88), not from who may open a document; requesting grants

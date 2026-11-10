@@ -7,6 +7,7 @@ import {
   auditContext,
   call,
   informedParticipation,
+  pendingReconciliation,
   pl,
   resetTestDatabase,
   testDatabaseUrls,
@@ -326,6 +327,10 @@ describe("record_entry_clarification", () => {
   it("closes with the status: once the participation left informed nothing more is recorded", async () => {
     const { id } = await signedPastStart({ packet: true });
     await record(id, await version(id));
+    const start = (
+      await owner.query("select tg_start::text as d from participation where id=$1", [id])
+    ).rows[0].d;
+    await pendingReconciliation(owner, id, start);
     await call(app, "change_participation_status", {
       id,
       field: "status",

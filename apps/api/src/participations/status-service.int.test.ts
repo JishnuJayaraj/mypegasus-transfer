@@ -1,7 +1,12 @@
 import { acceptedDsvScan } from "@transfer/db/testing";
 import { ManualClock } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds, seedWaves } from "@transfer/db";
-import { changeStatus, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
+import {
+  changeStatus,
+  pendingReconciliation,
+  resetTestDatabase,
+  testDatabaseUrls,
+} from "@transfer/db/testing";
 import type { DatedFact, GuardFacts } from "@transfer/domain";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { dbGuardFacts, failClosedFacts, type GuardFactsProvider } from "./guard-facts";
@@ -212,6 +217,8 @@ describe("status changes", () => {
     await expect(
       entering.changeStatus(pl, { ...entry, effectiveDate: "2091-03-02" }),
     ).rejects.toEqual(refused("domain", "effective_date_mismatch"));
+    // The row `reconcile_tg_entry` writes with it (its route's tests use the route).
+    await pendingReconciliation(owner, id, w1.defaultTgStart!);
     await entering.changeStatus(pl, entry);
     const { rows } = await owner.query(
       "select tg_entry_date::text from participation where id = $1",
@@ -251,6 +258,7 @@ describe("status changes", () => {
     await expect(reconcile()).rejects.toEqual(refused("domain", "guard_failed", ["tg_start_date"]));
     expect(await state(id)).toMatchObject({ status: "informed" });
     await run("lifecycle.sweep", "2091-03-01", "2091-03-01T03:15:00Z");
+    await pendingReconciliation(owner, id, w1.defaultTgStart!);
     await reconcile();
     expect(await state(id)).toMatchObject({ status: "active_in_tg" });
   });
@@ -674,6 +682,7 @@ describe("effective dates (round 18)", () => {
       to: "dsv_signed",
     });
     clock.set(new Date("2091-03-02T09:00:00Z"));
+    await pendingReconciliation(owner, id, w1.defaultTgStart!);
     await dated.changeStatus(pl, {
       participationId: id,
       track: "main",

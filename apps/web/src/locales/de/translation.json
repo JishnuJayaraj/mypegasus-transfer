@@ -1116,7 +1116,8 @@
       "invite": "Zu Termin einladen",
       "assisted": "Assistierte Erfassung starten",
       "withdraw": "Zurückziehen",
-      "correctEndReason": "Grund korrigieren"
+      "correctEndReason": "Grund korrigieren",
+      "reconcile": "Eintritt nachträglich erfassen"
     },
     "withdrawal": {
       "title": "Zurückziehen",
@@ -1564,7 +1565,8 @@
       "evidence_invalidated": "Nachweis ungültig (seit {{date}})",
       "dsv_not_fully_executed": "DSV nicht vollständig unterschrieben (Teilnehmende unterschrieben am {{date}})",
       "entry_clarification": "Eintritt klären (geplanter Beginn überschritten seit {{date}})",
-      "dsv_customer_notice": "Kunde informieren (zurückgezogen am {{date}})"
+      "dsv_customer_notice": "Kunde informieren (zurückgezogen am {{date}})",
+      "reconciliation_clarification": "Rückfrage zum Eintritt (seit {{date}})"
     },
     "kug200b": {
       "generate": "Kug 200b erzeugen",
@@ -1933,7 +1935,8 @@
       "entry_clarification_escalated": "Eintritt: an die Regionale Betriebsleitung eskaliert",
       "entry_clarification_instructed": "Eintritt: Weisung erfasst",
       "entry_clarification_requested": "Eintritt: Rückfrage an die Projektleitung",
-      "dsv_customer_notified": "Kunde über die Aufhebung informiert"
+      "dsv_customer_notified": "Kunde über die Aufhebung informiert",
+      "tg_entry_reconciled": "Eintritt nachträglich erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -3322,7 +3325,7 @@
     "loading": "Die Freigaben werden geladen …",
     "failed": "Die Freigaben konnten nicht geladen werden.",
     "forbidden": "Die Freigaben sind der Regionalen Betriebsleitung vorbehalten.",
-    "intro": "Beantragte Ausnahmen vom Profiling, Korrekturen von Nachweisen und eskalierte Klärungen zum Eintritt in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Quelle, Daten und ob der Nachweis vorliegt – keine Namen, keine Nachweise selbst und keine korrigierten Werte. Eigene Anträge entscheidet eine andere Person.",
+    "intro": "Beantragte Ausnahmen vom Profiling, Korrekturen von Nachweisen, eskalierte Klärungen zum Eintritt und nachträglich erfasste Eintritte in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Quelle, Daten und ob der Nachweis vorliegt – keine Namen, keine Nachweise selbst und keine korrigierten Werte. Eigene Anträge und Erfassungen prüft eine andere Person.",
     "listTitle": "Beantragte Ausnahmen",
     "empty": "Keine offenen Anträge.",
     "columns": {
@@ -3455,6 +3458,56 @@
         "requested": "Die Rückfrage wurde erfasst; der Fall liegt wieder bei der Projektleitung."
       },
       "request": "Rückfrage an die PL"
+    },
+    "reconciliations": {
+      "listTitle": "Nachträglich erfasste Eintritte",
+      "empty": "Keine offenen nachträglichen Eintritte.",
+      "columns": {
+        "project": "Projekt",
+        "tgStart": "TG-Beginn",
+        "evidence": "Nachweise",
+        "stage": "Stand",
+        "history": "Verlauf",
+        "actions": "Aktionen"
+      },
+      "item": "{{project}}, TG-Beginn {{date}}",
+      "stageOn": "{{stage}} (erfasst am {{reconciled}}, Prüfung vorgesehen bis {{due}})",
+      "awaitingReply": "Wartet auf die Antwort der Projektleitung",
+      "ownReconciliation": "Von Ihnen erfasst",
+      "outcomes": {
+        "no_objection": "Ohne Einwand",
+        "clarification_requested": "Rückfrage",
+        "resolved_no_objection": "Erledigt",
+        "escalated_to_dpo": "An DSB eskaliert"
+      },
+      "dialog": {
+        "code": "Grund der Rückfrage",
+        "choose": "Erst den Grund wählen.",
+        "source": "Quelle (eine Zeile, höchstens 200 Zeichen, ohne Namen oder Gesundheitsangaben)",
+        "enterSource": "Erst die Quelle angeben.",
+        "confirm": "Erfassen",
+        "cancel": "Abbrechen",
+        "final": {
+          "no_objection": "Die Prüfung wird ohne Einwand abgeschlossen. Der Eintritt bleibt, wie er erfasst ist.",
+          "clarification_requested": "Die Projektleitung erhält die Rückfrage und antwortet mit Quelle. Der Eintritt bleibt, wie er erfasst ist; es gibt keine Frist.",
+          "resolved_no_objection": "Die Prüfung wird nach der Antwort abgeschlossen. Der Eintritt bleibt, wie er erfasst ist.",
+          "escalated_to_dpo": "Der Fall geht an den Datenschutzbeauftragten und bleibt offen, bis Sie ihn nach dessen dokumentierter Weisung erledigen. Der Eintritt bleibt, wie er erfasst ist."
+        }
+      },
+      "messages": {
+        "no_objection": "Die Prüfung ist ohne Einwand abgeschlossen.",
+        "clarification_requested": "Die Rückfrage ist erfasst; sie liegt bei der Projektleitung.",
+        "resolved_no_objection": "Die Prüfung ist erledigt.",
+        "escalated_to_dpo": "An den Datenschutzbeauftragten eskaliert; der Fall bleibt offen.",
+        "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+        "forbidden": "Sie dürfen diese Prüfung nicht erfassen.",
+        "notFound": "Den Eintritt gibt es nicht mehr. Die Liste wurde neu geladen.",
+        "conflict": "Der Fall hat sich inzwischen geändert. Die Liste wurde neu geladen.",
+        "codes": {
+          "not_awaiting": "Der Fall wartet gerade nicht auf Ihre Prüfung. Die Liste wurde neu geladen.",
+          "outcome_not_allowed": "Diese Entscheidung ist im jetzigen Stand nicht möglich."
+        }
+      }
     }
   },
   "corrections": {
@@ -3738,10 +3791,11 @@
     "intro": "Die DSV ist unterschrieben, die Teilnahme ist aber nicht zum geplanten Beginn in die Transfergesellschaft eingetreten (offen seit {{date}}). Der Fall gehört der Projektleitung und bleibt offen, bis die Teilnahme nicht mehr „informiert“ ist. Er ändert keinen Status; ein Rücktritt oder eine Beendigung nach dem geplanten Beginn ist hier nicht vorgesehen (offene Frage Q220).",
     "paths": {
       "title": "Mögliche Wege",
-      "reconciliation": "Abstimmung des Eintritts: Alle Voraussetzungen lagen zum geplanten Beginn vor. Die Abstimmung wird in einer späteren Version angeboten.",
+      "reconciliation": "Eintritt nachträglich erfassen: Alle Voraussetzungen lagen zum geplanten Beginn vor, wurden aber erst danach erfasst.",
       "newStart": "Neuer Beginn mit Nachtrag: Der späteste Eintritt der Welle lässt noch einen neuen Beginn zu. Der Nachtrag muss vollständig unterschrieben sein.",
       "newStartLink": "Zu den Terminen der Teilnahme",
-      "none": "Zurzeit erfüllt kein Weg seine Voraussetzungen. Dokumentieren Sie, was aussteht, und eskalieren Sie bei Bedarf."
+      "none": "Zurzeit erfüllt kein Weg seine Voraussetzungen. Dokumentieren Sie, was aussteht, und eskalieren Sie bei Bedarf.",
+      "reconcile": "Eintritt nachträglich erfassen"
     },
     "pending": {
       "title": "Was aussteht",
@@ -3820,6 +3874,96 @@
         "requested": "Rückfrage",
         "instructed": "Weisung"
       }
+    }
+  },
+  "reconciliation": {
+    "title": "Eintritt nachträglich erfassen",
+    "cardTitle": "Nachträglich erfasster Eintritt",
+    "loading": "Der nachträgliche Eintritt wird geladen …",
+    "failed": "Der nachträgliche Eintritt konnte nicht geladen werden.",
+    "open": "Eintritt nachträglich erfassen",
+    "intro": "Alle Voraussetzungen lagen am TG-Beginn {{date}} vor, wurden aber erst danach erfasst. Der Eintritt wird mit dem TG-Beginn als Datum erfasst und von der Regionalen Betriebsleitung nachträglich geprüft.",
+    "evidence": {
+      "title": "Nachweise",
+      "item": "{{kind}}: gültig ab {{valid}}, erfasst am {{recorded}}",
+      "days": "{{kind}}: gültig ab {{valid}}, erfasst am {{recorded}}",
+      "none": "Keine Nachweise."
+    },
+    "evidenceKinds": {
+      "dsv_packet": "DSV vollständig unterschrieben",
+      "asu_registration": "Arbeitsuchendmeldung mit Nachweis",
+      "tl407": "TL 407 unterschrieben (Profiling erledigt)",
+      "profiling_exception": "Genehmigte Ausnahme vom Profiling"
+    },
+    "facts": {
+      "dsv_packet": "Vollständig unterschriebene DSV",
+      "asu_registration": "Arbeitsuchendmeldung mit Nachweis",
+      "profiling": "Profiling oder genehmigte Ausnahme"
+    },
+    "problems": {
+      "evidence_missing": "{{fact}}: liegt nicht vor.",
+      "evidence_after_tg_start": "{{fact}}: erst nach dem TG-Beginn gültig. Ein Eintritt wird nie auf einen späteren Nachweis zurückdatiert."
+    },
+    "refusals": {
+      "actor_not_allowed": "Nur die Projektleitung erfasst den Eintritt nachträglich.",
+      "project_not_active": "Das Projekt ist nicht aktiv.",
+      "not_informed": "Die Teilnahme ist nicht im Stand „informiert“.",
+      "tg_start_missing": "Es gibt keinen TG-Beginn.",
+      "before_tg_start": "Erst nach dem TG-Beginn möglich.",
+      "run_not_completed": "Am TG-Beginn erst, wenn der heutige Lauf abgeschlossen ist.",
+      "dsv_not_signed": "Die DSV ist nicht unterschrieben.",
+      "evidence_incomplete": "Nicht jede Voraussetzung lag am TG-Beginn vor."
+    },
+    "confirm": "Ich bestätige: Jeder Nachweis lag am TG-Beginn vor; die Daten stimmen mit den Unterlagen überein.",
+    "complete": "Erst die Bestätigung setzen.",
+    "save": "Eintritt erfassen",
+    "saved": "Der Eintritt ist nachträglich erfasst. Die Regionale Betriebsleitung prüft ihn.",
+    "errors": {
+      "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+      "stale": "Die Teilnahme oder ihre Nachweise haben sich geändert. Bitte den Dialog neu öffnen.",
+      "forbidden": "Sie dürfen den Eintritt nicht nachträglich erfassen.",
+      "domain": "Die Voraussetzungen am TG-Beginn sind nicht erfüllt."
+    },
+    "stages": {
+      "requested": "Prüfung offen",
+      "no_objection": "Ohne Einwand",
+      "clarification_requested": "Rückfrage an die Projektleitung",
+      "replied": "Beantwortet, Prüfung offen",
+      "escalated_to_dpo": "An DSB eskaliert",
+      "resolved_no_objection": "Erledigt"
+    },
+    "status": "Erfasst am {{reconciled}} mit TG-Beginn {{date}}. Stand: {{stage}} (Prüfung vorgesehen bis {{due}}; keine Frist).",
+    "steps": {
+      "title": "Verlauf der Prüfung",
+      "step": "{{date}}: {{text}}",
+      "kinds": {
+        "no_objection": "Ohne Einwand",
+        "clarification_requested": "Rückfrage",
+        "replied": "Antwort",
+        "resolved_no_objection": "Erledigt",
+        "escalated_to_dpo": "An DSB eskaliert"
+      }
+    },
+    "reasonCodes": {
+      "evidence_unclear": "Nachweis unklar",
+      "date_unclear": "Datum unklar",
+      "other_documented": "Anderer dokumentierter Grund"
+    },
+    "replyCodes": {
+      "evidence_supplemented": "Nachweis ergänzt",
+      "explained": "Erläutert",
+      "correction_requested": "Korrektur beantragt"
+    },
+    "reply": {
+      "title": "Antwort auf die Rückfrage",
+      "request": "Rückfrage vom {{date}}: {{code}} – {{source}}",
+      "code": "Antwort",
+      "source": "Quelle (eine Zeile, höchstens 200 Zeichen, ohne Namen oder Gesundheitsangaben)",
+      "sourceInvalid": "Erst die Quelle angeben.",
+      "choose": "Erst die Antwort wählen.",
+      "save": "Antwort erfassen",
+      "saved": "Die Antwort ist erfasst; die Regionale Betriebsleitung prüft weiter.",
+      "hint": "Einen Nachweis ergänzen Sie über seine eigene Funktion (z. B. Scan hochladen); hier halten Sie die Antwort fest."
     }
   }
 }

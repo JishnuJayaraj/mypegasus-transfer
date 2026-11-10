@@ -331,6 +331,12 @@ export function participationRoutes(deps: Deps) {
           viewDsv: snapshot.project.type === "ta_tg" && mayWorkDsv(subject, target).ok,
           withdraw: withdraw === null,
           correctEndReason: correctsEndReason,
+          // "Eintritt nachträglich erfassen": as the reconciliation's own route decides it.
+          reconcileTgEntry:
+            snapshot.project.type === "ta_tg" &&
+            p.status === "informed" &&
+            p.dsvStatus === "dsv_signed" &&
+            (await statusService.reconciliationState(subject, participationId)).refusal === null,
         },
         refusals: {
           assignEntryWave: assignment.refusal,

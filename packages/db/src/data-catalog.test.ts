@@ -109,6 +109,8 @@ describe("data catalog", () => {
       entry_clarification: entry("participation_record", "internal", true),
       entry_clarification_step: entry("participation_record", "internal", true),
       dsv_customer_notice: entry("participation_record", "internal", true),
+      tg_entry_reconciliation: entry("participation_record", "internal", true),
+      tg_entry_reconciliation_step: entry("participation_record", "internal", true),
       form_generation: entry("form_working_copy", "confidential", true),
       // Slice 6 (Q193): the declarations of an accepted signed form.
       signed_declaration: entry("participation_record", "confidential", true),

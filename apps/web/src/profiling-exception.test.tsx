@@ -387,7 +387,8 @@ function reviews(items: object[], routes: Parameters<typeof mockApi>[0] = {}) {
   const mock = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
-    "GET /api/v1/reviews": () => json({ items, corrections: [], clarifications: [] }),
+    "GET /api/v1/reviews": () =>
+      json({ items, corrections: [], clarifications: [], reconciliations: [] }),
     ...routes,
   });
   renderApp("/reviews", mock.api);

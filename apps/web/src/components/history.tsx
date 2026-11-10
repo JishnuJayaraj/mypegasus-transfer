@@ -192,6 +192,11 @@ export function HistoryTab({
         return coded("entryClarification.instructionCodes", text(details.instructionCode) ?? "");
       case "entry_clarification_requested":
         return coded("entryClarification.requestCodes", text(details.requestCode) ?? "");
+      // The reconciliation of a missed entry: the kinds of evidence (the date is the event's).
+      case "tg_entry_reconciled":
+        return list(details.evidenceKinds)
+          .map((kind) => coded("reconciliation.evidenceKinds", kind))
+          .join(", ");
       // "Kunde informiert am" of a cancellation-based withdrawal: the day.
       case "dsv_customer_notified":
         return t("history.customerNotified", { date: formatDate(text(details.notifiedOn)) });

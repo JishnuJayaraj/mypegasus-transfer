@@ -6,6 +6,7 @@ import {
   call,
   informedParticipation,
   nightly,
+  pendingReconciliation,
   pl,
   resetTestDatabase,
   testDatabaseUrls,
@@ -102,8 +103,12 @@ const sign = (f: F, scan: string) =>
     statusVersion: f.version,
   });
 const facts = (f: F) => app.query("select * from dsv_facts($1)", [[f.id]]).then((r) => r.rows);
-const enter = (f: F, over: Record<string, unknown> = {}) =>
-  call(app, "change_participation_status", {
+const enter = async (f: F, over: Record<string, unknown> = {}) => {
+  // The reconciliation's review row, as `reconcile_tg_entry` writes it (its own tests use it).
+  if ((over.entryKind ?? "reconciliation") === "reconciliation") {
+    await pendingReconciliation(owner, f.id, (over.effectiveDate as string) ?? f.tgStart);
+  }
+  return call(app, "change_participation_status", {
     id: f.id,
     field: "status",
     expectedFrom: "informed",
@@ -113,6 +118,7 @@ const enter = (f: F, over: Record<string, unknown> = {}) =>
     effectiveDate: f.tgStart,
     ...over,
   });
+};
 
 it("completes only from one scan with all three signatures, valid on the latest date", async () => {
   const f = await fixture();

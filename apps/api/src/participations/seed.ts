@@ -11,7 +11,7 @@ import {
   type Database,
 } from "@transfer/db";
 import type { DatedFact, GuardFacts, IsoDate } from "@transfer/domain";
-import { dbGuardFacts, type GuardFactsProvider } from "./guard-facts";
+import { dbEntryEvidence, dbGuardFacts, type GuardFactsProvider } from "./guard-facts";
 import { createStatusService, type ServiceActor, type StatusService } from "./status-service";
 import { staffSubject } from "./subjects";
 
@@ -104,13 +104,32 @@ export const seedFacts: Readonly<Record<string, GuardFacts>> = {
   [p.taOnlyCompleted]: { taMeasuresComplete: before },
 };
 
-/** The production provider plus the seed's synthetic facts; evidence records are real ones. */
+/** A synthetic record id for an overlaid fact (stable per participation and kind). */
+const overlayId = (participationId: string, suffix: string) =>
+  `${participationId.slice(0, -2)}${suffix}`;
+
+/**
+ * The production provider plus the seed's synthetic facts; evidence records are real ones. An
+ * overlaid ASU or TL 407 fact has no record, so the reconciliation's evidence names a synthetic id
+ * for it (the database checks only the packet, which the seed records for real).
+ */
 const seedFactsProvider: GuardFactsProvider = {
   facts: async (tx, input) => ({
     ...(await dbGuardFacts.facts(tx, input)),
     ...seedFacts[input.participationId],
   }),
   evidence: dbGuardFacts.evidence,
+  entryEvidence: async (tx, input) => {
+    const records = await dbEntryEvidence(tx, input);
+    const overlay = seedFacts[input.participationId] ?? {};
+    const { asuRegisteredWithProof: asu, profilingDone: done } = overlay;
+    return {
+      ...records,
+      asu: records.asu ?? (asu ? { id: overlayId(input.participationId, "a1"), ...asu } : null),
+      tl407:
+        records.tl407 ?? (done ? { id: overlayId(input.participationId, "a2"), ...done } : null),
+    };
+  },
 };
 
 type Step = {
@@ -276,12 +295,13 @@ const reconciledEntry = (participationId: string): Step => ({
   on: D4,
   run: async (s, db) => {
     await assertReconciliationJustified(db, participationId);
-    return s.changeStatus(pl, {
+    // As the PL's dialog does: the evidence listed, the status version read, the confirmation.
+    const read = await s.reconciliationState(pl, participationId);
+    return s.reconcileTgEntry(pl, {
       participationId,
-      track: "main",
-      from: "informed",
-      to: "active_in_tg",
-      entryKind: "reconciliation",
+      evidence: read.evidence.map((e) => ({ kind: e.kind, id: e.id, validOn: e.validOn })),
+      statusVersion: read.statusVersion,
+      confirmed: true,
     });
   },
 });

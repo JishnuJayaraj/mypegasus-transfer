@@ -44,6 +44,7 @@ import { profilingRoutes } from "./routes/profiling";
 import { asuRoutes } from "./routes/asu";
 import { dsvRoutes } from "./routes/dsv";
 import { entryClarificationRoutes } from "./routes/entry-clarification";
+import { reconciliationRoutes } from "./routes/reconciliation";
 import { exportRoutes } from "./routes/exports";
 import { kug200bBatchRoutes } from "./routes/kug200b-batches";
 import { tl407SubmissionRoutes } from "./routes/tl407-submissions";
@@ -191,6 +192,7 @@ export function createApp(deps: Deps) {
   api.route("/", formRoutes(runtimeDeps));
   api.route("/", dsvRoutes(runtimeDeps));
   api.route("/", entryClarificationRoutes(runtimeDeps));
+  api.route("/", reconciliationRoutes(runtimeDeps));
   api.route("/", exportRoutes(runtimeDeps));
   api.route("/", kug200bBatchRoutes(runtimeDeps));
   api.route("/", tl407SubmissionRoutes(runtimeDeps));

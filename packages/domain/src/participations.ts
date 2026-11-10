@@ -272,6 +272,11 @@ export const ParticipationDetail = z
       withdraw: z.boolean(),
       /** "Grund korrigieren" (the PL, a recorded end reason; Q72). */
       correctEndReason: z.boolean(),
+      /**
+       * "Eintritt nachträglich erfassen" (the PL; process-and-lifecycle.md, the reconciliation):
+       * after the TG start with every entry fact valid on it.
+       */
+      reconcileTgEntry: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({

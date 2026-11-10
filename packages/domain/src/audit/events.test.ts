@@ -150,6 +150,9 @@ describe("audit event types (ADR-0002)", () => {
       "entry_clarification_instructed",
       "entry_clarification_requested",
       "dsv_customer_notified",
+      "tg_entry_reconciled",
+      "reconciliation_reviewed",
+      "reconciliation_replied",
     ]);
   });
 
@@ -268,6 +271,9 @@ describe("audit event types (ADR-0002)", () => {
       "entry_clarification_instructed",
       "entry_clarification_requested",
       "dsv_customer_notified",
+      "tg_entry_reconciled",
+      "reconciliation_reviewed",
+      "reconciliation_replied",
     ]);
   });
 
@@ -916,6 +922,28 @@ describe("the other event types", () => {
       { details: { clarificationId: otherId, requestCode: "date_unclear" } },
     ],
     ["dsv_customer_notified", { details: { notifiedOn: "2026-03-06" } }],
+    [
+      "tg_entry_reconciled",
+      {
+        effectiveDate: "2027-03-01",
+        details: { reconciliationId: otherId, evidenceKinds: ["dsv_packet", "tl407"] },
+      },
+    ],
+    [
+      "reconciliation_reviewed",
+      {
+        details: {
+          reconciliationId: otherId,
+          outcome: "clarification_requested",
+          reasonCode: "date_unclear",
+        },
+      },
+    ],
+    [
+      "reconciliation_reviewed",
+      { details: { reconciliationId: otherId, outcome: "no_objection" } },
+    ],
+    ["reconciliation_replied", { details: { reconciliationId: otherId, replyCode: "explained" } }],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -1394,6 +1422,22 @@ describe("the other event types", () => {
       { details: { clarificationId: otherId, requestCode: "awaiting_asu_proof" } },
     ],
     ["dsv_customer_notified", { details: { notifiedOn: "06.03.2026" } }],
+    [
+      "tg_entry_reconciled",
+      { effectiveDate: null, details: { reconciliationId: otherId, evidenceKinds: ["tl407"] } },
+    ],
+    [
+      "tg_entry_reconciled",
+      { effectiveDate: "2027-03-01", details: { reconciliationId: otherId, evidenceKinds: [] } },
+    ],
+    [
+      "reconciliation_reviewed",
+      { details: { reconciliationId: otherId, outcome: "no_objection", source: "Akte 3" } },
+    ],
+    [
+      "reconciliation_replied",
+      { participationId: null, details: { reconciliationId: otherId, replyCode: "explained" } },
+    ],
     [
       "dsv_form_generated",
       {

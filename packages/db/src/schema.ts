@@ -3659,6 +3659,98 @@ export const dsvCustomerNotice = pgTable(
   ],
 );
 
+/**
+ * The reconciliation of a missed TG entry (process-and-lifecycle.md, the reconciliation; Q68 case
+ * 2, Q80, Q216): one per participation, written with its status change (`entryKind`
+ * `reconciliation`) by `reconcile_tg_entry`; the status function refuses a reconciliation without
+ * it. The evidence the PL confirmed (kinds, record ids, valid days, recording instants), the
+ * effective date (the TG start), the PL and the review's stage with its revision. Internal,
+ * `case_internal`, class `participation_record`.
+ */
+export const tgEntryReconciliation = pgTable(
+  "tg_entry_reconciliation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    effectiveDate: dateColumn("effective_date").notNull(),
+    /** `[{ kind, id, validOn, recordedAt }]`, one per entry fact. */
+    evidence: jsonb("evidence").notNull(),
+    /** The PL's confirmation that every fact held on the TG start (never preset). */
+    confirmed: boolean("confirmed").notNull(),
+    reconciledBy: uuid("reconciled_by")
+      .notNull()
+      .references(() => staffUser.id),
+    reconciledAt: instant("reconciled_at").notNull().defaultNow(),
+    /** The status change's audit event, set in the same transaction. */
+    statusEventId: uuid("status_event_id"),
+    /** The review (Q216): `requested` … `resolved_no_objection`. */
+    stage: text("stage").notNull().default("requested"),
+    /** The number of review steps; every write compares the one the caller read. */
+    revision: integer("revision").notNull().default(0),
+  },
+  (t) => [
+    unique("tg_entry_reconciliation_once").on(t.participationId),
+    foreignKey({
+      name: "tg_entry_reconciliation_participation_project_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check(
+      "tg_entry_reconciliation_valid",
+      sql`${t.confirmed} and jsonb_typeof(${t.evidence}) = 'array'
+        and jsonb_array_length(${t.evidence}) between 1 and 3 and ${t.revision} >= 0
+        and ${t.stage} in ('requested', 'no_objection', 'clarification_requested', 'replied', 'escalated_to_dpo', 'resolved_no_objection')`,
+    ),
+  ],
+);
+
+/**
+ * Every step of a reconciliation's review, in order: the manager's outcomes and the PL's replies,
+ * each with its code and documented source line (`case_internal`, Q209's rules; none for
+ * `no_objection`). Written only by `review_reconciliation` and
+ * `reply_reconciliation_clarification`.
+ */
+export const tgEntryReconciliationStep = pgTable(
+  "tg_entry_reconciliation_step",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    reconciliationId: uuid("reconciliation_id")
+      .notNull()
+      .references(() => tgEntryReconciliation.id),
+    seq: integer("seq").notNull(),
+    kind: text("kind").notNull(),
+    code: text("code"),
+    source: text("source"),
+    by: uuid("by")
+      .notNull()
+      .references(() => staffUser.id),
+    at: instant("at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("tg_entry_reconciliation_step_seq").on(t.reconciliationId, t.seq),
+    check(
+      "tg_entry_reconciliation_step_kind",
+      sql`${t.seq} >= 1 and (
+        (${t.kind} = 'no_objection' and ${t.code} is null and ${t.source} is null)
+        or (${t.kind} = 'clarification_requested' and ${t.code} in ('evidence_unclear', 'date_unclear', 'other_documented'))
+        or (${t.kind} = 'replied' and ${t.code} in ('evidence_supplemented', 'explained', 'correction_requested'))
+        or (${t.kind} in ('resolved_no_objection', 'escalated_to_dpo') and ${t.code} is null))
+        and (${t.kind} = 'no_objection' or char_length(${t.source}) between 1 and 200)`,
+    ),
+  ],
+);
+
 export const tables = [
   staffUser,
   region,
@@ -3704,6 +3796,8 @@ export const tables = [
   entryClarification,
   entryClarificationStep,
   dsvCustomerNotice,
+  tgEntryReconciliation,
+  tgEntryReconciliationStep,
   signedDeclaration,
   asuRecord,
   asuRegistration,
