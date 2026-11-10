@@ -202,8 +202,7 @@ function page(reconciliation: object, routes: Parameters<typeof mockApi>[0] = {}
 describe("Eintritt nachträglich erfassen", () => {
   it("lists the evidence with its days, presets nothing and sends what it showed", async () => {
     const { calls } = page(open(), {
-      [`POST ${detailPath}/tg-entry-reconciliation`]: () =>
-        json(recorded("requested"), { status: 201 }),
+      [`POST ${detailPath}/tg-entry-reconciliation`]: () => json(recorded("requested"), 201),
     });
     const card = within(
       (await screen.findByRole("heading", { name: "Eintritt klären" })).closest("section")!,
