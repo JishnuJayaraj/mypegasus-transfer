@@ -306,6 +306,18 @@ test("a wrong profilingDoneOn: requested, approved, the missed start reconciled"
   await expect(page.getByText("In der TG").first()).toBeVisible();
   await expectAccessible(page);
   await shot(page, "profiling-done-on-reconciled");
+
+  // The manager closes this review ("Ohne Einwand"), leaving the shared queue as it was.
+  const api = page.context().request;
+  const mine = (await (
+    await api.get(`/api/v1/participations/${id}/tg-entry-reconciliation`)
+  ).json()) as { reconciliation: { id: string; revision: number } };
+  await session(page, baseURL!, regionalOperationsManager);
+  const reviewed = await api.post(`/api/v1/reconciliations/${mine.reconciliation.id}/review`, {
+    headers: { Origin: baseURL! },
+    data: { outcome: "no_objection", revision: mine.reconciliation.revision },
+  });
+  expect(reviewed.ok(), await reviewed.text()).toBe(true);
 });
 
 test("back office supersedes a wrong participant date (14.04. → 14.03.) on both scans", async ({
