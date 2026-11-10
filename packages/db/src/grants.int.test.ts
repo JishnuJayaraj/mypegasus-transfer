@@ -82,6 +82,7 @@ describe("transfer_app", () => {
 // ADR-0002: statuses and audit events are written only by the status functions.
 const statusFunctions = [
   "dsv_facts",
+  "field_status_change",
   "sign_dsv",
   "record_dsv_original",
   "dsv_cancellation_facts",

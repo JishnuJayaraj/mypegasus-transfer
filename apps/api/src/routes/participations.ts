@@ -371,10 +371,8 @@ export function participationRoutes(deps: Deps) {
             and status = 'requested' and field_key = 'profilingDoneOn') as profiling_pending,
           exists (select from evidence_correction where participation_id = ${participationId}::uuid
             and status = 'requested' and field_key = 'withdrawnOn') as withdrawn_pending,
-          (select a.actor_type::text from audit_event a
-            where a.participation_id = ${participationId}::uuid and a.event_type = 'status_changed'
-              and a.field = 'status' and a.to_value = 'withdrawn'
-            order by a.occurred_at desc, a.seq desc limit 1) as withdrawn_by`);
+          (select actor_type from field_status_change(${participationId}::uuid, 'withdrawnOn'))
+            as withdrawn_by`);
       const profilingRecorded = p.profilingStatus === "profiling_done" && p.profilingDoneOn !== null;
       const manualWithdrawal = p.status === "withdrawn" && state!.withdrawn_by === "user";
       corrections = {

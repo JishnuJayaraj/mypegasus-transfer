@@ -65,7 +65,19 @@ const fields: Record<string, string> = {
 };
 
 /** A date correction's refusals point at its own fields (the request's shape decides which). */
+const dateCodes = new Set([
+  "field_not_recorded",
+  "correction_unchanged",
+  "corrected_on_in_future",
+  "effective_date_before_signature",
+  "withdrawal_by_system",
+  "effective_date_before_cancellation",
+  "signature_not_shown",
+  "signature_date_mismatch",
+  "received_before_signature",
+]);
 function pointerOf(code: string, input: RequestInput | undefined): string | null {
+  if (!dateCodes.has(code)) return fields[code] ?? null;
   if (input?.correction === "correct_field") {
     return code === "field_not_recorded" || code === "withdrawal_by_system" ? "field" : "value";
   }
@@ -242,9 +254,7 @@ async function dateProblem(
           where d.participation_id = p.id and d.type = 'tl407_signed_scan'
             and d.review_state = 'accepted' and d.deleted_at is null
             and d.quarantined_at is null and d.invalidated_by_correction is null) as tl407_signed_on,
-        (select a.actor_type::text from audit_event a where a.participation_id = p.id
-            and a.event_type = 'status_changed' and a.field = 'status' and a.to_value = 'withdrawn'
-          order by a.occurred_at desc, a.seq desc limit 1) as withdrawn_by,
+        (select actor_type from field_status_change(p.id, 'withdrawnOn')) as withdrawn_by,
         p.dsv_status = 'dsv_signed' as signed_dsv,
         (select min(f.valid_on)::text from dsv_cancellation_facts(array[p.id]) f)
           as cancellation_valid_on

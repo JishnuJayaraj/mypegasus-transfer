@@ -523,3 +523,149 @@ describe("the review in Freigaben, the reply and the resolution", () => {
     ).toEqual([":not_awaiting"]);
   });
 });
+
+// Date corrections (data-protection.md, evidence corrections: field targets and the DSV
+// signature-date supersession) with the reconciliation: a corrected fact is recorded at its
+// approval, so the scheduled run before it never counted it, and the reconciliation uses it.
+describe("date corrections and the missed entry", () => {
+  const correction = (id: string, body: object, as: string = projectLead) =>
+    request("POST", `/participations/${id}/evidence-corrections`, as, {
+      reason: "documented_internal_error",
+      source: "Personalakte, TL 407 Seite 2",
+      ...body,
+    });
+  const approve = (correctionId: string, as: string = manager) =>
+    request("POST", `/evidence-corrections/${correctionId}/decision`, as, { decision: "approve" });
+  const correctionId = async (res: Response) => {
+    expect(res.status).toBe(201);
+    return ((await res.json()) as { correctionId: string }).correctionId;
+  };
+  const detail = async (id: string, as: string = projectLead) =>
+    readJson(await request("GET", `/participations/${id}`, as), ParticipationDetail);
+
+  it("reconciles a missed start with a corrected profilingDoneOn, changing no status or past event", async () => {
+    const { id } = await missedEntry();
+    // The completion was typed as today: after the TG start, so no entry fact held on it.
+    await sql("update participation set profiling_done_on = berlin_today() where id = $1", [id]);
+    expect((await state(id)).capabilities.reconcile).toBe(false);
+    expect((await detail(id)).dateCorrections).toEqual({
+      profilingDoneOn: { pending: false, mayRequest: true },
+      withdrawnOn: null,
+    });
+    // Back office and the consultant see no such capability and are refused.
+    expect((await detail(id, backOffice)).dateCorrections).toBeUndefined();
+    await expectProblem(
+      await correction(id, { correction: "correct_field", field: "profilingDoneOn", value: await day(-10) }, backOffice),
+      403,
+      "forbidden",
+    );
+    // A date before the TL 407's signature: 422 with its pointer.
+    expect(
+      await errors(
+        await correction(id, { correction: "correct_field", field: "profilingDoneOn", value: await day(-11) }),
+        422,
+      ),
+    ).toEqual(["/value:effective_date_before_signature"]);
+    const events = await sql(
+      "select id from audit_event where participation_id = $1 order by seq",
+      [id],
+    );
+    const pending = await correctionId(
+      await correction(id, { correction: "correct_field", field: "profilingDoneOn", value: await day(-10) }),
+    );
+    expect((await detail(id)).dateCorrections!.profilingDoneOn).toEqual({
+      pending: true,
+      mayRequest: false,
+    });
+    // "Freigaben": the field key, never the value, the participant's id or name.
+    const item = (await queue()).corrections.find((c) => c.correctionId === pending)!;
+    expect(item).toMatchObject({
+      targetKind: "field",
+      action: "supersede",
+      fieldKey: "profilingDoneOn",
+      signatureKind: null,
+      documentType: null,
+    });
+    expect(JSON.stringify(item)).not.toContain(await day(-10));
+    expect(JSON.stringify(item)).not.toContain(id);
+    expect((await approve(pending)).status).toBe(204);
+    // A second decision is 409 source_changed (the queue showed another state).
+    const again = await approve(pending);
+    expect(await errors(again, 409)).toEqual([":source_changed"]);
+    // The corrected fact holds on the TG start: the reconciliation passes.
+    const read = await state(id);
+    expect(read.evidence.find((e) => e.kind === "tl407")!.validOn).toBe(await day(-10));
+    expect((await reconcile(id)).status).toBe(201);
+    // Nothing past changed: every earlier event is still there, as recorded.
+    const later = await sql(
+      "select id from audit_event where participation_id = $1 order by seq limit $2",
+      [id, events.rows.length],
+    );
+    expect(later.rows).toEqual(events.rows);
+    // Logs carry ids and codes only: no date, no source.
+    const text = logs.join("\n");
+    expect(text).toContain("evidence correction requested");
+    expect(text).not.toContain("Personalakte");
+    expect(text).not.toContain(await day(-10));
+  });
+
+  it("supersedes a DSV signature date requested by back office; the entry loses its support until corrected again", async () => {
+    const { id } = await missedEntry();
+    expect((await reconcile(id)).status).toBe(201);
+    const offer = (
+      await sql("select id from dsv_offer where participation_id = $1 and ended_as = 'signed'", [id])
+    ).rows[0].id as string;
+    const supersede = (signedOn: string, as: string = backOffice) =>
+      correction(
+        id,
+        {
+          correction: "supersede_dsv_signature",
+          offerId: offer,
+          paper: "dsv_signed_scan",
+          signature: "customer",
+          signedOn,
+        },
+        as,
+      );
+    // Another participation's offer, or an offer the consultant can't read: 404.
+    await expectProblem(
+      await request("POST", `/participations/${id}/evidence-corrections`, backOffice, {
+        correction: "supersede_dsv_signature",
+        offerId: randomUUID(),
+        paper: "dsv_signed_scan",
+        signature: "customer",
+        signedOn: await day(0),
+        reason: "documented_internal_error",
+        source: "Akte",
+      }),
+      404,
+      "not-found",
+    );
+    await expectProblem(await supersede(await day(0), consultant), 404, "not-found");
+    expect(await errors(await supersede(await day(1)), 422)).toEqual([
+      "/signedOn:corrected_on_in_future",
+    ]);
+    // The countersignature was actually given today, after the TG start.
+    const pending = await correctionId(await supersede(await day(0)));
+    expect(await errors(await supersede(await day(-2)), 422)).toEqual([":correction_pending"]);
+    const item = (await queue()).corrections.find((c) => c.correctionId === pending)!;
+    expect(item).toMatchObject({
+      targetKind: "dsv_signature",
+      documentType: "dsv_signed_scan",
+      signatureKind: "customer",
+      fieldKey: null,
+    });
+    expect(await caseItems(id)).not.toContain("evidence_invalidated");
+    expect((await approve(pending)).status).toBe(204);
+    // The DSV tab shows the corrected date on the packet; the entry stays, "Nachweis ungültig".
+    const dsv = (await (await request("GET", `/participations/${id}/dsv`, backOffice)).json()) as {
+      scans: { metadata: { signatures: Record<string, string> } }[];
+    };
+    expect(dsv.scans.map((s) => s.metadata.signatures.customer)).toContain(await day(0));
+    expect((await detail(id)).status).toBe("active_in_tg");
+    expect(await caseItems(id)).toContain("evidence_invalidated");
+    // Cleared once the current facts support the entry again (here: a second correction).
+    expect((await approve(await correctionId(await supersede(await day(-5), projectLead)))).status).toBe(204);
+    expect(await caseItems(id)).not.toContain("evidence_invalidated");
+  });
+});

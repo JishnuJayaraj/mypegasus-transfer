@@ -57,10 +57,8 @@ export async function correctionReviewItemsOf(
       to_char(c.requested_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as requested_on,
       -- A field: when its status change was recorded; a signature: when its rows were.
       to_char(coalesce(d.reviewed_at, g.recorded_at, t.decided_at,
-        (select max(a.occurred_at) from audit_event a where a.participation_id = c.participation_id
-          and a.event_type = 'status_changed'
-          and (c.field_key, a.field::text, a.to_value) in (('profilingDoneOn', 'profiling_status',
-            'profiling_done'), ('withdrawnOn', 'status', 'withdrawn'))),
+        (select f.occurred_at from field_status_change(c.participation_id, c.field_key) f
+          where c.field_key is not null),
         (select min(s.recorded_at) from dsv_scan_signature s join document x on x.id = s.document_id
           where x.dsv_offer_id = c.dsv_offer_id and x.type::text = c.signature_paper
             and s.kind = c.signature_kind), c.requested_at)

@@ -174,6 +174,21 @@ RETURNS TABLE (
 $$;
 --> statement-breakpoint
 
+-- The status change that recorded a correctable field (the participation's latest change to
+-- `profiling_done` for `profilingDoneOn`, to `withdrawn` for `withdrawnOn`): who made it (the actor
+-- type) and when. The views read it ("Korrektur beantragen" only for a manual withdrawal; the
+-- target's recording day in "Freigaben"); transfer_app reads no audit event itself.
+CREATE FUNCTION field_status_change(p_participation_id uuid, p_field_key text)
+RETURNS TABLE (actor_type text, occurred_at timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT a.actor_type::text, a.occurred_at FROM public.audit_event a
+  WHERE a.participation_id = p_participation_id AND a.event_type = 'status_changed'
+    AND (p_field_key, a.field::text, a.to_value) IN (('profilingDoneOn', 'profiling_status',
+      'profiling_done'), ('withdrawnOn', 'status', 'withdrawn'))
+  ORDER BY a.occurred_at DESC, a.seq DESC LIMIT 1
+$$;
+--> statement-breakpoint
+
 -- What a field correction is checked against (data-protection.md, evidence corrections: field
 -- targets): the recorded value (null while the field holds none), and the rule's refusal for the
 -- corrected date, or null. `profilingDoneOn`: the profiling track `profiling_done`; not in the
@@ -198,10 +213,7 @@ BEGIN
     RETURN;
   END IF;
   IF p_field_key = 'withdrawnOn' THEN
-    SELECT a.actor_type::text INTO v_actor FROM public.audit_event a
-    WHERE a.participation_id = r.id AND a.event_type = 'status_changed' AND a.field = 'status'
-      AND a.to_value = 'withdrawn'
-    ORDER BY a.occurred_at DESC, a.seq DESC LIMIT 1;
+    SELECT f.actor_type INTO v_actor FROM public.field_status_change(r.id, 'withdrawnOn') f;
     IF v_actor IS DISTINCT FROM 'user' THEN
       problem := 'withdrawal_by_system';
       RETURN;
@@ -619,8 +631,9 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- Grants as 0088: transfer_app executes the two writes; the helpers stay internal.
-REVOKE ALL ON FUNCTION field_correction_problem, signature_correction_problem,
+-- Grants as 0088: transfer_app executes the two writes and the reader; the helpers stay internal.
+REVOKE ALL ON FUNCTION field_status_change, field_correction_problem, signature_correction_problem,
   request_evidence_correction, decide_evidence_correction FROM PUBLIC;
 --> statement-breakpoint
-GRANT EXECUTE ON FUNCTION request_evidence_correction, decide_evidence_correction TO transfer_app;
+GRANT EXECUTE ON FUNCTION field_status_change, request_evidence_correction,
+  decide_evidence_correction TO transfer_app;
