@@ -181,11 +181,12 @@ describe("a DSV scan's invalidation (D8)", () => {
   });
 });
 
+const correction = (subject: "profilingDoneOn" | "dsvSignature"): ApprovedInvalidation => ({
+  ...decided,
+  target: { kind: "date_correction", subject },
+});
+
 describe("date corrections and an entry already recorded (Nachweis ungültig)", () => {
-  const correction = (subject: "profilingDoneOn" | "dsvSignature"): ApprovedInvalidation => ({
-    ...decided,
-    target: { kind: "date_correction", subject },
-  });
   const entered = { ...none, tgEntryDate: "2026-04-01" };
 
   it("raises nothing before an entry", () => {

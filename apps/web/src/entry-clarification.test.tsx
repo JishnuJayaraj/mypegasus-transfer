@@ -92,6 +92,7 @@ const dsv = {
   },
   cancellations: [],
   customerNotice: null,
+  signatureCorrections: { mayRequest: false, pending: [] },
   capabilities: {
     generate: false,
     offer: false,

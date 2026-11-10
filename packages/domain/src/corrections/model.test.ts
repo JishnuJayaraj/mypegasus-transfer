@@ -201,9 +201,9 @@ describe("date correction rules (data-protection.md, evidence corrections: field
   });
 
   it("checks withdrawnOn: manual only, and not before the cancellation of a signed DSV", () => {
-    expect(fieldCorrectionProblem({ ...withdrawal, current: null }, "2026-03-12", today)?.code).toBe(
-      "field_not_recorded",
-    );
+    expect(
+      fieldCorrectionProblem({ ...withdrawal, current: null }, "2026-03-12", today)?.code,
+    ).toBe("field_not_recorded");
     expect(
       fieldCorrectionProblem({ ...withdrawal, withdrawnBy: "system" }, "2026-03-12", today)?.code,
     ).toBe("withdrawal_by_system");

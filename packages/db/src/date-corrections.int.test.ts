@@ -198,8 +198,18 @@ describe("the DSV signature-date supersession (process-and-lifecycle.md)", () =>
     expect(rows).toHaveLength(4);
     for (const documentId of [f.first, f.packet]) {
       expect(rows.filter((r) => r.document_id === documentId)).toEqual([
-        { document_id: documentId, signed_on: wrong, superseded_by: correctionId, correction_id: null },
-        { document_id: documentId, signed_on: right, superseded_by: null, correction_id: correctionId },
+        {
+          document_id: documentId,
+          signed_on: wrong,
+          superseded_by: correctionId,
+          correction_id: null,
+        },
+        {
+          document_id: documentId,
+          signed_on: right,
+          superseded_by: null,
+          correction_id: correctionId,
+        },
       ]);
     }
     // The retained contract facts follow the corrected actual date.
@@ -256,9 +266,9 @@ describe("the DSV signature-date supersession (process-and-lifecycle.md)", () =>
       failsWith("received_before_signature"),
     );
     expect(await signature(f, await day(-5))).toEqual(expect.any(String));
-    await expect(signature(f, await day(-6), "customer", pl, "dsv_cancellation")).rejects.toMatchObject(
-      failsWith("signature_not_shown"),
-    );
+    await expect(
+      signature(f, await day(-6), "customer", pl, "dsv_cancellation"),
+    ).rejects.toMatchObject(failsWith("signature_not_shown"));
     await expect(signature({ ...f, offer: randomUUID() }, await day(-6))).rejects.toMatchObject(
       failsWith("target_not_found"),
     );
@@ -392,9 +402,10 @@ describe("a field correction of profilingDoneOn (process-and-lifecycle.md, the p
     expect(after.profiling_done_on).toBe(await day(-9));
     expect(after.profiling_done_recorded_at).toEqual(decided_at);
     expect(after.profiling_done_recorded_at.getTime()).toBeGreaterThan(runAt.getTime());
-    expect((await one("select profiling_done_on::text from participation where id=$1", [id])).profiling_done_on).toBe(
-      await day(-9),
-    );
+    expect(
+      (await one("select profiling_done_on::text from participation where id=$1", [id]))
+        .profiling_done_on,
+    ).toBe(await day(-9));
     // No status, version or earlier audit event changed; the history shows the field key only.
     expect(await snapshot(id)).toEqual(before);
     const audit = await all(
@@ -479,30 +490,31 @@ describe("a field correction of profilingDoneOn (process-and-lifecycle.md, the p
   it("refuses an approval when the field changed after the request (target_corrected)", async () => {
     const id = await profiled(await day(-10), await day(-2));
     const correctionId = await field(id, "profilingDoneOn", await day(-9));
-    await owner.query("update participation set profiling_done_on = berlin_today() - 3 where id=$1", [
-      id,
-    ]);
+    await owner.query(
+      "update participation set profiling_done_on = berlin_today() - 3 where id=$1",
+      [id],
+    );
     await expect(decide(correctionId)).rejects.toMatchObject(failsWith("target_corrected"));
     // A rejection changes nothing.
     await decide(correctionId, false);
-    expect((await one("select profiling_done_on::text as d from participation where id=$1", [id])).d).toBe(
-      await day(-3),
-    );
+    expect(
+      (await one("select profiling_done_on::text as d from participation where id=$1", [id])).d,
+    ).toBe(await day(-3));
   });
 });
 
-describe("a field correction of withdrawnOn", () => {
-  const withdraw = (id: string, effectiveDate: string, context = pl) =>
-    call(app, "change_participation_status", {
-      id,
-      field: "status",
-      expectedFrom: "informed",
-      to: "withdrawn",
-      context,
-      endReason: "placed_direct",
-      effectiveDate,
-    });
+const withdraw = (id: string, effectiveDate: string, context = pl) =>
+  call(app, "change_participation_status", {
+    id,
+    field: "status",
+    expectedFrom: "informed",
+    to: "withdrawn",
+    context,
+    endReason: "placed_direct",
+    effectiveDate,
+  });
 
+describe("a field correction of withdrawnOn", () => {
   it("corrects a manual withdrawal's date, not into the future; the status stays", async () => {
     const id = await informedParticipation(app);
     await withdraw(id, await day(-1));
@@ -512,9 +524,9 @@ describe("a field correction of withdrawnOn", () => {
     );
     const correctionId = await field(id, "withdrawnOn", await day(-4));
     await decide(correctionId);
-    expect((await one("select withdrawn_on::text as d from participation where id=$1", [id])).d).toBe(
-      await day(-4),
-    );
+    expect(
+      (await one("select withdrawn_on::text as d from participation where id=$1", [id])).d,
+    ).toBe(await day(-4));
     expect(await snapshot(id)).toEqual(before);
   });
 
@@ -528,11 +540,16 @@ describe("a field correction of withdrawnOn", () => {
 
   it("keeps a cancellation-based withdrawal not before the cancellation's validity", async () => {
     const f = await signedDsv(await day(-6), await day(-5));
-    await owner.query("update participation set offer_deadline = berlin_today() - 7, tg_start = berlin_today() + 10 where id = $1", [
-      f.id,
-    ]);
+    await owner.query(
+      "update participation set offer_deadline = berlin_today() - 7, tg_start = berlin_today() + 10 where id = $1",
+      [f.id],
+    );
     const cancelledOn = await day(-3);
-    const all3 = { participant: cancelledOn, customer: cancelledOn, transfergesellschaft: cancelledOn };
+    const all3 = {
+      participant: cancelledOn,
+      customer: cancelledOn,
+      transfergesellschaft: cancelledOn,
+    };
     const documentId = randomUUID();
     await call(app, "add_document", {
       context: pl,
@@ -565,15 +582,17 @@ describe("a field correction of withdrawnOn", () => {
     );
     expect(await field(f.id, "withdrawnOn", cancelledOn)).toEqual(expect.any(String));
     // The cancellation's signature date is superseded on its own paper only.
-    const cancellation = await signature(f, await day(-2), "customer", asBackOffice, "dsv_cancellation");
+    const cancellation = await signature(
+      f,
+      await day(-2),
+      "customer",
+      asBackOffice,
+      "dsv_cancellation",
+    );
     await decide(cancellation);
     expect(
-      (
-        await one(
-          "select valid_on::text as d from dsv_cancellation_facts(array[$1::uuid])",
-          [f.id],
-        )
-      ).d,
+      (await one("select valid_on::text as d from dsv_cancellation_facts(array[$1::uuid])", [f.id]))
+        .d,
     ).toBe(await day(-2));
     // The contract's own signature rows are untouched.
     expect((await dsvFacts(f.id)).map((r) => r.signed_on)).toEqual([await day(-6), await day(-6)]);

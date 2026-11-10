@@ -109,6 +109,7 @@ const view = (overrides: object = {}) => ({
   },
   cancellations: [],
   customerNotice: null,
+  signatureCorrections: { mayRequest: false, pending: [] },
   capabilities: {
     generate: true,
     offer: true,

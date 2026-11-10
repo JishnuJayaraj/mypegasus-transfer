@@ -232,7 +232,8 @@ export function fieldCorrectionProblem(
       ? { code: "effective_date_before_signature", field: "value" }
       : null;
   }
-  return facts.signedDsv && (facts.cancellationValidOn === null || value < facts.cancellationValidOn)
+  return facts.signedDsv &&
+    (facts.cancellationValidOn === null || value < facts.cancellationValidOn)
     ? { code: "effective_date_before_cancellation", field: "value" }
     : null;
 }

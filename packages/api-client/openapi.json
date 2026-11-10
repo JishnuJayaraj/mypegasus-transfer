@@ -2791,10 +2791,42 @@
             "type": "object",
             "properties": {
               "profilingDoneOn": {
-                "$ref": "#/components/schemas/CorrectionState"
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "pending": {
+                    "type": "boolean"
+                  },
+                  "mayRequest": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "pending",
+                  "mayRequest"
+                ],
+                "additionalProperties": false
               },
               "withdrawnOn": {
-                "$ref": "#/components/schemas/CorrectionState"
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "pending": {
+                    "type": "boolean"
+                  },
+                  "mayRequest": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "pending",
+                  "mayRequest"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -3278,24 +3310,6 @@
         ],
         "additionalProperties": false
       },
-      "CorrectionState": {
-        "type": [
-          "object",
-          "null"
-        ],
-        "properties": {
-          "pending": {
-            "type": "boolean"
-          },
-          "mayRequest": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "pending",
-          "mayRequest"
-        ]
-      },
       "PlacementAgenturChoice": {
         "type": "object",
         "properties": {
@@ -3583,6 +3597,21 @@
           "capabilities"
         ],
         "additionalProperties": false
+      },
+      "CorrectionState": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "boolean"
+          },
+          "mayRequest": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pending",
+          "mayRequest"
+        ]
       },
       "ManualParticipationInput": {
         "type": "object",

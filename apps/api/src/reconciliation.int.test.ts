@@ -527,22 +527,22 @@ describe("the review in Freigaben, the reply and the resolution", () => {
 // Date corrections (data-protection.md, evidence corrections: field targets and the DSV
 // signature-date supersession) with the reconciliation: a corrected fact is recorded at its
 // approval, so the scheduled run before it never counted it, and the reconciliation uses it.
-describe("date corrections and the missed entry", () => {
-  const correction = (id: string, body: object, as: string = projectLead) =>
-    request("POST", `/participations/${id}/evidence-corrections`, as, {
-      reason: "documented_internal_error",
-      source: "Personalakte, TL 407 Seite 2",
-      ...body,
-    });
-  const approve = (correctionId: string, as: string = manager) =>
-    request("POST", `/evidence-corrections/${correctionId}/decision`, as, { decision: "approve" });
-  const correctionId = async (res: Response) => {
-    expect(res.status).toBe(201);
-    return ((await res.json()) as { correctionId: string }).correctionId;
-  };
-  const detail = async (id: string, as: string = projectLead) =>
-    readJson(await request("GET", `/participations/${id}`, as), ParticipationDetail);
+const correction = (id: string, payload: object, as: string = projectLead) =>
+  request("POST", `/participations/${id}/evidence-corrections`, as, {
+    reason: "documented_internal_error",
+    source: "Personalakte, TL 407 Seite 2",
+    ...payload,
+  });
+const approve = (id: string, as: string = manager) =>
+  request("POST", `/evidence-corrections/${id}/decision`, as, { decision: "approve" });
+const correctionId = async (res: Response) => {
+  expect(res.status).toBe(201);
+  return ((await res.json()) as { correctionId: string }).correctionId;
+};
+const detail = async (id: string, as: string = projectLead) =>
+  readJson(await request("GET", `/participations/${id}`, as), ParticipationDetail);
 
+describe("date corrections and the missed entry", () => {
   it("reconciles a missed start with a corrected profilingDoneOn, changing no status or past event", async () => {
     const { id } = await missedEntry();
     // The completion was typed as today: after the TG start, so no entry fact held on it.
@@ -555,14 +555,22 @@ describe("date corrections and the missed entry", () => {
     // Back office and the consultant see no such capability and are refused.
     expect((await detail(id, backOffice)).dateCorrections).toBeUndefined();
     await expectProblem(
-      await correction(id, { correction: "correct_field", field: "profilingDoneOn", value: await day(-10) }, backOffice),
+      await correction(
+        id,
+        { correction: "correct_field", field: "profilingDoneOn", value: await day(-10) },
+        backOffice,
+      ),
       403,
       "forbidden",
     );
     // A date before the TL 407's signature: 422 with its pointer.
     expect(
       await errors(
-        await correction(id, { correction: "correct_field", field: "profilingDoneOn", value: await day(-11) }),
+        await correction(id, {
+          correction: "correct_field",
+          field: "profilingDoneOn",
+          value: await day(-11),
+        }),
         422,
       ),
     ).toEqual(["/value:effective_date_before_signature"]);
@@ -571,7 +579,11 @@ describe("date corrections and the missed entry", () => {
       [id],
     );
     const pending = await correctionId(
-      await correction(id, { correction: "correct_field", field: "profilingDoneOn", value: await day(-10) }),
+      await correction(id, {
+        correction: "correct_field",
+        field: "profilingDoneOn",
+        value: await day(-10),
+      }),
     );
     expect((await detail(id)).dateCorrections!.profilingDoneOn).toEqual({
       pending: true,
@@ -613,7 +625,9 @@ describe("date corrections and the missed entry", () => {
     const { id } = await missedEntry();
     expect((await reconcile(id)).status).toBe(201);
     const offer = (
-      await sql("select id from dsv_offer where participation_id = $1 and ended_as = 'signed'", [id])
+      await sql("select id from dsv_offer where participation_id = $1 and ended_as = 'signed'", [
+        id,
+      ])
     ).rows[0].id as string;
     const supersede = (signedOn: string, as: string = backOffice) =>
       correction(
@@ -665,7 +679,9 @@ describe("date corrections and the missed entry", () => {
     expect((await detail(id)).status).toBe("active_in_tg");
     expect(await caseItems(id)).toContain("evidence_invalidated");
     // Cleared once the current facts support the entry again (here: a second correction).
-    expect((await approve(await correctionId(await supersede(await day(-5), projectLead)))).status).toBe(204);
+    expect(
+      (await approve(await correctionId(await supersede(await day(-5), projectLead)))).status,
+    ).toBe(204);
     expect(await caseItems(id)).not.toContain("evidence_invalidated");
   });
 });

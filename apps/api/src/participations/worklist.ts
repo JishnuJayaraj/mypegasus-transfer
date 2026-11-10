@@ -507,14 +507,14 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
               subject: c.target_kind === "field" ? "profilingDoneOn" : "dsvSignature",
             }
           : c.target_kind === "asu_registration"
-          ? { kind: "asu_registration" }
-          : {
-              kind: "document",
-              documentType: c.document_type!,
-              signed: c.signed === true,
-              supportedRegistration: c.supported_registration,
-              ...(c.dsv && { dsv: c.dsv }),
-            },
+            ? { kind: "asu_registration" }
+            : {
+                kind: "document",
+                documentType: c.document_type!,
+                signed: c.signed === true,
+                supportedRegistration: c.supported_registration,
+                ...(c.dsv && { dsv: c.dsv }),
+              },
     });
   }
   return result;

@@ -16989,8 +16989,14 @@ export interface components {
             /** @enum {string|null} */
             endReasonSource?: "user" | "system" | null;
             dateCorrections?: {
-                profilingDoneOn: components["schemas"]["CorrectionState"];
-                withdrawnOn: components["schemas"]["CorrectionState"];
+                profilingDoneOn: {
+                    pending: boolean;
+                    mayRequest: boolean;
+                } | null;
+                withdrawnOn: {
+                    pending: boolean;
+                    mayRequest: boolean;
+                } | null;
             };
             statusVersion: number;
             entryWave: {
@@ -17141,10 +17147,6 @@ export interface components {
                 withdraw: "forbidden" | "project_not_active" | "status_not_withdrawable" | "dsv_cancellation_missing" | "after_planned_start" | "tg_start_missing" | null;
             };
         };
-        CorrectionState: {
-            pending: boolean;
-            mayRequest: boolean;
-        } | null;
         PlacementAgenturChoice: {
             agenturKey: string;
             label: {
@@ -17245,6 +17247,10 @@ export interface components {
             capabilities: {
                 recordOutcome: boolean;
             };
+        };
+        CorrectionState: {
+            pending: boolean;
+            mayRequest: boolean;
         };
         ManualParticipationInput: {
             values: {

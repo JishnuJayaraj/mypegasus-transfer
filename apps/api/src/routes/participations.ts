@@ -373,7 +373,8 @@ export function participationRoutes(deps: Deps) {
             and status = 'requested' and field_key = 'withdrawnOn') as withdrawn_pending,
           (select actor_type from field_status_change(${participationId}::uuid, 'withdrawnOn'))
             as withdrawn_by`);
-      const profilingRecorded = p.profilingStatus === "profiling_done" && p.profilingDoneOn !== null;
+      const profilingRecorded =
+        p.profilingStatus === "profiling_done" && p.profilingDoneOn !== null;
       const manualWithdrawal = p.status === "withdrawn" && state!.withdrawn_by === "user";
       corrections = {
         dateCorrections: {

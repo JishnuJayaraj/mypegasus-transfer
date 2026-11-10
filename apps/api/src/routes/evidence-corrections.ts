@@ -262,7 +262,11 @@ async function dateProblem(
     const row = rows[0]!;
     return fieldCorrectionProblem(
       input.field === "profilingDoneOn"
-        ? { field: "profilingDoneOn", current: row.profiling_done_on, tl407SignedOn: row.tl407_signed_on }
+        ? {
+            field: "profilingDoneOn",
+            current: row.profiling_done_on,
+            tl407SignedOn: row.tl407_signed_on,
+          }
         : {
             field: "withdrawnOn",
             current: row.withdrawn_on,

@@ -19,6 +19,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi, participationQuery } from "../api";
+import { useCorrectionRequest } from "./evidence-correction";
 import { usePanelNavigationGuard } from "./panel-guard";
 
 type View = components["schemas"]["DsvView"];
@@ -35,16 +36,23 @@ const kinds = ["participant", "customer", "transfergesellschaft"] as const;
  */
 export function DsvScans({
   view,
+  projectId,
   onOpen,
   paper = "scan",
 }: {
   view: View;
+  projectId: string;
   onOpen: (id: string) => Promise<void>;
   paper?: "scan" | "cancellation";
 }) {
   const { t } = useTranslation();
   const cancellation = paper === "cancellation";
   const list = cancellation ? view.cancellations : view.scans;
+  const paperType = cancellation ? "dsv_cancellation" : "dsv_signed_scan";
+  const signatureCorrection = useCorrectionRequest({
+    participationId: view.participationId,
+    projectId,
+  });
   const api = useApi();
   const cache = useQueryClient();
   const [target, setTarget] = useState<Target | null>(null);
@@ -211,6 +219,7 @@ export function DsvScans({
             {t(cancellation ? "dsv.cancellation.upload" : "dsv.scans.upload")}
           </Button>
         )}
+        {signatureCorrection.element}
         {!list.length && <p>{t(cancellation ? "dsv.cancellation.empty" : "dsv.scans.empty")}</p>}
         {list.map((scan) => (
           <Stack key={scan.document.id} gap={3}>
@@ -224,13 +233,35 @@ export function DsvScans({
             </p>
             {kinds
               .filter((k) => scan.metadata.signatures[k])
-              .map((k) => (
-                <p key={k}>
-                  {t(`dsv.scans.${k}`)}
-                  {": "}
-                  {formatDate(scan.metadata.signatures[k]!)}
-                </p>
-              ))}
+              .map((k) => {
+                // A wrong signature date on accepted paper is superseded, never edited
+                // (process-and-lifecycle.md, the DSV signature-date supersession).
+                const pending = view.signatureCorrections.pending.some(
+                  (c) =>
+                    c.offerId === scan.metadata.offerId &&
+                    c.paper === paperType &&
+                    c.signature === k,
+                );
+                return (
+                  <p key={k}>
+                    {t(`dsv.scans.${k}`)}
+                    {": "}
+                    {formatDate(scan.metadata.signatures[k]!)}
+                    {pending && ` · ${t("corrections.pending")}`}
+                    {scan.document.review.state === "accepted" &&
+                      !pending &&
+                      view.signatureCorrections.mayRequest &&
+                      signatureCorrection.button({
+                        kind: "dsv_signature",
+                        id: `${scan.metadata.offerId}-${paperType}-${k}`,
+                        offerId: scan.metadata.offerId,
+                        paper: paperType,
+                        signature: k,
+                        label: `${t(`dsv.scans.${k}`)} (${formatDate(scan.metadata.signatures[k]!)})`,
+                      })}
+                  </p>
+                );
+              })}
             <div>
               {scan.document.capabilities.open && (
                 <Button kind="ghost" onClick={() => void onOpen(scan.document.id)}>

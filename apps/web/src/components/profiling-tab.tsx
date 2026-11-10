@@ -24,6 +24,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, participationQuery, useApi } from "../api";
 import { ReloadNotice, useDraft } from "./draft";
+import { useCorrectionRequest } from "./evidence-correction";
 import { ProfilingException } from "./profiling-exception";
 import { SelfServiceTab } from "./self-service-tab";
 import { Tl407Section } from "./tl407-section";
@@ -66,7 +67,7 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
       {view.closed && (
         <InlineNotification kind="info" title={t("profiling.closed")} hideCloseButton lowContrast />
       )}
-      <StatusSection view={view} />
+      <StatusSection view={view} detail={detail} projectId={projectId} />
       <SessionsSection view={view} />
       <section className="tp-section" aria-labelledby="profiling-self-service">
         <h2 id="profiling-self-service">{t("profiling.selfService.title")}</h2>
@@ -108,8 +109,20 @@ function useSaved(participationId: string) {
   };
 }
 
-function StatusSection({ view }: { view: View }) {
+function StatusSection({
+  view,
+  detail,
+  projectId,
+}: {
+  view: View;
+  detail: Detail;
+  projectId: string;
+}) {
   const { t } = useTranslation();
+  const profilingDoneOnCorrection = useCorrectionRequest({
+    participationId: view.participationId,
+    projectId,
+  });
   const api = useApi();
   const { saved, reload, statusChanged } = useSaved(view.participationId);
   const [declining, setDeclining] = useState(false);
@@ -154,10 +167,21 @@ function StatusSection({ view }: { view: View }) {
         {view.profilingDoneOn && (
           <div>
             <dt>{t("profiling.status.doneOn")}</dt>
-            <dd>{formatDate(view.profilingDoneOn)}</dd>
+            <dd>
+              {formatDate(view.profilingDoneOn)}
+              {detail.dateCorrections?.profilingDoneOn?.pending && ` · ${t("corrections.pending")}`}
+              {/* A wrong completion date (data-protection.md, evidence corrections). */}
+              {detail.dateCorrections?.profilingDoneOn?.mayRequest &&
+                profilingDoneOnCorrection.button({
+                  kind: "field",
+                  id: "profilingDoneOn",
+                  label: t("corrections.fields.profilingDoneOn"),
+                })}
+            </dd>
           </div>
         )}
       </dl>
+      {profilingDoneOnCorrection.element}
       {view.profilingDoneSupported === false && (
         <InlineNotification
           kind="warning"

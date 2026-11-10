@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import {
   participationAsuQuery,
   participationDocumentsQuery,
+  participationDsvQuery,
   participationHistoryQuery,
   participationProfilingQuery,
   participationQuery,
@@ -32,6 +33,9 @@ import {
 // source are always chosen and typed by the PL: nothing is preset. The dialog captures its target
 // when it opens and never adopts another (a replacement, a refreshed state); the regional
 // operations manager decides in "Freigaben". The button follows the API's capability.
+// A date correction (data-protection.md, evidence corrections: field targets and the DSV
+// signature-date supersession) asks for the truthful date as the source shows it: `profilingDoneOn`,
+// a manual `withdrawnOn`, or one signature's date on accepted DSV paper; never preset.
 
 type Input = components["schemas"]["EvidenceCorrectionRequestInput"];
 type Reason = Input["reason"];
@@ -41,7 +45,18 @@ export type CorrectionTarget =
   | { kind: "document"; id: string; label: string }
   /** On `kug_200b` the date is the batch's: only an invalidation is offered (Q209 (3)). */
   | { kind: "asu_registration"; id: string; label: string; kug200b: boolean }
-  | { kind: "ba_reporting_task"; id: string; label: string };
+  | { kind: "ba_reporting_task"; id: string; label: string }
+  /** `id` is the field key. */
+  | { kind: "field"; id: "profilingDoneOn" | "withdrawnOn"; label: string }
+  /** `id` names the offer, paper and signature. */
+  | {
+      kind: "dsv_signature";
+      id: string;
+      offerId: string;
+      paper: "dsv_signed_scan" | "dsv_cancellation";
+      signature: "participant" | "customer" | "transfergesellschaft";
+      label: string;
+    };
 
 const reasons = [
   "ba_legal_reference",
@@ -107,7 +122,12 @@ export function useCorrectionRequest(scope: { participationId: string; projectId
       )}
     </>
   );
-  return { button, element };
+  /** Opens the dialog for `target` (a menu action); it keeps that target. */
+  const open = (target: CorrectionTarget) => {
+    setMessage(undefined);
+    setOpened(target);
+  };
+  return { button, element, open };
 }
 
 function CorrectionDialog(props: {
@@ -147,6 +167,20 @@ function CorrectionDialog(props: {
     if (target.kind === "ba_reporting_task") {
       return { correction: "supersede_ba_report", taskId: target.id, ...base };
     }
+    if (target.kind === "field" || target.kind === "dsv_signature") {
+      const parsed = parseDisplayDate(date);
+      if (!parsed.ok || parsed.value === undefined) return undefined;
+      return target.kind === "field"
+        ? { correction: "correct_field", field: target.id, value: parsed.value, ...base }
+        : {
+            correction: "supersede_dsv_signature",
+            offerId: target.offerId,
+            paper: target.paper,
+            signature: target.signature,
+            signedOn: parsed.value,
+            ...base,
+          };
+    }
     if (action === "invalidate") {
       return { correction: "invalidate_asu_registration", registrationId: target.id, ...base };
     }
@@ -164,7 +198,11 @@ function CorrectionDialog(props: {
   }
 
   async function submit() {
-    if (target.kind === "asu_registration" && action === "supersede") {
+    if (
+      (target.kind === "asu_registration" && action === "supersede") ||
+      target.kind === "field" ||
+      target.kind === "dsv_signature"
+    ) {
       const parsed = parseDisplayDate(date);
       setInvalidDate(!parsed.ok || parsed.value === undefined);
     }
@@ -193,6 +231,7 @@ function CorrectionDialog(props: {
         participationQuery(api, participationId),
         participationAsuQuery(api, participationId),
         participationDocumentsQuery(api, participationId),
+        participationDsvQuery(api, participationId),
         participationProfilingQuery(api, participationId),
         participationHistoryQuery(api, participationId),
         worklistQuery(api, props.projectId),
@@ -269,6 +308,24 @@ function CorrectionDialog(props: {
           </>
         )}
         {target.kind === "ba_reporting_task" && <p>{t("corrections.dialog.replacement")}</p>}
+        {(target.kind === "field" || target.kind === "dsv_signature") && (
+          <>
+            <p>
+              {t(
+                target.kind === "field"
+                  ? "corrections.dialog.fieldHint"
+                  : "corrections.dialog.signatureHint",
+              )}
+            </p>
+            <DateField
+              id="correction-corrected-on"
+              labelText={t("corrections.dialog.correctedOn")}
+              defaultValue={date}
+              onChange={setDate}
+              invalidText={invalidDate ? t("corrections.dialog.invalidDate") : undefined}
+            />
+          </>
+        )}
         <Select
           id="correction-reason"
           labelText={t("corrections.dialog.reason")}
