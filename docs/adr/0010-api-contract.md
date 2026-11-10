@@ -871,3 +871,23 @@ participation's related queries and the project's work list/dashboard.
   `clarifications` are the entry clarifications of 7-4. `ParticipationDetail.capabilities` gains
   `reconcileTgEntry`; `WorklistCaseItem` gains `reconciliation_clarification`. Logs carry ids and
   codes only.
+
+## Note 2026-11-10 (Slice 7, PR 7-8): date corrections
+
+- `POST /participations/{id}/evidence-corrections` gains `correct_field { field, value }` (`field`
+  `profilingDoneOn` or `withdrawnOn`, any other a validation error) and `supersede_dsv_signature {
+  offerId, paper, signature, signedOn }`. Order: a hidden participation `404`; an offer not of the
+  participation, or one whose paper the viewer neither reads nor may correct, `404`; without the
+  authority table's role `403` (back office and the consultant for a field, the consultant for a
+  signature); then `422` with pointers: `field_not_recorded` and `withdrawal_by_system` at `/field`,
+  `correction_unchanged`, `corrected_on_in_future`, `effective_date_before_signature` and
+  `effective_date_before_cancellation` at `/value`; `signature_not_shown` and
+  `signature_date_mismatch` at `/signature`, `correction_unchanged`, `corrected_on_in_future` and
+  `received_before_signature` at `/signedOn`; `correction_pending` and `target_corrected` without a
+  pointer. The decision's route is unchanged (`409 source_changed`, `422 target_corrected` and the
+  rules again).
+- `CorrectionReviewItem` gains `fieldKey` and `signatureKind` (`documentType` names a signature's
+  paper); no corrected or original date, participant id or name. `ParticipationDetail` gains
+  `dateCorrections { profilingDoneOn, withdrawnOn }` (each `{ pending, mayRequest }` or null; the PL
+  only) and `DsvView` gains `signatureCorrections { mayRequest, pending[] }`. Logs carry ids and
+  codes (`fieldKey`, `paper`, `signatureKind`), never a date or the source.
