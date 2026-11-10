@@ -38,6 +38,8 @@ import {
   EndReasonCorrectionRequest,
   WithdrawalRequest,
   withdrawRefusal,
+  ContactStatusRequest,
+  mayTakeSomeContactStep,
   effectiveTgStart,
   edges,
   mayPerformTransition,
@@ -330,6 +332,13 @@ export function participationRoutes(deps: Deps) {
           viewAsu: snapshot.project.type === "ta_tg" && mayViewAsu(subject, target).ok,
           viewDsv: snapshot.project.type === "ta_tg" && mayWorkDsv(subject, target).ok,
           withdraw: withdraw === null,
+          // "Kontaktstatus" (process-and-lifecycle.md, the manual contact statuses): the targets
+          // the viewer may set now, as the route decides them.
+          contactStatus: ["imported", "contacted", "unreachable"].includes(p.status)
+            ? (await statusService.contactTransitions(subject, participationId))
+                .filter((t) => t.allowed)
+                .map((t) => t.to)
+            : [],
           correctEndReason: correctsEndReason,
           // "Eintritt nachträglich erfassen": as the reconciliation's own route decides it.
           reconcileTgEntry:
@@ -752,7 +761,9 @@ export function participationRoutes(deps: Deps) {
       .where(eq(participation.id, participationId));
     if (!found) return undefined;
     const access = await projectAccess(db, sessionUser(c), found.projectId);
-    return access.visible ? { ...access, status: found.status } : undefined;
+    return access.visible
+      ? { ...access, projectId: found.projectId, status: found.status }
+      : undefined;
   }
 
   router.openapi(
@@ -822,6 +833,83 @@ export function participationRoutes(deps: Deps) {
         );
       }
       log("withdrawn");
+      const detail = await detailOf(sessionUser(c), participationId);
+      return detail ? c.json(detail, 200) : problem(c, "forbidden");
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/contact-status",
+      tags: ["participations"],
+      summary:
+        "Set the contact status (the PL, the assigned consultant/profiler; process-and-lifecycle.md, the manual contact statuses): imported → contacted, contacted → unreachable, unreachable → contacted (before_cutoff), against the status version read. Returns the participation",
+      description: [
+        "Refusals, in this order:",
+        "- `404`: the participation is hidden from the viewer.",
+        "- `403`: the viewer may take no contact step (Q60), or not this one.",
+        "- `422 project_not_active`.",
+        "- `409 stale_status`: the participation changed since its status version was read.",
+        "- `422` at `/to`: `no_edge` (no contact edge from the current status, e.g. informed or a terminal status), `before_cutoff` (unreachable → contacted after the admission cutoff).",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: ContactStatusRequest } } },
+      },
+      responses: {
+        200: json(ParticipationDetail, "The participation with its new contact status"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const found = await visibleParticipation(c, participationId);
+      if (!found) return problem(c, "not-found");
+      const log = (outcome: string) =>
+        deps.logger.info(
+          { requestId: c.get("requestId"), participationId, outcome },
+          "participation contact status",
+        );
+      // Permission before state: a viewer who may take no contact step is a 403 whatever the
+      // status is; the status service checks the step's own edge again under the lock.
+      const target = projectTarget(found.projectId, found.regionId, participationId);
+      if (!mayTakeSomeContactStep((edge) => mayPerformTransition(found.subject, edge, target).ok)) {
+        log("actor_not_allowed");
+        return problem(c, "forbidden");
+      }
+      try {
+        await statusService.changeStatus(
+          found.subject,
+          {
+            participationId,
+            track: "main",
+            from: found.status,
+            to: input.to,
+            expectedVersion: input.statusVersion,
+          },
+          { requestId: c.get("requestId") },
+        );
+      } catch (error) {
+        if (!(error instanceof StatusServiceError)) throw error;
+        log(error.code);
+        if (error.kind !== "domain") return refusal(c, error);
+        const codes = error.failedGuards.length > 0 ? error.failedGuards : [error.code];
+        return domainProblem(
+          c,
+          codes.map((code) => ({ code, field: code === "project_not_active" ? null : "to" })),
+        );
+      }
+      log("changed");
       const detail = await detailOf(sessionUser(c), participationId);
       return detail ? c.json(detail, 200) : problem(c, "forbidden");
     },

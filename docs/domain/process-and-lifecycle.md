@@ -1483,3 +1483,17 @@ packet now completed after the TG entry date, a completion now after it), the PL
 "Nachweis ungültig" until the current facts support it again; it is resolved through the
 reconciliation rules or the entry clarification, never repaired, and Q220 decides what else exists for
 an entry that stays unsupported.
+
+### Manual contact statuses as built (7-9)
+
+*(Q60 assumed, Q215 accepted; readings Q233.)*
+
+"Kontaktstatus" in the page header (the PL, the assigned consultant/profiler) moves the main status
+along the existing `manual` edges only: `imported → contacted`, `contacted → unreachable`,
+`unreachable → contacted` (its `before_cutoff` guard; `imported → contacted` has none). The route
+`POST /participations/{id}/contact-status` calls the status function, which writes the
+`status_changed` event in the same transaction (ADR-0002); no new audit event type. The dialog
+captures the status version when it opens and offers only the targets the capability allows,
+nothing preset; a change meanwhile is `409 stale_status`. `contacted → informed` stays the
+attendance's path (information delivery), and `informed`, `active_in_tg` and the terminal statuses
+have no contact step.

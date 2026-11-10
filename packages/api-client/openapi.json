@@ -3204,6 +3204,12 @@
               "withdraw": {
                 "type": "boolean"
               },
+              "contactStatus": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ContactStatusTarget"
+                }
+              },
               "correctEndReason": {
                 "type": "boolean"
               },
@@ -3225,6 +3231,7 @@
               "viewAsu",
               "viewDsv",
               "withdraw",
+              "contactStatus",
               "correctEndReason",
               "reconcileTgEntry"
             ],
@@ -3613,6 +3620,13 @@
           "mayRequest"
         ]
       },
+      "ContactStatusTarget": {
+        "type": "string",
+        "enum": [
+          "contacted",
+          "unreachable"
+        ]
+      },
       "ManualParticipationInput": {
         "type": "object",
         "properties": {
@@ -3823,6 +3837,23 @@
         "required": [
           "endReason",
           "effectiveDate",
+          "statusVersion"
+        ],
+        "additionalProperties": false
+      },
+      "ContactStatusRequest": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "$ref": "#/components/schemas/ContactStatusTarget"
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "to",
           "statusVersion"
         ],
         "additionalProperties": false
@@ -21719,6 +21750,108 @@
         "responses": {
           "200": {
             "description": "The withdrawn participation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/contact-status": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Set the contact status (the PL, the assigned consultant/profiler; process-and-lifecycle.md, the manual contact statuses): imported → contacted, contacted → unreachable, unreachable → contacted (before_cutoff), against the status version read. Returns the participation",
+        "description": "Refusals, in this order:\n- `404`: the participation is hidden from the viewer.\n- `403`: the viewer may take no contact step (Q60), or not this one.\n- `422 project_not_active`.\n- `409 stale_status`: the participation changed since its status version was read.\n- `422` at `/to`: `no_edge` (no contact edge from the current status, e.g. informed or a terminal status), `before_cutoff` (unreachable → contacted after the admission cutoff).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The participation with its new contact status",
             "content": {
               "application/json": {
                 "schema": {

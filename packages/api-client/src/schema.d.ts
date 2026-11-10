@@ -2591,6 +2591,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/contact-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the contact status (the PL, the assigned consultant/profiler; process-and-lifecycle.md, the manual contact statuses): imported → contacted, contacted → unreachable, unreachable → contacted (before_cutoff), against the status version read. Returns the participation
+         * @description Refusals, in this order:
+         *     - `404`: the participation is hidden from the viewer.
+         *     - `403`: the viewer may take no contact step (Q60), or not this one.
+         *     - `422 project_not_active`.
+         *     - `409 stale_status`: the participation changed since its status version was read.
+         *     - `422` at `/to`: `no_edge` (no contact edge from the current status, e.g. informed or a terminal status), `before_cutoff` (unreachable → contacted after the admission cutoff).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ContactStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description The participation with its new contact status */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationDetail"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/end-reason": {
         parameters: {
             query?: never;
@@ -17135,6 +17239,7 @@ export interface components {
                 viewAsu: boolean;
                 viewDsv: boolean;
                 withdraw: boolean;
+                contactStatus: components["schemas"]["ContactStatusTarget"][];
                 correctEndReason: boolean;
                 reconcileTgEntry: boolean;
             };
@@ -17252,6 +17357,8 @@ export interface components {
             pending: boolean;
             mayRequest: boolean;
         };
+        /** @enum {string} */
+        ContactStatusTarget: "contacted" | "unreachable";
         ManualParticipationInput: {
             values: {
                 personnelNumber?: string;
@@ -17318,6 +17425,10 @@ export interface components {
             effectiveDate: string;
             statusVersion: number;
             confirmed?: boolean;
+        };
+        ContactStatusRequest: {
+            to: components["schemas"]["ContactStatusTarget"];
+            statusVersion: number;
         };
         EndReasonCorrectionRequest: {
             /** @enum {string} */

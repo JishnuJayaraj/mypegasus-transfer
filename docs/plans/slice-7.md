@@ -433,6 +433,10 @@ events gain detail keys), and `field_status_change` lets the views read who reco
 reading `audit_event`. `dsv_contract`'s retained dates follow an approved supersession. Readings:
 Q232 (assumed).
 
+**7-9 as built:** the plan's route through `change_participation_status` (no new SQL function,
+migration or audit event type); `ParticipationDetail.capabilities.contactStatus` lists the targets
+the viewer may set now. Readings: Q233 (assumed).
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether
