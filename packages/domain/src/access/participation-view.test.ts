@@ -241,6 +241,7 @@ describe("participationDetail", () => {
         withdraw: true,
         correctEndReason: false,
         reconcileTgEntry: false,
+        contactStatus: [],
       },
       refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
     });
