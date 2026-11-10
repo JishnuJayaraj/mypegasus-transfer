@@ -298,25 +298,26 @@ describe("the PL's reply on the tab DSV", () => {
   });
 });
 
+const item = (over: object = {}) => ({
+  id: reconciliationId,
+  projectId: project.id,
+  projectName: "Restrukturierung Werk Nord",
+  tgStart: "2026-11-01",
+  reconciledOn: "2026-11-03",
+  reviewDueOn: "2026-11-04",
+  evidence: [{ kind: "dsv_packet", validOn: "2026-10-28", recordedOn: "2026-11-02" }],
+  stage: "requested",
+  revision: 0,
+  steps: [],
+  capabilities: { outcomes: ["no_objection", "clarification_requested"] },
+  ...over,
+});
+
 describe("the reconciliations in Freigaben", () => {
   const manager = {
     ...staffUsers[1],
     grants: [{ role: "regional_operations_manager", scope: "region", regionId: null }],
   };
-  const item = (over: object = {}) => ({
-    id: reconciliationId,
-    projectId: project.id,
-    projectName: "Restrukturierung Werk Nord",
-    tgStart: "2026-11-01",
-    reconciledOn: "2026-11-03",
-    reviewDueOn: "2026-11-04",
-    evidence: [{ kind: "dsv_packet", validOn: "2026-10-28", recordedOn: "2026-11-02" }],
-    stage: "requested",
-    revision: 0,
-    steps: [],
-    capabilities: { outcomes: ["no_objection", "clarification_requested"] },
-    ...over,
-  });
   function reviews(items: object[], routes: Parameters<typeof mockApi>[0] = {}) {
     const mock = mockApi({
       "GET /api/v1/me": () => json(manager),
