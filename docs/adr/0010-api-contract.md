@@ -847,3 +847,27 @@ participation's related queries and the project's work list/dashboard.
   `dsvCancellationValidOn` (DSV viewers), `endReason`/`endReasonSource` (the PL who may correct it),
   `capabilities.withdraw | correctEndReason` and `refusals.withdraw`; `WorklistCaseItem` gains
   `dsv_customer_notice`. The routes log ids and codes only.
+
+#### The reconciliation and its review (7-6)
+
+- `GET /participations/{id}/tg-entry-reconciliation` (the PL and back office; anyone else who sees
+  the participation `403`, a hidden one `404`): `TgEntryReconciliationState { tgStart, evidence[]
+  { kind, id, validOn, recordedAt }, problems[] { fact, code }, reconciliation, capabilities
+  { reconcile, reply }, refusal }`.
+- `POST` the same (the PL): `{ evidence: [{ kind, id, validOn }] (3), statusVersion, confirmed: true }`;
+  `201 TgEntryReconciliationState`. `404` → `403` → `409` (`/statusVersion: stale_status`,
+  `/evidence: source_changed`) → `422` (the failed guards by their ids, `not_informed`,
+  `project_not_active`, `/evidence: evidence_incomplete | evidence_after_tg_start`).
+- `POST /reconciliations/{id}/review` (the region's manager): `{ outcome: no_objection, revision }`,
+  `{ outcome: clarification_requested, code, source, revision }` or `{ outcome:
+  resolved_no_objection | escalated_to_dpo, source, revision }`; `204`. `404` for a reconciliation the
+  viewer can't see, `403` (`actor_not_allowed`, `four_eyes`), `409 /revision: stale_reconciliation`,
+  `422 not_awaiting | /outcome: outcome_not_allowed`.
+- `POST /reconciliations/{id}/reply` (a PL of the project): `{ code, source, revision }`; `204`; the
+  same refusals with `not_awaiting`.
+- `GET /reviews` gains `reconciliations: ReconciliationReviewItem[]` (the open ones: project, TG
+  start, reconciled and due days, the evidence's kinds with valid and recorded days, stage, revision,
+  steps, `capabilities.outcomes`; no participant id or name, no record id). The existing
+  `clarifications` are the entry clarifications of 7-4. `ParticipationDetail.capabilities` gains
+  `reconcileTgEntry`; `WorklistCaseItem` gains `reconciliation_clarification`. Logs carry ids and
+  codes only.

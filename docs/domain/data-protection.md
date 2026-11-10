@@ -1510,3 +1510,16 @@ event, a log or a job payload. The PL and back office see the work list's DSV it
 generation; a consultant sees neither. The queue "Freigaben" lists an escalated case to the regional
 operations managers of the project's region only.
 
+### The reconciliation and its review (Slice 7, PR 7-6)
+
+`tg_entry_reconciliation` and its steps `tg_entry_reconciliation_step` are internal case data
+(`participation_record`, `project_id` on the row, scoped to the participation), written only by
+`reconcile_tg_entry`, `review_reconciliation` and `reply_reconciliation_clarification`; the runtime
+role selects them. The row holds the evidence's kinds, record ids, valid days and recording instants,
+the PL's confirmation and the review's stage; a step holds the manager's outcome or the PL's reply,
+its code and one documented source line (Q209's rules, `case_internal`). The sources are shown to the
+PL and back office on the tab "DSV" and to the regional operations managers of the project's region
+in "Freigaben", where the queue names the project, the TG start and the evidence's kinds with their
+days but no participant, no participation id, no record id and no file (Q80). The sources never reach
+the history, an audit event, a log or a job payload: `tg_entry_reconciled` (history `case`) carries the
+evidence kinds; `reconciliation_reviewed` and `reconciliation_replied` (stream `review`) the codes.

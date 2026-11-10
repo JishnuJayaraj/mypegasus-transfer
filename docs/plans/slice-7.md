@@ -419,6 +419,12 @@ no change (catalog version 10 is a policy row), and `audit_history` was recreate
 cancellation's document events in the `dsv` stream. Readings: Q229 (assumed); the legal form and
 notifications of a cancellation: Q230 (open, with Q46).
 
+**7-6 as built:** the plan's functions and routes. The reconciliation's day is the status service's
+(the clock and the day's run, as the guard always was); the database checks the packet and refuses a
+`reconciliation` entry without its row. `GET /reviews` keeps 7-4's `clarifications` (the entry
+clarifications) and gains `reconciliations`, whose open clarifications are in it by their stage.
+Readings: Q231 (assumed).
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether
