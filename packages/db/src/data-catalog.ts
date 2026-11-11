@@ -69,6 +69,58 @@ export const retentionPrerequisites: RetentionPrerequisites = {
   maintenance_rules_complete: false,
 };
 
+/** Rows waiting for a referencing row (data-protection.md, retained dependencies). */
+export const retainedDependencies = [
+  {
+    table: "activation_code",
+    referencedBy: "participant_session",
+    retentionClass: "access_credential",
+    until: "session deleted",
+  },
+  {
+    table: "staff_session",
+    referencedBy: "assisted_mode",
+    retentionClass: "access_credential",
+    until: "assisted mode deleted",
+  },
+  {
+    table: "appointment_booking",
+    referencedBy: "participant_reminder",
+    retentionClass: "personnel_file",
+    until: "reminder deleted",
+  },
+  {
+    table: "participant_channel",
+    referencedBy: "participant_reminder",
+    retentionClass: "personnel_file",
+    until: "reminder deleted",
+  },
+  {
+    table: "consent_record",
+    referencedBy: "participant_reminder",
+    retentionClass: "personnel_file",
+    until: "reminder deleted",
+  },
+  {
+    table: "consent_record",
+    referencedBy: "participant_channel",
+    retentionClass: "personnel_file",
+    until: "channel deleted",
+  },
+  {
+    table: "consent_record",
+    referencedBy: "kug200b_withdrawal",
+    retentionClass: "personnel_file",
+    until: "withdrawal deleted",
+  },
+  {
+    table: "dsv_scan_signature",
+    referencedBy: "document",
+    retentionClass: "personnel_file",
+    until: "document hold released",
+  },
+] as const;
+
 /**
  * The class of a table whose rows carry their own (ADR-0008, per item), in its `retention_class`
  * column: `document`, each row its type's class from the document type catalog;

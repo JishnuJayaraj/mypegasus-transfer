@@ -1335,7 +1335,7 @@ Q235)*.**
   (`withdrawn`, `ta_completed`, `exited`) the job applies `personnel_file` and `health_record`
   (`retention_delete_class`) when `retentionDue` says so; the triggers are `non_signer_withdrawn`
   (withdrawn before the TG without a fully executed DSV, from `withdrawnOn`), `closed_without_tg`
-  (withdrawn with a fully executed DSV, or `ta_completed`, from that day) and `exited` (the exit
+  (withdrawn with a fully executed DSV, from that day) and `exited` (the exit
   date). A period per trigger is days, calendar months or the end of the n-th calendar year after
   the trigger's year; every one stays `unset` until the DPO confirms it. Deleting the health record
   leaves the personnel file readable and writable. Documents of a class become tombstones (deleted
@@ -1344,7 +1344,9 @@ Q235)*.**
   stream, class and counts only).
 - **Funding `unknown` blocks** the participation record of a participation that never entered the
   TG (`funding_unknown`, reported, nothing deleted) and the choice between the evidence-only phase
-  and the erasure; the personnel file and the health record don't depend on it. The participation
+  and the erasure. For non-signers, it also blocks the personnel file and health record; the
+  90-day branch applies only to `known_no`. For `known_yes` neither class has a confirmed mapping.
+  `ta_completed` and health after `closed_without_tg` remain unmapped (Q236). The participation
   record itself goes only with the erasure (stage two, Slice 7, PR 7-7c).
 - **The retained DSV facts** stay in `dsv_offer` and `dsv_contract` (signature dates,
   `fullyExecutedOn`, acceptance days and role kinds, the original's received and sent dates) when
@@ -1645,3 +1647,16 @@ in "Freigaben", where the queue names the project, the TG start and the evidence
 days but no participant, no participation id, no record id and no file (Q80). The sources never reach
 the history, an audit event, a log or a job payload: `tg_entry_reconciled` (history `case`) carries the
 evidence kinds; `reconciliation_reviewed` and `reconciliation_replied` (stream `review`) the codes.
+
+**7-7b follow-up as built (Q234–Q236).** A non-signer without a fully executed DSV uses the 90-day branch only with funding `known_no`; `unknown` blocks it and `known_yes` has no due day for personnel and health data. The mappings for funded non-signers, `ta_completed`, and health after `closed_without_tg` remain open (Q236). All executable periods remain unset. Only held data outside the evidence set prevents evidence-only access; holds on evidence items and evidence-set documents do not. Ordinary work lists and dashboard counts exclude evidence-only participations; legal-hold administration and the retention job include them. Before activating deletion, `hold_administration_confirmed` requires a completed operational workflow for holds on individual documents. The document picker is deferred.
+
+**Retained dependencies.** The executable list is `retainedDependencies` in the data catalog. Each row waits only while the listed referencing row or document hold exists, then goes when its own period permits:
+
+| Table retained | Why kept | Class | When it goes |
+|---|---|---|---|
+| `activation_code` | Referenced by `participant_session` | `access_credential` | After the session goes |
+| `staff_session` | Referenced by `assisted_mode` | `access_credential` | After assisted mode goes |
+| `appointment_booking` | Referenced by `participant_reminder` | `personnel_file` | After the reminder goes |
+| `participant_channel` | Referenced by `participant_reminder` | `personnel_file` | After the reminder goes |
+| `consent_record` | Referenced by a reminder, channel, or `kug200b_withdrawal` | `personnel_file` | After all referencing rows go |
+| `dsv_scan_signature` | Its document is held | `personnel_file` | After the document hold is released |

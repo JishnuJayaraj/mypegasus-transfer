@@ -1,4 +1,5 @@
 import { getTableConfig, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   documentTypeCatalog,
@@ -15,9 +16,28 @@ import {
   perRowRetention,
   retentionPeriods,
   retentionPrerequisites,
+  retainedDependencies,
   type CatalogEntry,
 } from "./data-catalog";
 import { project, tables } from "./schema";
+
+it("lists each dependency guarded by the retention deletion functions", () => {
+  const sql = ["0108_retention_functions.sql", "0110_legal_hold_functions.sql"]
+    .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
+    .map((source) => source.slice(source.indexOf("CREATE FUNCTION retention_")));
+  const found = new Set<string>();
+  for (const source of sql) {
+    for (const statement of source.matchAll(/DELETE FROM public\.(\w+)\s+\w+\s+WHERE[\s\S]*?;/g)) {
+      for (const ref of statement[0].matchAll(/NOT EXISTS \(SELECT FROM public\.(\w+)/g)) {
+        found.add(`${statement[1]}:${ref[1]}`);
+      }
+    }
+  }
+  found.add("dsv_scan_signature:document");
+  expect([...found].toSorted()).toEqual(
+    retainedDependencies.map((d) => `${d.table}:${d.referencedBy}`).toSorted(),
+  );
+});
 
 const participantEntry: CatalogEntry = {
   retentionClass: "participation_record",

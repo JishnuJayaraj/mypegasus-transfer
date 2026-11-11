@@ -280,8 +280,10 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
   ordinary reads are refused (evidence-only access is break-glass, not built, so activation stays off,
   D18). A participation with funding `known_no` that never entered the TG has no evidence set: when its last
   class is due, it is erased (D24). Funding `unknown` blocks every deletion that depends on it
-  (`funding_unknown`): the participation-record items of a non-signer and the decision between the
-  evidence-only phase and erasure; `personnel_file` and `health_record` don't depend on it.
+  (`funding_unknown`): the participation record, the non-signer personnel and health records, and the
+  decision between evidence-only and erasure. The non-signer branch applies only to `known_no`;
+  `known_yes` has no confirmed mapping. `ta_completed` and health after `closed_without_tg` remain
+  unmapped (Q236).
 - **D22. Funding is a recorded fact** (Q217, accepted): per participation `funded110`: `known_yes`,
   `known_no` or `unknown` (default `unknown`), recorded by back office with the documented source and
   audited. **TG entry is a conservative retention trigger, never proof of Transfer-KuG** (the second
@@ -456,6 +458,8 @@ participation except `audit_event` and `legal_hold` (a test checks it); the hold
 **Size:** about 2,400 changed lines without tests, generated code and docs (about 500 the SQL,
 about 750 the UI and its texts); over the estimate, kept as one PR for the owner to decide on a split.
 
+**7-7b follow-up as built:** Q234 accepted for synthetic development; Q235 amended as recorded in the owner answers. Non-signer personnel and health data use the 90-day branch only with funding `known_no`; unknown blocks it and funded, TA completion and health after closure remain unmapped (Q236). Evidence-only permits holds on evidence, and ordinary work lists and dashboard counts exclude evidence-only participations. Single-document hold workflow remains an activation prerequisite. Periods remain unset and activation off.
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether
@@ -624,7 +628,7 @@ Enum values are added in their PR's generated migration and compared as text in 
   the recording instant, never the actual date.
 - Every status change goes through the status function with its audit; every new audit event needs
   its projection rows, `audit_event_lifecycle_has_participation`, `record_audit_event`'s refused list,
-  a history label and, from 7-7c, its detail keys' subject classification.
+  a history label when exposed by history and, from 7-7c, its detail keys' subject classification; security events never exposed in histories need no history translations.
 - A new FK or NOT NULL on an existing table needs a tested upgrade path from the previous migration
   (`document.dsv_offer_id`, `participation.funded110` and `evidence_set_since`).
 - A new parameter on a hand-written SECURITY DEFINER function means DROP (the old signature), CREATE,

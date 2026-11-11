@@ -427,6 +427,26 @@ describe("the signed DSV in the work list and the dashboard (the DSV work list a
 });
 
 describe("GET /projects/{id}/dashboard", () => {
+  it("excludes evidence-only participations from the work list and every dashboard filter while holds stay readable", async () => {
+    const visible = await person();
+    const restricted = await person();
+    await owner
+      .update(participation)
+      .set({ evidenceSetSince: "2026-01-01T00:00:00Z" })
+      .where(eq(participation.id, restricted));
+    const { items } = await readJson(await worklist(), Worklist);
+    expect(items.map((item) => item.id)).toContain(visible);
+    expect(items.map((item) => item.id)).not.toContain(restricted);
+    const board = await readJson(await dashboard(), ProjectDashboard);
+    for (const group of Object.values(board.counts)) {
+      for (const { count, filter } of group) {
+        expect(count).toBe(items.filter((item) => matchesWorklistFilter(item, filter)).length);
+      }
+    }
+    expect((await get(`/participations/${restricted}/legal-holds`, as(projectLead))).status).toBe(
+      200,
+    );
+  });
   it("counts exactly the snapshot's participations by the same filters", async () => {
     await person(werkNord, { entryWaveId: w1.id });
     await person(werkNord, { entryWaveId: w2.id, status: "imported" });
