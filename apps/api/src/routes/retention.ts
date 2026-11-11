@@ -35,6 +35,16 @@ const stale = (c: Context<AppEnv>, code: string) =>
     errors: [{ pointer: "/expected", code, detail: "Read the values again" }],
   });
 
+const fundingView = (
+  found: { funded110: Funded110; source: string | null; setAt: string | null },
+  canSet: boolean,
+): FundingView => ({
+  funded110: found.funded110,
+  source: found.source,
+  setAt: found.setAt === null ? null : new Date(found.setAt).toISOString(),
+  capabilities: { set: canSet },
+});
+
 export function retentionRoutes(deps: Deps) {
   const { db, logger } = deps;
   const router = createRouter();
@@ -177,16 +187,6 @@ export function retentionRoutes(deps: Deps) {
       canSet: mayRecordFunding(access.subject, target).ok,
     };
   }
-
-  const fundingView = (
-    found: { funded110: Funded110; source: string | null; setAt: string | null },
-    canSet: boolean,
-  ): FundingView => ({
-    funded110: found.funded110,
-    source: found.source,
-    setAt: found.setAt === null ? null : new Date(found.setAt).toISOString(),
-    capabilities: { set: canSet },
-  });
 
   router.openapi(
     createRoute({

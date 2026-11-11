@@ -16,10 +16,10 @@
 -- `funding_status_set`.
 
 
--- Whether this transaction is inside a retention run (the trigger path). Runs as the functions'
--- owner: every write a trigger guards happens inside a SECURITY DEFINER function.
+-- Whether this transaction is inside a retention run (the trigger path). Not granted: it runs as the
+-- functions' owner, since every write a trigger guards happens inside a SECURITY DEFINER function.
 CREATE FUNCTION in_retention_run()
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+RETURNS boolean LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   v text := pg_catalog.current_setting('transfer.retention_run', true);
 BEGIN

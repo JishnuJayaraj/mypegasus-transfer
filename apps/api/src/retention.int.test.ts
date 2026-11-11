@@ -27,7 +27,7 @@ afterAll(() => Promise.all([db.$client.end(), owner.$client.end()]));
 
 const sql = (text: string, params: unknown[] = []) => owner.$client.query(text, params);
 const none = { kugFinalSettlementDate: null, measure110SettlementDate: null };
-const putDates = (body: object, as: string, project = werkNord) =>
+const putDates = (body: object, as: string, project: string = werkNord) =>
   app.request(`/api/v1/projects/${project}/settlement-dates`, jsonRequest("PUT", body, staff[as]!));
 const codesOf = async (res: Response, status: number) => {
   expect(res.status).toBe(status);
@@ -39,6 +39,14 @@ const loseMembership = (staffUserId: string) =>
     werkNord,
     staffUserId,
   ]);
+
+const participant = () =>
+  call(owner.$client, "create_participation", { projectId: werkNord, context: pl });
+const unknown = { funded110: "unknown", source: null };
+const put = (id: string, body: object, as: string) =>
+  app.request(`/api/v1/participations/${id}/funding`, jsonRequest("PUT", body, staff[as]!));
+const get = (id: string, as: string) =>
+  app.request(`/api/v1/participations/${id}/funding`, { headers: staff[as]! });
 
 describe("settlement dates (Q52)", () => {
   it("are set by back office against the dates read, and read by whoever sees the project", async () => {
@@ -113,14 +121,6 @@ describe("settlement dates (Q52)", () => {
 });
 
 describe("the funding (Q217)", () => {
-  const participant = () =>
-    call(owner.$client, "create_participation", { projectId: werkNord, context: pl });
-  const unknown = { funded110: "unknown", source: null };
-  const put = (id: string, body: object, as: string) =>
-    app.request(`/api/v1/participations/${id}/funding`, jsonRequest("PUT", body, staff[as]!));
-  const get = (id: string, as: string) =>
-    app.request(`/api/v1/participations/${id}/funding`, { headers: staff[as]! });
-
   it("is recorded by back office with its source against the value read; the history shows the code", async () => {
     const id = await participant();
     expect(await readJson(await get(id, projectLead), FundingView)).toEqual({

@@ -438,6 +438,15 @@ migration or audit event type); `ParticipationDetail.capabilities.contactStatus`
 the viewer may set now. Q233 accepted 2026-11-11 with one amendment, built in a follow-up PR:
 `refusals.contactStatus` shows an authorised step's reason in the dialog.
 
+**7-7a as built:** the plan's functions and routes, with `GET` reads beside both writes. The
+settlement dates have their own `set_settlement_dates` (`update_project` is not recreated);
+the trigger path also covers a new append-only trigger on `audit_event` and `staff_audit_event`;
+orphaned objects are a class of their own (`orphaned_object`, `unset`). No UI: "Abrechnung" and
+"Förderung" come with 7-7b's "Aufbewahrung", so no e2e. Readings: Q234 (assumed). **Size:** about
+1,720 changed lines without tests, generated code and docs, of which about 330 are the eight
+trigger functions and `record_audit_event` recreated; over the estimate, kept as one PR for the
+owner to decide on a split.
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether

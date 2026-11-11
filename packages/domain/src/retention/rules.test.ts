@@ -28,13 +28,29 @@ const synthetic: RetentionPeriods = {
   },
 };
 
-describe("retentionDue (ADR-0008; data-protection.md, retention)", () => {
-  const credential = (ended: string | null, held = false) => ({
-    class: "access_credential" as const,
-    triggers: { ended },
-    held,
-  });
+const credential = (ended: string | null, held = false) => ({
+  class: "access_credential" as const,
+  triggers: { ended },
+  held,
+});
 
+const due = (facts: Parameters<typeof workingCopyTriggers>[0], today: string) =>
+  retentionDue(
+    { class: "form_working_copy", triggers: workingCopyTriggers(facts), held: false },
+    synthetic,
+    today,
+  );
+
+const staff = (roles: ProjectRole[]) =>
+  ({
+    kind: "staff",
+    staffUserId: "staff-a",
+    orgRoles: new Map(),
+    projectRoles: { [sample.projectId]: new Set(roles) },
+    assignedParticipationIds: new Set<string>(),
+  }) as const;
+
+describe("retentionDue (ADR-0008; data-protection.md, retention)", () => {
   it("keeps a credential for 30 days and deletes it on day 31", () => {
     expect(retentionDue(credential("2026-01-01"), synthetic, "2026-01-31")).toEqual({
       kind: "not_due",
@@ -72,12 +88,6 @@ describe("retentionDue (ADR-0008; data-protection.md, retention)", () => {
   });
 
   it("takes a working copy's earliest trigger (Q179)", () => {
-    const due = (facts: Parameters<typeof workingCopyTriggers>[0], today: string) =>
-      retentionDue(
-        { class: "form_working_copy", triggers: workingCopyTriggers(facts), held: false },
-        synthetic,
-        today,
-      );
     const abandoned = {
       generatedOn: "2026-01-01",
       supersededOn: null,
@@ -161,14 +171,6 @@ describe("mayRecordFunding", () => {
     regionId: sample.regionId,
     participationId: null,
   };
-  const staff = (roles: ProjectRole[]) =>
-    ({
-      kind: "staff",
-      staffUserId: "staff-a",
-      orgRoles: new Map(),
-      projectRoles: { [sample.projectId]: new Set(roles) },
-      assignedParticipationIds: new Set<string>(),
-    }) as const;
 
   it("lets back office record, never the PL, a consultant or the participant", () => {
     expect(mayRecordFunding(staff(["back_office"]), target).ok).toBe(true);

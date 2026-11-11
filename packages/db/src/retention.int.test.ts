@@ -49,6 +49,16 @@ async function anAuditEvent(): Promise<string> {
   return rows[0].id;
 }
 
+const settle = (context: string, kug: string | null, expected: string | null = null) =>
+  call(owner, "set_settlement_dates", {
+    context,
+    projectId: seedProjectIds.werkNord,
+    kugFinal: kug,
+    measure110: null,
+    expectedKugFinal: expected,
+    expectedMeasure110: null,
+  });
+
 describe("transfer_app and the retention functions", () => {
   it.each(retentionCalls)("may not execute %s", async (_name, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
@@ -239,16 +249,6 @@ describe("the immutability triggers' retention path", () => {
 });
 
 describe("settlement dates and funding (Q52, Q217)", () => {
-  const settle = (context: string, kug: string | null, expected: string | null = null) =>
-    call(owner, "set_settlement_dates", {
-      context,
-      projectId: seedProjectIds.werkNord,
-      kugFinal: kug,
-      measure110: null,
-      expectedKugFinal: expected,
-      expectedMeasure110: null,
-    });
-
   it("lets back office set the dates against the values read, never the PL", async () => {
     await expect(settle(pl, "2027-06-30")).rejects.toMatchObject({ message: "actor_not_allowed" });
     await settle(backOffice, "2027-06-30");

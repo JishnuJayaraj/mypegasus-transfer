@@ -49,3 +49,15 @@ duty.
   in every PR that adds personal data.
 - The settlement dates become operationally important: the admin dashboard warns about projects
   that ended more than 12 months ago without them.
+
+## As built 2026-11-11: the framework (Slice 7, PR 7-7a)
+
+Rules in the domain, periods in the data catalog, activation gated (data-protection.md, retention
+as built; readings Q234): `retentionDue` per item, `retentionActivation` over the prerequisites of
+a live deletion, all unmet, so every run is a dry run. The job applies stage one without a person
+trigger (access credentials, generated working copies' files, orphaned objects) once a class's
+period is set; the other classes are reported, never deleted. It runs under its own role through
+the immutability triggers' retention path (ADR-0002). The funding (`funded110`) and the settlement
+dates are recorded by back office. Not built yet: the per-class deletions, legal holds, the
+evidence-only phase and stage two's erasure; the admin dashboard's warning about missing
+settlement dates needs project closure.
