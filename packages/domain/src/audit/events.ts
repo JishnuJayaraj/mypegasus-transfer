@@ -13,6 +13,7 @@ import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
+import { HoldableClass, HoldRecordKind, LegalHoldReason } from "../retention/holds";
 import { Funded110 } from "../retention/rules";
 import { ProjectType } from "../project";
 import { ProjectRole } from "../enums";
@@ -275,6 +276,12 @@ export const AuditEventType = z.enum([
   // by `set_settlement_dates` and `set_funding_status`: which date was set, the funding's code
   "settlement_dates_set",
   "funding_status_set",
+  // Legal holds and the retention job's deletions (data-protection.md, legal holds; retention per
+  // class), written only by `place_legal_hold`, `release_legal_hold` and the `retention_*`
+  // functions; security stream, never in a history; codes, never the documented basis
+  "legal_hold_placed",
+  "legal_hold_released",
+  "retention_applied",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -408,6 +415,9 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "reconciliation_replied",
   "settlement_dates_set",
   "funding_status_set",
+  "legal_hold_placed",
+  "legal_hold_released",
+  "retention_applied",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1720,6 +1730,37 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ funded110: Funded110 }),
+  }),
+  /** A legal hold placed (Q218): its scope and reason code, never the documented basis. */
+  event("legal_hold_placed", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      holdId: z.uuid(),
+      reason: LegalHoldReason,
+      classes: z.array(HoldableClass),
+      recordKinds: z.array(HoldRecordKind),
+      documentCount: z.int().min(0),
+    }),
+  }),
+  /** A legal hold released by the region's manager: never the instruction's source. */
+  event("legal_hold_released", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ holdId: z.uuid() }),
+  }),
+  /**
+   * The retention job deleted a class of a participation, or the participation entered the
+   * evidence-only phase (data-protection.md, retention per class): the class and counts only.
+   */
+  event("retention_applied", {
+    ...ofParticipation,
+    actor: z.strictObject({ type: z.literal("system"), job: z.literal("retention") }),
+    details: z.strictObject({
+      retentionClass: z.enum(["personnel_file", "health_record", "evidence_only"]),
+      deleted: z.int().min(0),
+      kept: z.int().min(0),
+    }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

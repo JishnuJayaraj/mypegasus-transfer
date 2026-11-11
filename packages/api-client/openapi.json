@@ -17531,6 +17531,232 @@
         ],
         "additionalProperties": false
       },
+      "LegalHoldsView": {
+        "type": "object",
+        "properties": {
+          "holds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegalHoldItem"
+            }
+          },
+          "evidenceSetSince": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "place": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "place"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "holds",
+          "evidenceSetSince",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "LegalHoldItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldableClass"
+            }
+          },
+          "recordKinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldRecordKind"
+            }
+          },
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "reason": {
+            "$ref": "#/components/schemas/LegalHoldReason"
+          },
+          "basis": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "placedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "releasedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "release": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "release"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "classes",
+          "recordKinds",
+          "documentIds",
+          "reason",
+          "basis",
+          "placedOn",
+          "releasedOn",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "HoldableClass": {
+        "type": "string",
+        "enum": [
+          "personnel_file",
+          "health_record",
+          "form_working_copy",
+          "evidence_set"
+        ]
+      },
+      "HoldRecordKind": {
+        "type": "string",
+        "enum": [
+          "dsv_offer",
+          "dsv_contract",
+          "dsv_scan_signature",
+          "participant_reminder",
+          "appointment_booking",
+          "consent_record",
+          "participant_channel",
+          "participant_details",
+          "participant_profile",
+          "participant_profiling",
+          "participant_profiling_assessment",
+          "participant_health_data",
+          "participant_profiling_health_assessment"
+        ]
+      },
+      "LegalHoldReason": {
+        "type": "string",
+        "enum": [
+          "litigation",
+          "authority_request",
+          "documented_dispute",
+          "dpo_instruction"
+        ]
+      },
+      "LegalHoldRequest": {
+        "type": "object",
+        "properties": {
+          "classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldableClass"
+            },
+            "maxItems": 4
+          },
+          "recordKinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldRecordKind"
+            },
+            "maxItems": 13
+          },
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 100
+          },
+          "reason": {
+            "$ref": "#/components/schemas/LegalHoldReason"
+          },
+          "basis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "expected": {
+            "type": "object",
+            "properties": {
+              "activeHoldIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "required": [
+              "activeHoldIds"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "classes",
+          "recordKinds",
+          "documentIds",
+          "reason",
+          "basis",
+          "expected"
+        ],
+        "additionalProperties": false
+      },
+      "LegalHoldRelease": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "additionalProperties": false
+      },
       "ExportLink": {
         "type": "object",
         "properties": {
@@ -18721,13 +18947,20 @@
             "items": {
               "$ref": "#/components/schemas/ReconciliationReviewItem"
             }
+          },
+          "legalHolds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegalHoldReviewItem"
+            }
           }
         },
         "required": [
           "items",
           "corrections",
           "clarifications",
-          "reconciliations"
+          "reconciliations",
+          "legalHolds"
         ]
       },
       "CorrectionTargetKind": {
@@ -18942,6 +19175,72 @@
           "resolved_no_objection",
           "escalated_to_dpo"
         ]
+      },
+      "LegalHoldReviewItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectName": {
+            "type": "string"
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldableClass"
+            }
+          },
+          "recordKinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldRecordKind"
+            }
+          },
+          "documentCount": {
+            "type": "integer"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/LegalHoldReason"
+          },
+          "placedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "release": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "release"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "projectName",
+          "classes",
+          "recordKinds",
+          "documentCount",
+          "reason",
+          "placedOn",
+          "capabilities"
+        ],
+        "additionalProperties": false
       },
       "EvidenceCorrectionRequested": {
         "type": "object",
@@ -34810,6 +35109,262 @@
         }
       }
     },
+    "/api/v1/participations/{participationId}/legal-holds": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The participation's legal holds (Q218): scope, reason code, dates; the documented basis for the PL and back office only. The PL, back office and the region's operations manager",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The holds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalHoldsView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Place a legal hold on selected classes, record kinds or documents of the participation (the PL or back office; Q218), never all of it, with a reason code and the documented basis, against the active holds read. Audited legal_hold_placed (security) with the scope and the code, never the basis",
+        "description": "Refusals, in this order:\n- `404`: the participation is hidden from the viewer, or a document isn't one of its own.\n- `403`: not the PL or back office of the project.\n- `409 stale_holds` at `/expected`: the active holds changed since they were read.\n- `422 hold_scope_empty`: nothing selected; `hold_scope_too_broad`: every class at once.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalHoldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalHoldsView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/legal-holds/{holdId}/release": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Release a legal hold (a regional operations manager of the project's region who didn't place it; Q218) against a documented legal or DPO instruction. Audited legal_hold_released (security), never the source",
+        "description": "Refusals, in this order:\n- `404`: the hold doesn't exist or its project is hidden from the viewer.\n- `403`: not a regional operations manager of the region, or the one who placed it.\n- `409 hold_released`: it was released already.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "holdId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalHoldRelease"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Released"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/exports/{kind}": {
       "post": {
         "tags": [
@@ -36296,7 +36851,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; no name, case data, evidence content or corrected value",
+        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; the active legal holds with the project, scope, reason code and day placed; no name, case data, evidence content or corrected value",
         "responses": {
           "200": {
             "description": "The pending requests",

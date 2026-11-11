@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { legalHoldReviewItemsOf } from "./legal-holds";
 import { eq, profilingExceptionRequest, projectTemplatePin } from "@transfer/db";
 import {
   ExceptionEvidenceCreated,
@@ -322,7 +323,7 @@ export function profilingExceptionRoutes(deps: Deps) {
       path: "/reviews",
       tags: ["participations"],
       summary:
-        "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; no name, case data, evidence content or corrected value",
+        "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; the active legal holds with the project, scope, reason code and day placed; no name, case data, evidence content or corrected value",
       middleware,
       responses: {
         200: json(ReviewQueue, "The pending requests"),
@@ -339,6 +340,7 @@ export function profilingExceptionRoutes(deps: Deps) {
           corrections: await correctionReviewItemsOf(db, subject),
           clarifications: await clarificationReviewItemsOf(db, subject),
           reconciliations: await reconciliationReviewItemsOf(db, subject),
+          legalHolds: await legalHoldReviewItemsOf(db, subject),
         },
         200,
       ) as never;

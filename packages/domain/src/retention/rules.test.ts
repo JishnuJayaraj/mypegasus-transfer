@@ -4,6 +4,8 @@ import type { PermissionTarget } from "../access/permissions";
 import type { ProjectRole } from "../enums";
 import {
   credentialCutoff,
+  evidenceOnlyApplies,
+  participationRetentionTriggers,
   mayReadFunding,
   mayRecordFunding,
   RetentionClass,
@@ -117,6 +119,8 @@ describe("retentionDue (ADR-0008; data-protection.md, retention)", () => {
 
   it("applies only the credentials and working copies; the rest is reported", () => {
     expect(RetentionClass.options.filter((c) => retentionRules[c].applied)).toEqual([
+      "personnel_file",
+      "health_record",
       "access_credential",
       "form_working_copy",
       "orphaned_object",
@@ -199,5 +203,168 @@ describe("mayRecordFunding", () => {
         target,
       ).ok,
     ).toBe(false);
+  });
+});
+
+// Synthetic per-class periods (test values only): 90 days for a non-signer, 3 months for health
+// after exit, the end of the 3rd calendar year after exit or closure.
+const perClass: RetentionPeriods = {
+  ...synthetic,
+  personnel_file: {
+    days: { non_signer_withdrawn: 90 },
+    yearEnds: { closed_without_tg: 3, exited: 3 },
+  },
+  health_record: {
+    days: { non_signer_withdrawn: 90 },
+    months: { closed_without_tg: 3, exited: 3 },
+  },
+  participation_record: {
+    days: { non_signer_withdrawn: 90 },
+    yearEnds: { closed_without_tg: 3, exited: 3 },
+  },
+};
+
+describe("retention per class (data-protection.md, retention per class)", () => {
+  const nonSigner = participationRetentionTriggers({
+    status: "withdrawn",
+    closedOn: "2026-03-02",
+    withdrawnOn: "2026-03-01",
+    enteredTg: false,
+    dsvFullyExecuted: false,
+  });
+  const item = (
+    c: "personnel_file" | "health_record",
+    triggers: Record<string, string | null>,
+  ) => ({
+    class: c,
+    triggers,
+    held: false,
+  });
+
+  it("deletes a non-signer's personnel file on day 91, not 90", () => {
+    expect(nonSigner).toEqual({
+      non_signer_withdrawn: "2026-03-01",
+      closed_without_tg: null,
+      exited: null,
+    });
+    expect(retentionDue(item("personnel_file", nonSigner), perClass, "2026-05-30").kind).toBe(
+      "not_due",
+    );
+    expect(retentionDue(item("personnel_file", nonSigner), perClass, "2026-05-31")).toEqual({
+      kind: "due",
+      stage: 1,
+      trigger: "non_signer_withdrawn",
+      from: "2026-03-01",
+    });
+  });
+
+  it("deletes the health record 3 months after exit while the personnel file stays", () => {
+    const exited = participationRetentionTriggers({
+      status: "exited",
+      closedOn: "2026-06-30",
+      withdrawnOn: null,
+      enteredTg: true,
+      dsvFullyExecuted: true,
+    });
+    expect(retentionDue(item("health_record", exited), perClass, "2026-09-30").kind).toBe(
+      "not_due",
+    );
+    expect(retentionDue(item("health_record", exited), perClass, "2026-10-01").kind).toBe("due");
+    expect(retentionDue(item("personnel_file", exited), perClass, "2026-10-01")).toEqual({
+      kind: "not_due",
+      on: "2030-01-01",
+    });
+    expect(retentionDue(item("personnel_file", exited), perClass, "2030-01-01").kind).toBe("due");
+  });
+
+  it("closes a signer without TG entry, or ta_completed, at its own trigger", () => {
+    const facts = { closedOn: "2026-04-02", withdrawnOn: "2026-04-01", enteredTg: false } as const;
+    expect(
+      participationRetentionTriggers({ ...facts, status: "withdrawn", dsvFullyExecuted: true }),
+    ).toEqual({ non_signer_withdrawn: null, closed_without_tg: "2026-04-01", exited: null });
+    expect(
+      participationRetentionTriggers({
+        ...facts,
+        withdrawnOn: null,
+        status: "ta_completed",
+        dsvFullyExecuted: false,
+      }),
+    ).toEqual({ non_signer_withdrawn: null, closed_without_tg: "2026-04-02", exited: null });
+    expect(
+      participationRetentionTriggers({ ...facts, status: "informed", dsvFullyExecuted: false }),
+    ).toEqual({ non_signer_withdrawn: null, closed_without_tg: null, exited: null });
+  });
+
+  it("blocks the participation record of a non-entrant while the funding is unknown", () => {
+    const record = (funded110: "unknown" | "known_no", enteredTg = false) => ({
+      class: "participation_record" as const,
+      triggers: nonSigner,
+      held: false,
+      funding: { funded110, enteredTg },
+    });
+    expect(retentionDue(record("unknown"), perClass, "2026-06-01")).toEqual({
+      kind: "blocked",
+      reason: "funding_unknown",
+    });
+    expect(retentionDue(record("known_no"), perClass, "2026-06-01").kind).toBe("due");
+    expect(retentionDue(record("unknown", true), perClass, "2026-06-01").kind).toBe("due");
+    // The personnel file doesn't depend on it.
+    expect(
+      retentionDue(
+        {
+          ...item("personnel_file", nonSigner),
+          funding: { funded110: "unknown", enteredTg: false },
+        },
+        perClass,
+        "2026-06-01",
+      ).kind,
+    ).toBe("due");
+  });
+
+  it("is unset when a trigger has no span, or two", () => {
+    const twice: RetentionPeriods = {
+      ...perClass,
+      personnel_file: {
+        days: { non_signer_withdrawn: 90, closed_without_tg: 1, exited: 1 },
+        months: { exited: 1 },
+      },
+    };
+    expect(retentionDue(item("personnel_file", nonSigner), twice, "2027-01-01").kind).toBe(
+      "period_unset",
+    );
+    const missing: RetentionPeriods = {
+      ...perClass,
+      health_record: { days: { non_signer_withdrawn: 90 } },
+    };
+    expect(retentionDue(item("health_record", nonSigner), missing, "2027-01-01").kind).toBe(
+      "period_unset",
+    );
+    expect(
+      credentialCutoff({ ...synthetic, access_credential: { months: { ended: 1 } } }, "2026-02-01"),
+    ).toBeNull();
+    expect(
+      credentialCutoff(
+        { ...synthetic, access_credential: { days: { ended: 1 }, yearEnds: { ended: 1 } } },
+        "2026-02-01",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("evidenceOnlyApplies (Q64)", () => {
+  it("applies only with an evidence set and every other class deleted", () => {
+    expect(evidenceOnlyApplies(["participation_record", "audit_log"], "unknown", true)).toBe(
+      "applies",
+    );
+    expect(evidenceOnlyApplies(["participation_record", "evidence_set"], "known_yes", false)).toBe(
+      "applies",
+    );
+    expect(
+      evidenceOnlyApplies(["participation_record", "personnel_file"], "known_yes", false),
+    ).toBe("classes_left");
+    expect(evidenceOnlyApplies(["participation_record"], "known_no", false)).toBe(
+      "no_evidence_set",
+    );
+    expect(evidenceOnlyApplies(["participation_record"], "unknown", false)).toBe("funding_unknown");
   });
 });

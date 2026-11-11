@@ -14795,6 +14795,258 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participation's legal holds (Q218): scope, reason code, dates; the documented basis for the PL and back office only. The PL, back office and the region's operations manager */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The holds */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LegalHoldsView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Place a legal hold on selected classes, record kinds or documents of the participation (the PL or back office; Q218), never all of it, with a reason code and the documented basis, against the active holds read. Audited legal_hold_placed (security) with the scope and the code, never the basis
+         * @description Refusals, in this order:
+         *     - `404`: the participation is hidden from the viewer, or a document isn't one of its own.
+         *     - `403`: not the PL or back office of the project.
+         *     - `409 stale_holds` at `/expected`: the active holds changed since they were read.
+         *     - `422 hold_scope_empty`: nothing selected; `hold_scope_too_broad`: every class at once.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LegalHoldRequest"];
+                };
+            };
+            responses: {
+                /** @description Placed */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LegalHoldsView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/legal-holds/{holdId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Release a legal hold (a regional operations manager of the project's region who didn't place it; Q218) against a documented legal or DPO instruction. Audited legal_hold_released (security), never the source
+         * @description Refusals, in this order:
+         *     - `404`: the hold doesn't exist or its project is hidden from the viewer.
+         *     - `403`: not a regional operations manager of the region, or the one who placed it.
+         *     - `409 hold_released`: it was released already.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    holdId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LegalHoldRelease"];
+                };
+            };
+            responses: {
+                /** @description Released */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{kind}": {
         parameters: {
             query?: never;
@@ -16257,7 +16509,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; no name, case data, evidence content or corrected value */
+        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; the open reconciliations of a missed TG entry with the project, the TG start, the evidence kinds with their valid and recorded days and the review's steps; the active legal holds with the project, scope, reason code and day placed; no name, case data, evidence content or corrected value */
         get: {
             parameters: {
                 query?: never;
@@ -21362,6 +21614,57 @@ export interface components {
                 source: string | null;
             };
         };
+        LegalHoldsView: {
+            holds: components["schemas"]["LegalHoldItem"][];
+            /** Format: date-time */
+            evidenceSetSince: string | null;
+            capabilities: {
+                place: boolean;
+            };
+        };
+        LegalHoldItem: {
+            /** Format: uuid */
+            id: string;
+            classes: components["schemas"]["HoldableClass"][];
+            recordKinds: components["schemas"]["HoldRecordKind"][];
+            documentIds: string[];
+            reason: components["schemas"]["LegalHoldReason"];
+            basis: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            placedOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            releasedOn: string | null;
+            capabilities: {
+                release: boolean;
+            };
+        };
+        /** @enum {string} */
+        HoldableClass: "personnel_file" | "health_record" | "form_working_copy" | "evidence_set";
+        /** @enum {string} */
+        HoldRecordKind: "dsv_offer" | "dsv_contract" | "dsv_scan_signature" | "participant_reminder" | "appointment_booking" | "consent_record" | "participant_channel" | "participant_details" | "participant_profile" | "participant_profiling" | "participant_profiling_assessment" | "participant_health_data" | "participant_profiling_health_assessment";
+        /** @enum {string} */
+        LegalHoldReason: "litigation" | "authority_request" | "documented_dispute" | "dpo_instruction";
+        LegalHoldRequest: {
+            classes: components["schemas"]["HoldableClass"][];
+            recordKinds: components["schemas"]["HoldRecordKind"][];
+            documentIds: string[];
+            reason: components["schemas"]["LegalHoldReason"];
+            basis: string;
+            expected: {
+                activeHoldIds: string[];
+            };
+        };
+        LegalHoldRelease: {
+            source: string;
+        };
         ExportLink: {
             url: string;
             /**
@@ -21699,6 +22002,7 @@ export interface components {
             }[];
             clarifications: components["schemas"]["EntryClarificationReviewItem"][];
             reconciliations: components["schemas"]["ReconciliationReviewItem"][];
+            legalHolds: components["schemas"]["LegalHoldReviewItem"][];
         };
         /** @enum {string} */
         CorrectionTargetKind: "document" | "asu_registration" | "ba_reporting_task" | "field" | "dsv_signature";
@@ -21773,6 +22077,26 @@ export interface components {
         };
         /** @enum {string} */
         ReconciliationOutcome: "no_objection" | "clarification_requested" | "resolved_no_objection" | "escalated_to_dpo";
+        LegalHoldReviewItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            classes: components["schemas"]["HoldableClass"][];
+            recordKinds: components["schemas"]["HoldRecordKind"][];
+            documentCount: number;
+            reason: components["schemas"]["LegalHoldReason"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            placedOn: string;
+            capabilities: {
+                release: boolean;
+            };
+        };
         EvidenceCorrectionRequested: {
             /** Format: uuid */
             correctionId: string;

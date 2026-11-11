@@ -246,6 +246,9 @@ export const auditProjection: {
   // the case stream, never its documented source.
   settlement_dates_set: projectLevel,
   funding_status_set: shown("case", { details: ["funded110"] }),
+  legal_hold_placed: security,
+  legal_hold_released: security,
+  retention_applied: security,
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "fieldKey", "paper", "signatureKind", "decision"],
   }),

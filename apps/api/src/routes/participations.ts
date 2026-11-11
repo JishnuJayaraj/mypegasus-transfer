@@ -4,6 +4,7 @@ import {
   asc,
   eq,
   inArray,
+  isNull,
   baReportingTask,
   participantDetails,
   participationDsvAmendment,
@@ -509,6 +510,8 @@ export function participationRoutes(deps: Deps) {
         .where(
           and(
             eq(participation.projectId, projectId),
+            // The evidence-only phase: break-glass only, never in a list (data-protection.md).
+            isNull(participation.evidenceSetSince),
             scope.kind === "assigned"
               ? inArray(participation.id, [...scope.participationIds])
               : undefined,

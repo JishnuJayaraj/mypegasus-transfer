@@ -155,6 +155,9 @@ describe("audit event types (ADR-0002)", () => {
       "reconciliation_replied",
       "settlement_dates_set",
       "funding_status_set",
+      "legal_hold_placed",
+      "legal_hold_released",
+      "retention_applied",
     ]);
   });
 
@@ -278,6 +281,9 @@ describe("audit event types (ADR-0002)", () => {
       "reconciliation_replied",
       "settlement_dates_set",
       "funding_status_set",
+      "legal_hold_placed",
+      "legal_hold_released",
+      "retention_applied",
     ]);
   });
 

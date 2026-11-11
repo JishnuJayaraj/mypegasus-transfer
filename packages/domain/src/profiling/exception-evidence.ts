@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LegalHoldReviewItem } from "../retention/holds";
 import { CorrectionReviewItem } from "../corrections/model";
 import { EntryClarificationReviewItem } from "../dsv/clarification";
 import { ReconciliationReviewItem } from "../dsv/reconciliation";
@@ -199,7 +200,7 @@ export type ReviewItem = z.infer<typeof ReviewItem>;
 
 /**
  * "Freigaben": the pending profiling exceptions, evidence corrections, escalated entry
- * clarifications and open reconciliations, each oldest first.
+ * clarifications, open reconciliations and active legal holds, each oldest first.
  */
 export const ReviewQueue = z
   .object({
@@ -212,6 +213,8 @@ export const ReviewQueue = z
      * PL's reply to a clarification, or the resolution of a reply or an escalation.
      */
     reconciliations: z.array(ReconciliationReviewItem),
+    /** The active legal holds of the region's projects, for their release (Q218). */
+    legalHolds: z.array(LegalHoldReviewItem),
   })
   .meta({ id: "ReviewQueue" });
 

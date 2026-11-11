@@ -131,6 +131,7 @@ describe("data catalog", () => {
       kug200b_batch_member: entry("participation_record", "internal", true),
       agentur_submission: entry("participation_record", "internal", true),
       retention_run: entry("reference_data", "internal"),
+      legal_hold: entry("audit_log", "confidential", true),
       export_link: entry("access_credential", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
       // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.
