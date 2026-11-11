@@ -105,6 +105,10 @@ describe("retentionDue (ADR-0008; data-protection.md, retention)", () => {
       trigger: "participation_closed",
       from: "2026-03-01",
     });
+    // A later trigger never postpones an earlier one.
+    expect(
+      due({ ...abandoned, supersededOn: "2026-01-10", closedOn: "2026-01-20" }, "2026-02-10"),
+    ).toMatchObject({ kind: "due", trigger: "superseded" });
     expect(due({ ...abandoned, supersededOn: "2026-01-10" }, "2026-02-10")).toMatchObject({
       kind: "due",
       trigger: "superseded",
