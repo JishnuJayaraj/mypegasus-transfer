@@ -109,8 +109,8 @@ export const retentionRules: Readonly<Record<RetentionClass, RetentionRule>> = {
 /**
  * A participation's triggers as Berlin days (data-protection.md, retention and deletion): a
  * non-signer (withdrawn before the TG without a fully executed DSV) from `withdrawnOn`; a
- * participation that closed without entering the TG otherwise (withdrawn with a fully executed
- * DSV, or `ta_completed`) from the day it closed; a TG participant from the day it exited.
+ * participation withdrawn with a fully executed DSV from the day it closed; a TG participant
+ * from the day it exited. The mapping for `ta_completed` is unconfirmed.
  */
 export function participationRetentionTriggers(facts: {
   status: string;
@@ -124,10 +124,7 @@ export function participationRetentionTriggers(facts: {
   const nonSigner = withdrawn && !facts.dsvFullyExecuted;
   return {
     non_signer_withdrawn: nonSigner ? (facts.withdrawnOn ?? facts.closedOn) : null,
-    closed_without_tg:
-      (withdrawn && !nonSigner) || facts.status === "ta_completed"
-        ? (facts.withdrawnOn ?? facts.closedOn)
-        : null,
+    closed_without_tg: withdrawn && !nonSigner ? (facts.withdrawnOn ?? facts.closedOn) : null,
     exited: facts.status === "exited" ? facts.closedOn : null,
   };
 }
@@ -189,6 +186,13 @@ export function retentionDue(
   for (const trigger of rule.triggers) {
     const from = item.triggers[trigger];
     if (!from) continue;
+    if (trigger === "closed_without_tg" && item.class === "health_record") continue;
+    if (
+      trigger === "non_signer_withdrawn" &&
+      (item.class === "personnel_file" || item.class === "health_record")
+    ) {
+      if (item.funding?.funded110 === "known_yes") continue;
+    }
     const on = addDays(keptUntil(period, trigger, from)!, 1);
     if (best === null || compareIsoDates(on, best.on) < 0) best = { trigger, from, on };
   }
@@ -196,10 +200,13 @@ export function retentionDue(
     return { kind: "not_due", on: best?.on ?? null };
   }
   if (
-    rule.dependsOnFunding &&
-    item.funding &&
-    !item.funding.enteredTg &&
-    item.funding.funded110 === "unknown"
+    (rule.dependsOnFunding &&
+      item.funding &&
+      !item.funding.enteredTg &&
+      item.funding.funded110 === "unknown") ||
+    (best.trigger === "non_signer_withdrawn" &&
+      (item.class === "personnel_file" || item.class === "health_record") &&
+      (item.funding?.funded110 ?? "unknown") === "unknown")
   ) {
     return { kind: "blocked", reason: "funding_unknown" };
   }
@@ -239,6 +246,7 @@ export function workingCopyTriggers(facts: {
 /** What must hold before any live deletion (data-protection.md, retention; Q219). */
 export const RetentionPrerequisite = z.enum([
   "periods_confirmed",
+  // Includes the completed operational workflow for holds on individual documents.
   "hold_administration_confirmed",
   "evidence_only_access_built",
   "maintenance_rules_complete",

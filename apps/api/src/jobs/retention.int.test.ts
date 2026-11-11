@@ -154,6 +154,43 @@ describe("with the catalog or activation off", () => {
 });
 
 describe("with synthetic periods and test activation", () => {
+  it("keeps an expired activation code referenced by a live session while deleting its neighbour", async () => {
+    const first = await informedParticipation(app);
+    const second = await informedParticipation(app);
+    const kept = randomUUID(),
+      neighbour = randomUUID();
+    for (const [id, participation, hash] of [
+      [kept, first, "a"],
+      [neighbour, second, "b"],
+    ]) {
+      await owner.query(
+        `insert into activation_code (id, project_id, participation_id, code_hash, channel, notice_language, printed_at, issued_by, issued_at, expires_at)
+        values ($1, $2, $3, repeat($4, 64), 'letter', 'de', '2025-01-01', $5, '2025-01-01', '2025-01-31')`,
+        [id, seedProjectIds.werkNord, participation, hash, seedStaffUserIds.projectLead],
+      );
+    }
+    await owner.query(
+      `insert into participant_session (token_hash, project_id, participation_id, state, activation_code_id, last_seen_at)
+      values (repeat('c',64), $1, $2, 'activating', $3, '2026-01-31')`,
+      [seedProjectIds.werkNord, first, kept],
+    );
+    await run("2026-02-01");
+    expect(await count("activation_code where id = $1", [kept])).toBe(1);
+    expect(await count("activation_code where id = $1", [neighbour])).toBe(0);
+  });
+  it("keeps an expired staff session referenced by assisted mode while deleting its neighbour", async () => {
+    const participation = await informedParticipation(app);
+    const kept = await endedSession("2025-01-01");
+    const neighbour = await endedSession("2025-01-01");
+    await owner.query(
+      `insert into assisted_mode (id, project_id, participation_id, staff_user_id, staff_session_hash, how)
+      values (gen_random_uuid(), $1, $2, $3, $4, 'phone')`,
+      [seedProjectIds.werkNord, participation, seedStaffUserIds.consultant, kept],
+    );
+    await run("2026-02-01");
+    expect(await count("staff_session where token_hash = $1", [kept])).toBe(1);
+    expect(await count("staff_session where token_hash = $1", [neighbour])).toBe(0);
+  });
   it("strips an access credential on day 31, not day 30", async () => {
     const session = await endedSession("2026-01-01");
     const live = await endedSession("2026-01-20");

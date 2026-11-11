@@ -93,6 +93,7 @@ beforeEach(async () => {
   await owner.query(`update participation set withdrawn_on = '2026-03-01' where id = $1`, [
     nonSigner,
   ]);
+  await owner.query(`update participation set funded110 = 'known_no' where id = $1`, [nonSigner]);
   await owner.query(
     `update participation set offer_deadline = least(offer_deadline, '2026-02-15'), tg_start = '2026-03-01', tg_entry_date = '2026-03-01', tg_end = '2027-02-28', exit_date = '2026-06-30' where id = $1`,
     [exited],
@@ -157,6 +158,24 @@ async function hold(
 }
 
 describe("each class at its own trigger and period", () => {
+  it.each(["known_no", "unknown", "known_yes"] as const)(
+    "applies both non-signer classes according to funding %s",
+    async (funding) => {
+      await owner.query(`update participation set funded110 = $2 where id = $1`, [
+        nonSigner,
+        funding,
+      ]);
+      await run("2026-05-30");
+      expect(await count("participant_details", nonSigner)).toBe(1);
+      expect(await count("participant_health_data", nonSigner)).toBe(1);
+      const summary = await run("2026-05-31");
+      const remaining = funding === "known_no" ? 0 : 1;
+      expect(await count("participant_details", nonSigner)).toBe(remaining);
+      expect(await count("participant_health_data", nonSigner)).toBe(remaining);
+      expect(summary.classes.personnel_file.blocked > 0).toBe(funding === "unknown");
+      expect(summary.classes.health_record.blocked > 0).toBe(funding === "unknown");
+    },
+  );
   it("deletes the health record while the personnel file stays readable and writable", async () => {
     const before = await run("2026-09-30", { periods: healthOnly });
     expect(before.classes.health_record.outcome).toBe("applied");
@@ -209,6 +228,7 @@ describe("each class at its own trigger and period", () => {
   });
 
   it("keeps the participation record of a non-signer while the funding is unknown", async () => {
+    await owner.query(`update participation set funded110 = 'unknown' where id = $1`, [nonSigner]);
     const unknown = await run("2026-06-01");
     expect(unknown.classes.participation_record).toMatchObject({
       outcome: "not_applied",
@@ -234,6 +254,78 @@ describe("each class at its own trigger and period", () => {
 });
 
 describe("legal holds (Q218)", () => {
+  it("retains the booking, channel and consent referenced by a held reminder", async () => {
+    const consent = randomUUID(),
+      channel = randomUUID(),
+      appointment = randomUUID(),
+      booking = randomUUID();
+    await owner.query(
+      `insert into consent_record (id, project_id, participation_id, purpose, source, channel_id, text_version, language, actor_type)
+      select $2, project_id, id, 'portal_contact', 'portal', $3, 'consent:v1', 'de', 'participant' from participation where id = $1`,
+      [nonSigner, consent, channel],
+    );
+    await owner.query(
+      `insert into participant_channel (id, project_id, participation_id, kind, address, verified_by, consent_id)
+      select $2, project_id, id, 'email', 'synthetic@example.org', 'one_time_code', $3 from participation where id = $1`,
+      [nonSigner, channel, consent],
+    );
+    await owner.query(
+      `insert into appointment (id, project_id, kind, starts_at, ends_at, booking_closes_at, capacity, venue, created_by)
+      select $2, project_id, 'info_event', '2026-03-10 09:00Z', '2026-03-10 10:00Z', '2026-03-09 09:00Z', 10, 'Raum', $3 from participation where id = $1`,
+      [nonSigner, appointment, seedStaffUserIds.projectLead],
+    );
+    await owner.query(
+      `insert into appointment_booking (id, project_id, participation_id, appointment_id, origin, booked_by)
+      select $2, project_id, id, $3, 'staff', $4 from participation where id = $1`,
+      [nonSigner, booking, appointment, seedStaffUserIds.projectLead],
+    );
+    await owner.query(
+      `insert into participant_reminder (id, project_id, participation_id, batch_id, kind, message_version, language, channel_id, channel_kind, consent_id, requested_on, appointment_id, booking_id)
+      select $2, project_id, id, $3, 'appointment_changed', 'reminder:v1', 'de', $4, 'email', $5, '2026-03-01', $6, $7 from participation where id = $1`,
+      [nonSigner, randomUUID(), randomUUID(), channel, consent, appointment, booking],
+    );
+    await hold(nonSigner, { recordKinds: ["participant_reminder"] });
+    await run("2026-05-31");
+    expect(await count("appointment_booking", nonSigner)).toBe(1);
+    expect(await count("participant_channel", nonSigner)).toBe(1);
+    expect(await count("consent_record", nonSigner)).toBe(1);
+    expect(await count("participant_details", nonSigner)).toBe(0);
+  });
+  it("keeps signatures of a held scan while deleting the other personnel data", async () => {
+    const { rows } = await owner.query(
+      `select document_id from dsv_scan_signature where participation_id = $1 limit 1`,
+      [exited],
+    );
+    const document = rows[0].document_id;
+    await hold(exited, { documentIds: [document] });
+    await run("2026-10-01");
+    expect(
+      await count("dsv_scan_signature", exited, `and document_id = '${document}'`),
+    ).toBeGreaterThan(0);
+    expect(await count("participant_details", exited)).toBe(0);
+  });
+  it("retains a consent referenced by a withdrawal while deleting its unreferenced neighbour", async () => {
+    const kept = randomUUID();
+    const neighbour = randomUUID();
+    for (const id of [kept, neighbour]) {
+      await owner.query(
+        `insert into consent_record (id, project_id, participation_id, purpose, source, text_version, language, actor_type)
+        select $2, project_id, id, 'kug200b_profile_access', 'portal', 'consent:v1', 'de', 'participant' from participation where id = $1`,
+        [nonSigner, id],
+      );
+    }
+    await owner.query(
+      `insert into kug200b_withdrawal (id, project_id, participation_id, consent_id, received_on, recorded_by)
+      select $2, project_id, id, $3, '2026-03-01', $4 from participation where id = $1`,
+      [nonSigner, randomUUID(), kept, seedStaffUserIds.backOffice],
+    );
+    await run("2026-05-31");
+    expect(
+      (await owner.query(`select id from consent_record where participation_id = $1`, [nonSigner]))
+        .rows,
+    ).toEqual([{ id: kept }]);
+    expect(await count("participant_details", nonSigner)).toBe(0);
+  });
   it("keeps exactly the held rows while their neighbours and the unheld classes go", async () => {
     const held = await upload(nonSigner);
     const neighbour = await upload(nonSigner);
@@ -269,6 +361,24 @@ describe("legal holds (Q218)", () => {
 });
 
 describe("the retained DSV facts and the evidence-only phase", () => {
+  it("allows evidence-only with evidence held, but not with personnel data held", async () => {
+    await hold(exited, { recordKinds: ["dsv_offer"] });
+    await hold(exited, { recordKinds: ["participant_details"] });
+    await run("2026-10-01");
+    expect(
+      (await owner.query(`select evidence_set_since from participation where id = $1`, [exited]))
+        .rows[0].evidence_set_since,
+    ).toBeNull();
+    await owner.query(
+      `update legal_hold set released_at = now(), released_by = $2, release_source = 'Weisung' where participation_id = $1 and 'participant_details' = any(record_kinds)`,
+      [exited, seedStaffUserIds.regionalOperationsManager],
+    );
+    await run("2026-10-02");
+    expect(
+      (await owner.query(`select evidence_set_since from participation where id = $1`, [exited]))
+        .rows[0].evidence_set_since,
+    ).not.toBeNull();
+  });
   it("keeps the contract's facts when the scans go, then starts the evidence-only phase", async () => {
     await owner.query(
       `update dsv_contract set original_location = 'paper_personnel_file' where participation_id = $1`,

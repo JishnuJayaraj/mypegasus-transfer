@@ -228,6 +228,7 @@ const item = (c: "personnel_file" | "health_record", triggers: Record<string, st
   class: c,
   triggers,
   held: false,
+  funding: { funded110: "known_no" as const, enteredTg: false },
 });
 
 describe("retention per class (data-protection.md, retention per class)", () => {
@@ -254,6 +255,36 @@ describe("retention per class (data-protection.md, retention per class)", () => 
       trigger: "non_signer_withdrawn",
       from: "2026-03-01",
     });
+  });
+
+  it.each(["personnel_file", "health_record"] as const)(
+    "applies the non-signer period to %s only when funding is known absent",
+    (c) => {
+      const funded = (funded110: "known_no" | "known_yes" | "unknown") => ({
+        ...item(c, nonSigner),
+        funding: { funded110, enteredTg: false },
+      });
+      expect(retentionDue(funded("known_no"), perClass, "2026-05-30").kind).toBe("not_due");
+      expect(retentionDue(funded("known_no"), perClass, "2026-05-31").kind).toBe("due");
+      expect(retentionDue(funded("unknown"), perClass, "2026-05-31")).toEqual({
+        kind: "blocked",
+        reason: "funding_unknown",
+      });
+      expect(retentionDue(funded("known_yes"), perClass, "2027-01-01")).toEqual({
+        kind: "not_due",
+        on: null,
+      });
+    },
+  );
+
+  it("fails closed when a non-signer's funding fact is absent", () => {
+    expect(
+      retentionDue(
+        { class: "personnel_file", triggers: nonSigner, held: false },
+        perClass,
+        "2026-05-31",
+      ),
+    ).toEqual({ kind: "blocked", reason: "funding_unknown" });
   });
 
   it("deletes the health record 3 months after exit while the personnel file stays", () => {
@@ -284,10 +315,18 @@ describe("retention per class (data-protection.md, retention per class)", () => 
       participationRetentionTriggers({
         ...facts,
         withdrawnOn: null,
+        status: "withdrawn",
+        dsvFullyExecuted: true,
+      }),
+    ).toEqual({ non_signer_withdrawn: null, closed_without_tg: "2026-04-02", exited: null });
+    expect(
+      participationRetentionTriggers({
+        ...facts,
+        withdrawnOn: null,
         status: "ta_completed",
         dsvFullyExecuted: false,
       }),
-    ).toEqual({ non_signer_withdrawn: null, closed_without_tg: "2026-04-02", exited: null });
+    ).toEqual({ non_signer_withdrawn: null, closed_without_tg: null, exited: null });
     // Without a recorded withdrawal day, the day it closed.
     expect(
       participationRetentionTriggers({
@@ -300,6 +339,20 @@ describe("retention per class (data-protection.md, retention per class)", () => 
     expect(
       participationRetentionTriggers({ ...facts, status: "informed", dsvFullyExecuted: false }),
     ).toEqual({ non_signer_withdrawn: null, closed_without_tg: null, exited: null });
+  });
+
+  it("leaves health after closure without TG unmapped", () => {
+    const triggers = participationRetentionTriggers({
+      status: "withdrawn",
+      closedOn: "2026-04-01",
+      withdrawnOn: "2026-04-01",
+      enteredTg: false,
+      dsvFullyExecuted: true,
+    });
+    expect(retentionDue(item("health_record", triggers), perClass, "2030-01-01")).toEqual({
+      kind: "not_due",
+      on: null,
+    });
   });
 
   it("blocks the participation record of a non-entrant while the funding is unknown", () => {
@@ -315,7 +368,7 @@ describe("retention per class (data-protection.md, retention per class)", () => 
     });
     expect(retentionDue(record("known_no"), perClass, "2026-06-01").kind).toBe("due");
     expect(retentionDue(record("unknown", true), perClass, "2026-06-01").kind).toBe("due");
-    // The personnel file doesn't depend on it.
+    // The non-signer personnel file also depends on funding.
     expect(
       retentionDue(
         {
@@ -325,7 +378,7 @@ describe("retention per class (data-protection.md, retention per class)", () => 
         perClass,
         "2026-06-01",
       ).kind,
-    ).toBe("due");
+    ).toBe("blocked");
   });
 
   it("is unset when a trigger has no span, or two", () => {

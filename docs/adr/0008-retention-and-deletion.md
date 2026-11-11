@@ -68,3 +68,7 @@ legal hold names; the participation record waits for the erasure and is blocked 
 a participation that never entered the TG is `unknown`. The evidence-only phase starts only where an
 evidence set exists and nothing outside it is left; then one trigger refuses writes and the API
 ordinary reads (data-protection.md, retention per class).
+
+## 7-7b follow-up as built (Q234–Q236)
+
+The non-signer branch for personnel and health data applies only with funding `known_no`; `unknown` blocks it and `known_yes` remains unmapped. The TA-completion and health-after-closure mappings remain open. Evidence-only starts once data outside the evidence set has gone, even if evidence itself is held. Ordinary work lists and dashboard counts exclude evidence-only participations. All periods remain unset and activation off; hold administration includes an operational single-document hold workflow before activation (data-protection.md, retained dependencies and retention follow-up).

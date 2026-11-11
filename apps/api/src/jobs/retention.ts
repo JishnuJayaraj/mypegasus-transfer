@@ -222,11 +222,17 @@ export async function runRetention(
           for (const c of perClass) {
             if (!left.has(c)) continue;
             const due = retentionDue(
-              { class: c, triggers, held: row.held_classes.includes(c) },
+              {
+                class: c,
+                triggers,
+                held: row.held_classes.includes(c),
+                funding: { funded110: row.funded110, enteredTg: row.entered_tg },
+              },
               periods,
               runDay,
             );
             if (due.kind === "held") classes[c].held += 1;
+            if (due.kind === "blocked") classes[c].blocked += 1;
             if (due.kind !== "due") continue;
             classes[c].due += 1;
             const documents = await scalar<string[]>(
@@ -247,7 +253,14 @@ export async function runRetention(
             );
             if (result.kept > 0) classes[c].held += 1;
             if (!dryRun) {
-              left.delete(c);
+              // Read the remaining classes again: held rows and retained dependencies can survive
+              // a partial deletion (data-protection.md, retained dependencies).
+              const remaining = await tx.execute<{ classes_left: string[] }>(sql`select classes_left
+                from retention_participations(${run}::uuid) where participation_id = ${row.participation_id}::uuid`);
+              if (remaining.rows[0]) {
+                left.clear();
+                for (const retained of remaining.rows[0].classes_left) left.add(retained);
+              }
               apply(c, 1);
             }
           }

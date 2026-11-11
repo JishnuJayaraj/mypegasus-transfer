@@ -155,3 +155,5 @@ v2: customer/works-council portal with login.
 v1.x: AI document extraction, CV generation, note summaries (behind AI adapter, EU-hosted model).
 v2: job matching, qualification suggestions, profiling drafts (AI Act review first),
 payroll/DATEV integration, KuG billing support.
+
+Before live retention deletion, complete the operational workflow for legal holds on individual documents and confirm hold administration. The picker is deferred during synthetic development (Q235).

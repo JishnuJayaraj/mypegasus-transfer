@@ -7,6 +7,7 @@ import {
   desc,
   eq,
   inArray,
+  isNull,
   participantChannel,
   participantDetails,
   participantIdentity,
@@ -133,6 +134,7 @@ export async function loadWorklist(
         .where(
           and(
             eq(participation.projectId, projectId),
+            isNull(participation.evidenceSetSince),
             scope.kind === "assigned"
               ? inArray(participation.id, [...scope.participationIds])
               : undefined,
