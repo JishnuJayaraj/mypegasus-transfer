@@ -277,12 +277,9 @@ function LegalHoldsCard({ participationId }: { participationId: string }) {
     return (
       <Stack gap={4}>
         {view.evidenceSetSince !== null && (
-          <InlineNotification
-            kind="info"
-            hideCloseButton
-            title={t("retention.evidenceOnly")}
-            lowContrast
-          />
+          <p>
+            <strong>{t("retention.evidenceOnly")}</strong>
+          </p>
         )}
         {view.holds.length === 0 ? (
           <p>{t("retention.holds.none")}</p>

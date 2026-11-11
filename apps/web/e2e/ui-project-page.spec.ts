@@ -170,8 +170,8 @@ test("the project page: header, tabs, the dashboard's three layers and Einrichtu
     "Eintrittswellen",
     "Kopf der Kug 200a",
     "DSV-Vorlage",
-    "Abrechnung",
     "Import",
+    "Abrechnung",
   ]);
   const projectCard = page.getByRole("region", { name: "Projekt" });
   await expect(projectCard.getByLabel("Region (Niederlassung)")).toBeVisible();

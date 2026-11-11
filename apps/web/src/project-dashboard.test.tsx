@@ -197,8 +197,8 @@ describe("the project page", () => {
       "Eintrittswellen",
       "Kopf der Kug 200a",
       "DSV-Vorlage",
-      "Abrechnung",
       "Import",
+      "Abrechnung",
     ]);
     expect(anchors.getByRole("link", { name: "Import" }).getAttribute("href")).toMatch(
       /tab=setup#project-import$/,

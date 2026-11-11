@@ -120,12 +120,9 @@ export function SettlementDatesCard({ projectId }: { projectId: string }) {
           ))}
         </dl>
         {view.required.fundingUnknown && (
-          <InlineNotification
-            kind="info"
-            hideCloseButton
-            title={t("settlement.fundingUnknown")}
-            lowContrast
-          />
+          <p>
+            <strong>{t("settlement.fundingUnknown")}</strong>
+          </p>
         )}
         <p>{t("settlement.hint")}</p>
         {view.capabilities.set && (

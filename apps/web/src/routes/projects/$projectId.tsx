@@ -259,7 +259,7 @@ function ProjectPage() {
 /**
  * "Einrichtung" as cards (the plan of Slice 6b, 6b-4): Projekt (status, region change, blockers,
  * activation), Agentur (pins and Agentur-specific settings), Wellen (in `ta_only` only why there
- * are none), Kug 200a-Kopf, DSV-Vorlage and Abrechnung (`ta_tg`) and Import (`project-import`, the target of "Datei importieren"). An anchor list beside them on
+ * are none), Kug 200a-Kopf and DSV-Vorlage (`ta_tg`), Import (`project-import`, the target of "Datei importieren") and Abrechnung (`ta_tg`). An anchor list beside them on
  * wide screens; below 66rem the cards simply follow each other.
  */
 function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean }) {
@@ -272,10 +272,10 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
       ? [
           { id: "setup-kug200a", label: t("kug200aHeader.title") },
           { id: "setup-dsv", label: t("dsvTemplate.title") },
-          { id: "setup-settlement", label: t("settlement.title") },
         ]
       : []),
     { id: "project-import", label: t("import.title") },
+    ...(taTg ? [{ id: "setup-settlement", label: t("settlement.title") }] : []),
   ];
   return (
     <div className="tp-anchored">
@@ -309,7 +309,6 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
             <EntryWaves projectId={projectId} />
             <Kug200aHeader projectId={projectId} />
             <DsvTemplateCard projectId={projectId} />
-            <SettlementDatesCard projectId={projectId} />
           </>
         ) : (
           <Card id="setup-waves" title={t("projectDetail.waves")}>
@@ -317,6 +316,8 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
           </Card>
         )}
         <ImportSection projectId={projectId} />
+        {/* Last: it loads after the anchors' targets above it ("Datei importieren"). */}
+        {taTg && <SettlementDatesCard projectId={projectId} />}
       </div>
     </div>
   );
