@@ -99,6 +99,9 @@ const statusFunctions = [
   // Slice 7, PR 7-7a: retention's inputs (back office)
   "set_settlement_dates",
   "set_funding_status",
+  // Slice 7, PR 7-7b: legal holds (the PL and back office place, the region's manager releases)
+  "place_legal_hold",
+  "release_legal_hold",
   "lock_participation",
   "create_participation",
   "change_participation_status",
@@ -281,6 +284,11 @@ const retentionFunctions = [
   "retention_working_copies",
   "retention_purge_working_copy",
   "retention_known_objects",
+  // Slice 7, PR 7-7b: stage one per class and the evidence-only phase
+  "retention_participations",
+  "retention_class_documents",
+  "retention_delete_class",
+  "retention_enter_evidence_only",
 ];
 
 const helpers = [
@@ -299,6 +307,8 @@ const helpers = [
   "project_text_valid",
   "entry_wave_text_valid",
   "refuse_config_change",
+  "refuse_in_evidence_set_phase",
+  "retention_classes_left",
   "override_without_agentur",
   "override_without_relaxation",
   "override_relaxations_of",

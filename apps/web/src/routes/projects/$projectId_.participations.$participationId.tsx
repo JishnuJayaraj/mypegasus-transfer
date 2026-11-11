@@ -57,6 +57,7 @@ import { RecoveryPrint, type RecoveryPrinted } from "../../components/recovery";
 import { BulkRemind, MessagesTab } from "../../components/reminders";
 import { RouteError } from "../../components/route-error";
 import { SelfServiceTab } from "../../components/self-service-tab";
+import { RetentionTab } from "../../components/retention-tab";
 import { worklistMemory } from "../../components/worklist-state";
 import { usePageTitle } from "../../page-title";
 
@@ -67,7 +68,7 @@ const RouterLink = createLink(Link);
  * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Profiling" (for
  * the PL and the assigned consultant), "Arbeitsuche" (`ta_tg`, the case readers), "DSV" (`ta_tg`,
  * the PL and back office), "Unterlagen",
- * "Termine", "Nachrichten" or "Verlauf".
+ * "Termine", "Nachrichten", "Aufbewahrung" (the PL and back office) or "Verlauf".
  */
 const tabs = [
   undefined,
@@ -78,6 +79,7 @@ const tabs = [
   "documents",
   "appointments",
   "messages",
+  "retention",
   "history",
 ] as const;
 type Search = { tab?: Exclude<(typeof tabs)[number], undefined> };
@@ -90,6 +92,7 @@ const tabLabels = {
   documents: "documents",
   appointments: "appointments",
   messages: "messages",
+  retention: "retention",
   history: "history",
 } as const;
 
@@ -194,7 +197,8 @@ function ParticipationPage() {
     (key) =>
       (key !== "profiling" || detail.capabilities.viewProfiling) &&
       (key !== "asu" || detail.capabilities.viewAsu) &&
-      (key !== "dsv" || detail.capabilities.viewDsv),
+      (key !== "dsv" || detail.capabilities.viewDsv) &&
+      (key !== "retention" || detail.capabilities.viewRetention),
   );
   const current = shown.includes(tab) ? tab : undefined;
 
@@ -335,6 +339,9 @@ function ParticipationPage() {
       // The participant's reminders (data-protection.md).
       case "messages":
         return <MessagesTab participationId={participationId} />;
+      // The funding and the legal holds (data-protection.md): the PL and back office.
+      case "retention":
+        return <RetentionTab participationId={participationId} />;
       // Opening the history is audited (data-protection.md).
       case "history":
         return (

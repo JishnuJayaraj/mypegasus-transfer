@@ -1384,7 +1384,9 @@ export {
 } from "./lifecycle/contact-status";
 export {
   credentialCutoff,
+  evidenceOnlyApplies,
   Funded110,
+  participationRetentionTriggers,
   mayReadFunding,
   mayRecordFunding,
   RetentionClass,
@@ -1406,3 +1408,18 @@ export {
   SettlementDatesRequest,
   SettlementDatesView,
 } from "./retention/api";
+export {
+  HoldableClass,
+  holdRecordKinds,
+  HoldRecordKind,
+  holdScopeProblem,
+  LegalHoldItem,
+  LegalHoldReason,
+  LegalHoldRelease,
+  LegalHoldRequest,
+  LegalHoldReviewItem,
+  LegalHoldsView,
+  mayPlaceLegalHold,
+  mayReleaseLegalHold,
+  type HoldScope,
+} from "./retention/holds";

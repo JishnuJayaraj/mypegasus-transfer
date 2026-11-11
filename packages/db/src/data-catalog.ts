@@ -374,6 +374,14 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // A legal hold (Q218): the held classes, record kinds or document ids of one participation, the
+  // reason code and the documented basis, who placed and released it with the instruction's
+  // source. Kept while active, then as the audit log (data-protection.md, legal holds).
+  legal_hold: {
+    retentionClass: "audit_log",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
   export_link: {
     retentionClass: "access_credential",
     dataClass: "internal",
@@ -595,6 +603,7 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     funded110_source: "funded110",
     funded110_set_by: null,
     funded110_set_at: "funded110",
+    evidence_set_since: null,
     created_at: null,
   },
   profiling_exception_evidence_record: {
@@ -1016,6 +1025,8 @@ const withoutFields = new Set([
   "dsv_customer_notice",
   "tg_entry_reconciliation",
   "tg_entry_reconciliation_step",
+  // A legal hold: its scope, reason code and basis (data-protection.md, legal holds), no field.
+  "legal_hold",
   "dsv_scan_signature",
   // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
   // declarations to the BA).

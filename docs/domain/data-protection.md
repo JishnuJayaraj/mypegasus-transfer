@@ -1329,6 +1329,43 @@ deletes nothing. Nothing reads a period or the activation from the environment.
   inside a retention run: the session's role `transfer_retention` and the transaction-local
   `transfer.retention_run` naming an open run the same transaction opened.
 
+**Retention per class, legal holds and the evidence-only phase *(Slice 7, PR 7-7b; readings
+Q235)*.**
+- **Each class at its own trigger and period, only that class.** Per closed participation
+  (`withdrawn`, `ta_completed`, `exited`) the job applies `personnel_file` and `health_record`
+  (`retention_delete_class`) when `retentionDue` says so; the triggers are `non_signer_withdrawn`
+  (withdrawn before the TG without a fully executed DSV, from `withdrawnOn`), `closed_without_tg`
+  (withdrawn with a fully executed DSV, or `ta_completed`, from that day) and `exited` (the exit
+  date). A period per trigger is days, calendar months or the end of the n-th calendar year after
+  the trigger's year; every one stays `unset` until the DPO confirms it. Deleting the health record
+  leaves the personnel file readable and writable. Documents of a class become tombstones (deleted
+  by `system`, file name erased, object deleted first). A row another kept row references waits (a
+  consent behind a Kug 200b withdrawal). Each deletion is audited `retention_applied` (security
+  stream, class and counts only).
+- **Funding `unknown` blocks** the participation record of a participation that never entered the
+  TG (`funding_unknown`, reported, nothing deleted) and the choice between the evidence-only phase
+  and the erasure; the personnel file and the health record don't depend on it. The participation
+  record itself goes only with the erasure (stage two, Slice 7, PR 7-7c).
+- **The retained DSV facts** stay in `dsv_offer` and `dsv_contract` (signature dates,
+  `fullyExecutedOn`, acceptance days and role kinds, the original's received and sent dates) when
+  the scans, their signature rows and the original's location go with the personnel file.
+- **Legal holds** (`legal_hold`, confidential, class `audit_log`): the PL or back office of the
+  project places one on selected classes (`personnel_file`, `health_record`, `form_working_copy`,
+  `evidence_set`), record kinds (e.g. `dsv_contract`, `participant_reminder`) or documents of one
+  participation, never all classes (`hold_scope_too_broad`) and never nothing (`hold_scope_empty`),
+  with a reason code (`litigation`, `authority_request`, `documented_dispute`, `dpo_instruction`)
+  and the documented basis, against the active holds read (`409 stale_holds`). A regional operations
+  manager of the project's region who didn't place it releases it in "Freigaben" with the
+  instruction's source; once (`409 hold_released`). Both audited in the security stream without the
+  basis or source. The job skips exactly the held rows; the rest of the class goes.
+- **The evidence-only phase** (`participation.evidence_set_since`, Q64) starts
+  (`retention_enter_evidence_only`) only when the participation has an evidence set (it entered the
+  TG or its funding is `known_yes`) and no class outside it holds data. From then the trigger
+  `refuse_in_evidence_set_phase` on every table naming a participation (but the audit trail and the
+  holds) refuses every write outside a retention run, the API answers `403 evidence_set_phase` to
+  every ordinary read of it after visibility, and lists leave it out. Its holds stay readable.
+  Break-glass is not built, so live deletion stays off.
+
 **Funding and settlement dates *(Q52, Q217; as built in PR 7-7a)*.** A participation's §110
 funding is a recorded fact, `funded110`: `known_yes`, `known_no` or `unknown` (the default), set by
 back office with its documented source (`PUT /participations/{id}/funding` against the value and

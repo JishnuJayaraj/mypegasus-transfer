@@ -109,7 +109,7 @@ function ReviewsPage() {
       reason: t(`history.reasons.${item.reason}`),
       date: formatDate(item.requestedOn),
     });
-  const { items, corrections, clarifications, reconciliations } = query.data;
+  const { items, corrections, clarifications, reconciliations, legalHolds } = query.data;
   return (
     <>
       <PageHeader title={t("reviews.title")} />
@@ -184,6 +184,13 @@ function ReviewsPage() {
         />
         <ReconciliationQueue
           reconciliations={reconciliations}
+          onDecided={async (result) => {
+            setMessage(result);
+            await queryClient.invalidateQueries({ queryKey: reviewsQuery(api).queryKey });
+          }}
+        />
+        <LegalHoldQueue
+          holds={legalHolds}
           onDecided={async (result) => {
             setMessage(result);
             await queryClient.invalidateQueries({ queryKey: reviewsQuery(api).queryKey });
@@ -768,6 +775,139 @@ function ReconciliationQueue(props: {
               />
             )}
             <p>{t(`reviews.reconciliations.dialog.final.${dialog.outcome}`)}</p>
+          </Stack>
+        )}
+      </Modal>
+    </>
+  );
+}
+
+type LegalHold = components["schemas"]["ReviewQueue"]["legalHolds"][number];
+
+/**
+ * The active legal holds of the region's projects (data-protection.md, legal holds; Q218): the
+ * project, the scope, the reason code and the day placed, never a name, the participation or the
+ * documented basis. "Freigeben" against a documented legal or DPO instruction (one source line);
+ * not for the manager who placed it. The API checks it again.
+ */
+function LegalHoldQueue(props: {
+  holds: LegalHold[];
+  onDecided: (message: { kind: "success" | "error"; text: string }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  // The dialog keeps the hold it opened for.
+  const [dialog, setDialog] = useState<LegalHold>();
+  const [source, setSource] = useState("");
+  const [shownInvalid, setShownInvalid] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const sourceValid =
+    source.length >= 1 &&
+    source.length <= 200 &&
+    source === source.trim() &&
+    !/\p{Cc}/u.test(source);
+  const scope = (hold: LegalHold) =>
+    [
+      ...hold.classes.map((c) => t(`retention.classes.${c}`)),
+      ...hold.recordKinds.map((k) => t(`retention.kinds.${k}`)),
+      ...(hold.documentCount > 0
+        ? [t("retention.holds.documents", { count: hold.documentCount })]
+        : []),
+    ].join(", ");
+  const label = (hold: LegalHold) =>
+    t("reviews.legalHolds.item", { project: hold.projectName, date: formatDate(hold.placedOn) });
+  const close = () => {
+    setDialog(undefined);
+    setSource("");
+    setShownInvalid(false);
+  };
+
+  async function release(hold: LegalHold) {
+    if (!sourceValid) {
+      setShownInvalid(true);
+      return;
+    }
+    setBusy(true);
+    let result: { kind: "success" | "error"; text: string };
+    try {
+      const { error } = await api.POST("/api/v1/legal-holds/{holdId}/release", {
+        params: { path: { holdId: hold.id } },
+        body: { source },
+      });
+      if (error) throw error;
+      result = { kind: "success", text: t("reviews.legalHolds.released") };
+    } catch (error) {
+      const code = error instanceof ApiProblemError ? error.problem.errors?.[0]?.code : undefined;
+      result = {
+        kind: "error",
+        text: t(
+          code === "hold_released"
+            ? "reviews.legalHolds.alreadyReleased"
+            : "reviews.legalHolds.failed",
+        ),
+      };
+    } finally {
+      setBusy(false);
+      close();
+    }
+    await props.onDecided(result);
+  }
+
+  return (
+    <>
+      <SimpleTable
+        title={t("reviews.legalHolds.listTitle")}
+        columns={(["project", "scope", "reason", "placedOn", "actions"] as const).map((key) => ({
+          key,
+          header: t(`reviews.legalHolds.columns.${key}`),
+        }))}
+        rows={props.holds.map((hold) => ({
+          id: hold.id,
+          project: hold.projectName,
+          scope: scope(hold),
+          reason: t(`retention.reasons.${hold.reason}`),
+          placedOn: formatDate(hold.placedOn),
+          actions: hold.capabilities.release ? (
+            <Button
+              kind="ghost"
+              size="sm"
+              disabled={busy}
+              aria-label={`${t("reviews.legalHolds.release")}: ${label(hold)}`}
+              onClick={() => setDialog(hold)}
+            >
+              {t("reviews.legalHolds.release")}
+            </Button>
+          ) : (
+            t("reviews.legalHolds.ownHold")
+          ),
+        }))}
+        emptyState={t("reviews.legalHolds.empty")}
+      />
+      <Modal
+        key={dialog ? dialog.id : "none"}
+        open={dialog !== undefined}
+        size="sm"
+        modalHeading={t("reviews.legalHolds.release")}
+        primaryButtonText={t("reviews.legalHolds.confirm")}
+        secondaryButtonText={t("reviews.reconciliations.dialog.cancel")}
+        primaryButtonDisabled={busy}
+        onRequestClose={close}
+        onRequestSubmit={() => dialog && void release(dialog)}
+      >
+        {dialog && (
+          <Stack gap={4}>
+            <p>{label(dialog)}</p>
+            <p>{scope(dialog)}</p>
+            <TextInput
+              id="legal-hold-release-source"
+              labelText={t("reviews.legalHolds.source")}
+              helperText={t("reviews.legalHolds.sourceHelp")}
+              value={source}
+              maxLength={200}
+              invalid={shownInvalid && !sourceValid}
+              invalidText={t("reviews.reconciliations.dialog.enterSource")}
+              onChange={(event) => setSource(event.target.value)}
+            />
           </Stack>
         )}
       </Modal>

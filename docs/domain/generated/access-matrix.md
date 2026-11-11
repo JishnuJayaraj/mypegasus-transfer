@@ -962,6 +962,9 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `reconciliation_replied` | `review` | no | no | — |
 | `settlement_dates_set` | project-level | no | no | — |
 | `funding_status_set` | `case` | no | no | `funded110` |
+| `legal_hold_placed` | `security` | no | no | — |
+| `legal_hold_released` | `security` | no | no | — |
+| `retention_applied` | `security` | no | no | — |
 
 ## Aggregates
 

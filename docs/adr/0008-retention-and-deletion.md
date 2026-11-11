@@ -61,3 +61,10 @@ the immutability triggers' retention path (ADR-0002). The funding (`funded110`) 
 dates are recorded by back office. Not built yet: the per-class deletions, legal holds, the
 evidence-only phase and stage two's erasure; the admin dashboard's warning about missing
 settlement dates needs project closure.
+
+**Stage one per class (Slice 7, PR 7-7b; readings Q235).** The job deletes a participation's
+`personnel_file` and `health_record` each at its own trigger and period, skipping exactly the rows a
+legal hold names; the participation record waits for the erasure and is blocked while the funding of
+a participation that never entered the TG is `unknown`. The evidence-only phase starts only where an
+evidence set exists and nothing outside it is left; then one trigger refuses writes and the API
+ordinary reads (data-protection.md, retention per class).

@@ -66,6 +66,7 @@ const detail = {
     viewProfiling: false,
     viewAsu: false,
     viewDsv: true,
+    viewRetention: false,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };

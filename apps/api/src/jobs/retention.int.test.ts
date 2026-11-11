@@ -110,7 +110,7 @@ describe("with the catalog or activation off", () => {
     expect(summary.unmet).toHaveLength(4);
     expect(Object.keys(summary.classes)).toEqual(RetentionClass.options);
     for (const c of RetentionClass.options) {
-      expect(summary.classes[c]).toEqual({
+      expect(summary.classes[c]).toMatchObject({
         outcome: c === "reference_data" ? "never" : "period_unset",
         due: 0,
         deleted: 0,
@@ -129,9 +129,21 @@ describe("with the catalog or activation off", () => {
       prerequisites: { ...testActivation, evidence_only_access_built: false },
     });
     expect(summary).toMatchObject({ dryRun: true, unmet: ["evidence_only_access_built"] });
-    expect(summary.classes.access_credential).toEqual({ outcome: "counted", due: 1, deleted: 0 });
-    expect(summary.classes.form_working_copy).toEqual({ outcome: "counted", due: 1, deleted: 0 });
-    expect(summary.classes.personnel_file).toEqual({ outcome: "period_unset", due: 0, deleted: 0 });
+    expect(summary.classes.access_credential).toMatchObject({
+      outcome: "counted",
+      due: 1,
+      deleted: 0,
+    });
+    expect(summary.classes.form_working_copy).toMatchObject({
+      outcome: "counted",
+      due: 1,
+      deleted: 0,
+    });
+    expect(summary.classes.personnel_file).toMatchObject({
+      outcome: "period_unset",
+      due: 0,
+      deleted: 0,
+    });
     expect(await count("staff_session where token_hash = $1", [session])).toBe(1);
     expect(await count("document where id = $1 and deleted_at is null", [copy])).toBe(1);
     expect((await storage.list("documents")).length).toBeGreaterThanOrEqual(2);
@@ -146,10 +158,18 @@ describe("with synthetic periods and test activation", () => {
     const session = await endedSession("2026-01-01");
     const live = await endedSession("2026-01-20");
     const day30 = await run("2026-01-31");
-    expect(day30.classes.access_credential).toEqual({ outcome: "applied", due: 0, deleted: 0 });
+    expect(day30.classes.access_credential).toMatchObject({
+      outcome: "applied",
+      due: 0,
+      deleted: 0,
+    });
     expect(await count("staff_session where token_hash = $1", [session])).toBe(1);
     const day31 = await run("2026-02-01");
-    expect(day31.classes.access_credential).toEqual({ outcome: "applied", due: 1, deleted: 1 });
+    expect(day31.classes.access_credential).toMatchObject({
+      outcome: "applied",
+      due: 1,
+      deleted: 1,
+    });
     expect(await count("staff_session where token_hash = $1", [session])).toBe(0);
     expect(await count("staff_session where token_hash = $1", [live])).toBe(1);
     // Idempotent: the next run finds nothing more.
@@ -162,7 +182,11 @@ describe("with synthetic periods and test activation", () => {
     await run("2025-12-30");
     expect(await storage.get(`documents/${copy}`)).toEqual(new Uint8Array([1]));
     const summary = await run("2025-12-31");
-    expect(summary.classes.form_working_copy).toEqual({ outcome: "applied", due: 1, deleted: 1 });
+    expect(summary.classes.form_working_copy).toMatchObject({
+      outcome: "applied",
+      due: 1,
+      deleted: 1,
+    });
     expect(await storage.list("documents")).toEqual([]);
     const { rows } = await owner.query(
       `select deleted_by, file_name, purged_at is not null as purged, delete_reason
@@ -184,7 +208,11 @@ describe("with synthetic periods and test activation", () => {
     now = new Date("2026-02-01T10:00:00Z");
     await storage.put(fresh, new Uint8Array([4]));
     const summary = await run("2026-02-01");
-    expect(summary.classes.orphaned_object).toEqual({ outcome: "applied", due: 1, deleted: 1 });
+    expect(summary.classes.orphaned_object).toMatchObject({
+      outcome: "applied",
+      due: 1,
+      deleted: 1,
+    });
     expect((await storage.list("documents")).map((o) => o.key).toSorted()).toEqual(
       [`documents/${copy}`, fresh].toSorted(),
     );

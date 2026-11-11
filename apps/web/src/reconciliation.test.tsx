@@ -62,6 +62,7 @@ const detail = {
     viewProfiling: false,
     viewAsu: false,
     viewDsv: true,
+    viewRetention: false,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };
@@ -323,7 +324,13 @@ describe("the reconciliations in Freigaben", () => {
       "GET /api/v1/me": () => json(manager),
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
       "GET /api/v1/reviews": () =>
-        json({ items: [], corrections: [], clarifications: [], reconciliations: items }),
+        json({
+          items: [],
+          corrections: [],
+          clarifications: [],
+          reconciliations: items,
+          legalHolds: [],
+        }),
       ...routes,
     });
     renderApp("/reviews", mock.api);

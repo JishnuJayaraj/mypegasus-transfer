@@ -2,11 +2,14 @@ import type { Clock, FileStorage } from "@transfer/adapters";
 import { sql, type Database } from "@transfer/db";
 import {
   credentialCutoff,
+  evidenceOnlyApplies,
+  participationRetentionTriggers,
   RetentionClass,
   retentionActivation,
   retentionDue,
   retentionRules,
   workingCopyTriggers,
+  type Funded110,
   type IsoDate,
   type RetentionPeriods,
   type RetentionPrerequisite,
@@ -25,13 +28,25 @@ export type ClassOutcome =
   | "no_storage"
   | "counted"
   | "applied";
-export type ClassReport = { outcome: ClassOutcome; due: number; deleted: number };
+/**
+ * Per class: how many items were due, deleted, kept by a legal hold, and blocked (an `unknown`
+ * funding, `funding_unknown`); never which.
+ */
+export type ClassReport = {
+  outcome: ClassOutcome;
+  due: number;
+  deleted: number;
+  held: number;
+  blocked: number;
+};
 export type RetentionSummary = {
   runDay: IsoDate;
   dryRun: boolean;
   /** The prerequisites of a live deletion still unmet; any makes the run a dry run. */
   unmet: RetentionPrerequisite[];
   classes: Record<RetentionClass, ClassReport>;
+  /** Participations that entered the evidence-only phase in this run. */
+  evidenceOnly: number;
 };
 
 export type RetentionDeps = {
@@ -61,7 +76,11 @@ const documentId = /^documents\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
  * objects, each by its class's period as `retentionDue` decides. One transaction under the
  * retention role, opened as a run (the immutability triggers' path); idempotent. While a class's
  * period is `unset` it is only reported; while any prerequisite of a live deletion is unmet, or
- * with `dryRun`, the run computes and counts and deletes nothing. Every class is reported.
+ * with `dryRun`, the run computes and counts and deletes nothing. Every class is reported. Then
+ * per closed participation (data-protection.md, retention per class) each class, the health record
+ * and the personnel file, at its own trigger and period, the held rows kept; the participation
+ * record is reported (`funding_unknown` blocks it) and erased in stage two; the evidence-only
+ * phase starts only where it applies.
  */
 export async function runRetention(
   { db, storage, clock, logger }: RetentionDeps,
@@ -82,10 +101,10 @@ export async function runRetention(
             : retentionRules[c].applied
               ? "counted"
               : "not_applied";
-      return [c, { outcome, due: 0, deleted: 0 }];
+      return [c, { outcome, due: 0, deleted: 0, held: 0, blocked: 0 }];
     }),
   ) as Record<RetentionClass, ClassReport>;
-  const summary: RetentionSummary = { runDay, dryRun, unmet, classes };
+  const summary: RetentionSummary = { runDay, dryRun, unmet, classes, evidenceOnly: 0 };
   const applies = (c: RetentionClass) => classes[c].outcome === "counted";
   const apply = (c: RetentionClass, deleted: number) => {
     classes[c].deleted += deleted;
@@ -181,8 +200,87 @@ export async function runRetention(
         }
       }
 
+      // Stage one per class of each closed participation (data-protection.md, retention per
+      // class): each class at its own trigger and period, only that class, the held rows kept.
+      const perClass = (["health_record", "personnel_file"] as const).filter(applies);
+      const reported = classes.participation_record.outcome !== "period_unset";
+      if (perClass.length > 0 || reported) {
+        const { rows } = await tx.execute<ParticipationFacts>(sql`select participation_id,
+          status, closed_on::text, withdrawn_on::text, exit_date::text, entered_tg,
+          dsv_fully_executed, funded110, evidence_set_since, held_classes, classes_left
+          from retention_participations(${run}::uuid)`);
+        for (const row of rows) {
+          if (row.evidence_set_since !== null) continue;
+          const triggers = participationRetentionTriggers({
+            status: row.status,
+            closedOn: row.status === "exited" ? (row.exit_date ?? row.closed_on) : row.closed_on,
+            withdrawnOn: row.withdrawn_on,
+            enteredTg: row.entered_tg,
+            dsvFullyExecuted: row.dsv_fully_executed,
+          });
+          const left = new Set(row.classes_left);
+          for (const c of perClass) {
+            if (!left.has(c)) continue;
+            const due = retentionDue(
+              { class: c, triggers, held: row.held_classes.includes(c) },
+              periods,
+              runDay,
+            );
+            if (due.kind === "held") classes[c].held += 1;
+            if (due.kind !== "due") continue;
+            classes[c].due += 1;
+            const documents = await scalar<string[]>(
+              tx,
+              sql`select retention_class_documents(${run}::uuid, ${row.participation_id}::uuid, ${c}) as result`,
+            );
+            if (!dryRun && documents.length > 0) {
+              if (!storage) {
+                classes[c].outcome = "no_storage";
+                continue;
+              }
+              // The objects first: a failure leaves the rows for the next run.
+              for (const id of documents) await storage.delete(objectKey(id));
+            }
+            const result = await scalar<{ deleted: number; kept: number; held: boolean }>(
+              tx,
+              sql`select retention_delete_class(${run}::uuid, ${row.participation_id}::uuid, ${c}) as result`,
+            );
+            if (result.kept > 0) classes[c].held += 1;
+            if (!dryRun) {
+              left.delete(c);
+              apply(c, 1);
+            }
+          }
+          if (reported) {
+            const record = retentionDue(
+              {
+                class: "participation_record",
+                triggers,
+                held: false,
+                funding: { funded110: row.funded110, enteredTg: row.entered_tg },
+              },
+              periods,
+              runDay,
+            );
+            if (record.kind === "blocked") classes.participation_record.blocked += 1;
+            if (record.kind === "due") classes.participation_record.due += 1;
+          }
+          if (
+            !dryRun &&
+            evidenceOnlyApplies([...left] as RetentionClass[], row.funded110, row.entered_tg) ===
+              "applies"
+          ) {
+            const entered = await scalar<boolean>(
+              tx,
+              sql`select retention_enter_evidence_only(${run}::uuid, ${row.participation_id}::uuid) as result`,
+            );
+            if (entered) summary.evidenceOnly += 1;
+          }
+        }
+      }
+
       await tx.execute(
-        sql`select retention_close_run(${run}::uuid, ${JSON.stringify({ dryRun, unmet, classes })}::jsonb)`,
+        sql`select retention_close_run(${run}::uuid, ${JSON.stringify({ dryRun, unmet, classes, evidenceOnly: summary.evidenceOnly })}::jsonb)`,
       );
     });
   } catch (error) {
@@ -193,6 +291,20 @@ export async function runRetention(
   logger.info({ job: "retention", ...summary }, "retention run");
   return summary;
 }
+
+type ParticipationFacts = {
+  participation_id: string;
+  status: string;
+  closed_on: IsoDate | null;
+  withdrawn_on: IsoDate | null;
+  exit_date: IsoDate | null;
+  entered_tg: boolean;
+  dsv_fully_executed: boolean;
+  funded110: Funded110;
+  evidence_set_since: string | null;
+  held_classes: string[];
+  classes_left: string[];
+};
 
 async function scalar<T>(
   tx: { execute: Database["execute"] },

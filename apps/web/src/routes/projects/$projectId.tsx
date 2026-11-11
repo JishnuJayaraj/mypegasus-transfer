@@ -42,6 +42,7 @@ import { usePanelNavigationGuard } from "../../components/panel-guard";
 import { Participants } from "../../components/participants";
 import { parseSortCode } from "../../components/worklist-state";
 import { ProjectDashboard } from "../../components/project-dashboard";
+import { SettlementDatesCard } from "../../components/settlement-dates";
 import { AppointmentsTab } from "../../components/appointments";
 import { ProjectRegion, RegionText } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
@@ -258,7 +259,7 @@ function ProjectPage() {
 /**
  * "Einrichtung" as cards (the plan of Slice 6b, 6b-4): Projekt (status, region change, blockers,
  * activation), Agentur (pins and Agentur-specific settings), Wellen (in `ta_only` only why there
- * are none), Kug 200a-Kopf and DSV-Vorlage (`ta_tg`) and Import (`project-import`, the target of "Datei importieren"). An anchor list beside them on
+ * are none), Kug 200a-Kopf and DSV-Vorlage (`ta_tg`), Import (`project-import`, the target of "Datei importieren") and Abrechnung (`ta_tg`). An anchor list beside them on
  * wide screens; below 66rem the cards simply follow each other.
  */
 function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean }) {
@@ -274,6 +275,7 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
         ]
       : []),
     { id: "project-import", label: t("import.title") },
+    ...(taTg ? [{ id: "setup-settlement", label: t("settlement.title") }] : []),
   ];
   return (
     <div className="tp-anchored">
@@ -314,6 +316,8 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
           </Card>
         )}
         <ImportSection projectId={projectId} />
+        {/* Last: it loads after the anchors' targets above it ("Datei importieren"). */}
+        {taTg && <SettlementDatesCard projectId={projectId} />}
       </div>
     </div>
   );

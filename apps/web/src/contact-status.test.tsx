@@ -59,6 +59,7 @@ const detail = (overrides: object = {}) => ({
     viewProfiling: false,
     viewAsu: false,
     viewDsv: false,
+    viewRetention: false,
     withdraw: false,
     contactStatus: ["unreachable"],
     correctEndReason: false,

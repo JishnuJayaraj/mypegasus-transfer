@@ -179,6 +179,42 @@ export const participationDsvQuery = (api: ApiClient, participationId: string) =
       ),
   });
 
+/** The project's settlement dates (data-protection.md, settlement dates). */
+export const settlementDatesQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "settlement-dates"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/projects/{projectId}/settlement-dates", {
+          params: { path: { projectId } },
+        }),
+      ),
+  });
+
+/** A participation's §110 funding (data-protection.md, funding). */
+export const fundingQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "funding"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/funding", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
+/** A participation's legal holds (data-protection.md, legal holds). */
+export const legalHoldsQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "legal-holds"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/legal-holds", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 export const projectDsvTemplateQuery = (api: ApiClient, projectId: string) =>
   queryOptions({
     queryKey: ["projects", projectId, "dsv-template"],

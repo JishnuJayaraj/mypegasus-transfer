@@ -644,6 +644,12 @@ export const participation = pgTable(
     funded110Source: text("funded110_source"),
     funded110SetBy: uuid("funded110_set_by").references((): AnyPgColumn => staffUser.id),
     funded110SetAt: timestamp("funded110_set_at", { withTimezone: true, mode: "string" }),
+    /**
+     * Since when only the evidence set is left (data-protection.md, the evidence-only phase; Q64):
+     * set only by `retention_enter_evidence_only`; from then writes to the participation's rows are
+     * refused by trigger and ordinary reads by the API (break-glass only).
+     */
+    evidenceSetSince: timestamp("evidence_set_since", { withTimezone: true, mode: "string" }),
     createdAt: createdAt(),
   },
   (t): PgTableExtraConfigValue[] => [
@@ -3815,6 +3821,55 @@ export const retentionRun = pgTable(
   ],
 );
 
+/**
+ * A legal hold (data-protection.md, legal holds; Q218) on selected classes, record kinds or
+ * documents of one participation, never the whole participation; the reason code and the
+ * documented basis; placed by the PL or back office, released by another regional manager with
+ * the instruction's source. Written only by `place_legal_hold` and `release_legal_hold`.
+ */
+export const legalHold = pgTable(
+  "legal_hold",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    classes: text("classes").array().notNull(),
+    recordKinds: text("record_kinds").array().notNull(),
+    documentIds: uuid("document_ids").array().notNull(),
+    reason: text("reason").notNull(),
+    basis: text("basis").notNull(),
+    placedBy: uuid("placed_by")
+      .notNull()
+      .references(() => staffUser.id),
+    placedAt: instant("placed_at").notNull().defaultNow(),
+    releasedBy: uuid("released_by").references(() => staffUser.id),
+    releasedAt: instant("released_at"),
+    releaseSource: text("release_source"),
+  },
+  (t) => [
+    foreignKey({
+      name: "legal_hold_participation_project_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("legal_hold_participation_idx").on(t.participationId),
+    check(
+      "legal_hold_released",
+      sql`(${t.releasedAt} is null) = (${t.releasedBy} is null) and (${t.releasedAt} is null) = (${t.releaseSource} is null)`,
+    ),
+    check(
+      "legal_hold_scope",
+      sql`cardinality(${t.classes}) + cardinality(${t.recordKinds}) + cardinality(${t.documentIds}) > 0 and not ${t.classes} @> array['personnel_file', 'health_record', 'form_working_copy', 'evidence_set']`,
+    ),
+    check(
+      "legal_hold_reason",
+      sql`${t.reason} in ('litigation', 'authority_request', 'documented_dispute', 'dpo_instruction')`,
+    ),
+  ],
+);
+
 export const tables = [
   staffUser,
   region,
@@ -3863,6 +3918,7 @@ export const tables = [
   tgEntryReconciliation,
   tgEntryReconciliationStep,
   retentionRun,
+  legalHold,
   signedDeclaration,
   asuRecord,
   asuRegistration,
