@@ -177,3 +177,11 @@ Not adapters:
 - A generated packet is stored like an upload (encrypted, `FileStorage`); without a store it is
   `503 storage_unavailable`, without an HTML renderer a packet that needs its Anlage `503
   pdf_unavailable`. The e2e server runs `PDF_ADAPTER=mock`.
+
+## As built 2026-11-11: `FileStorage.list` (Slice 7, PR 7-7a)
+
+`list(prefix)` returns the objects under `prefix/` (a valid key itself) with when each was last
+written, in key order: the retention job finds orphaned objects with it (data-protection.md,
+retention as built). The filesystem adapter walks the directory (a temporary file of a write in
+progress is no object) and reports the file's modification time; the memory adapter stamps each
+write with an injectable `now`. Both pass the shared contract test.

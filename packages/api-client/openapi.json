@@ -6586,7 +6586,8 @@
           "entry_clarification_instructed",
           "entry_clarification_requested",
           "dsv_customer_notified",
-          "tg_entry_reconciled"
+          "tg_entry_reconciled",
+          "funding_status_set"
         ]
       },
       "HistoryActor": {
@@ -17310,6 +17311,223 @@
           "code",
           "source",
           "revision"
+        ],
+        "additionalProperties": false
+      },
+      "SettlementDatesView": {
+        "type": "object",
+        "properties": {
+          "kugFinalSettlementDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "measure110SettlementDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "required": {
+            "type": "object",
+            "properties": {
+              "kugFinalSettlementDate": {
+                "type": "boolean"
+              },
+              "measure110SettlementDate": {
+                "type": "boolean"
+              },
+              "fundingUnknown": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "kugFinalSettlementDate",
+              "measure110SettlementDate",
+              "fundingUnknown"
+            ],
+            "additionalProperties": false
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "set": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "set"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "kugFinalSettlementDate",
+          "measure110SettlementDate",
+          "required",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "SettlementDatesRequest": {
+        "type": "object",
+        "properties": {
+          "kugFinalSettlementDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "measure110SettlementDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "expected": {
+            "type": "object",
+            "properties": {
+              "kugFinalSettlementDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "measure110SettlementDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "kugFinalSettlementDate",
+              "measure110SettlementDate"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "kugFinalSettlementDate",
+          "measure110SettlementDate",
+          "expected"
+        ],
+        "additionalProperties": false
+      },
+      "FundingView": {
+        "type": "object",
+        "properties": {
+          "funded110": {
+            "$ref": "#/components/schemas/Funded110"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "setAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "set": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "set"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "funded110",
+          "source",
+          "setAt",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Funded110": {
+        "type": "string",
+        "enum": [
+          "known_yes",
+          "known_no",
+          "unknown"
+        ]
+      },
+      "FundingRequest": {
+        "type": "object",
+        "properties": {
+          "funded110": {
+            "$ref": "#/components/schemas/Funded110"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "expected": {
+            "type": "object",
+            "properties": {
+              "funded110": {
+                "$ref": "#/components/schemas/Funded110"
+              },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "funded110",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "funded110",
+          "source",
+          "expected"
         ],
         "additionalProperties": false
       },
@@ -34196,6 +34414,338 @@
         "responses": {
           "204": {
             "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/settlement-dates": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "The project's settlement dates (whoever sees the project), which of them apply (the final Transfer-KuG settlement when a participation entered the TG, the §110 settlement when one is funded known_yes) and whether a funding is still unknown",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The settlement dates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettlementDatesView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Set the project's settlement dates (back office; Q52) against the dates read; null clears one. Audited settlement_dates_set with the names of the dates set",
+        "description": "Refusals, in this order:\n- `404`: the project is hidden from the viewer.\n- `403`: not back office of the project.\n- `409 stale_settlement_dates` at `/expected`: the dates changed since they were read.\n- `422 project_unchanged`: the dates are the ones recorded.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettlementDatesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettlementDatesView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/funding": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The participation's §110 funding with its documented source (back office and the PL; Q217): known_yes, known_no or unknown",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The funding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundingView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record the participation's §110 funding with its documented source (back office; Q217) against the value and source read. Audited funding_status_set with the code, never the source. TG entry is never proof of Transfer-KuG",
+        "description": "Refusals, in this order:\n- `404`: the participation is hidden from the viewer.\n- `403`: not back office of the project.\n- `409 stale_funding` at `/expected`: the funding changed since it was read.\n- `422 funding_unchanged`: the value and source are the ones recorded.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundingView"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation failed",

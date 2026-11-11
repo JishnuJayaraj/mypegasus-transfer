@@ -105,6 +105,7 @@ import {
   Kug200bScanConfirmation,
   kug200bDeclarations,
   scanForms,
+  Funded110,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -320,6 +321,13 @@ export const project = pgTable(
      * generated, fixed from the first generation. Null until pinned: no DSV can be generated.
      */
     dsvTemplateVersion: text("dsv_template_version"),
+    /**
+     * The settlement dates retention's second stage counts from (data-protection.md, settlement
+     * dates; Q52): the final Transfer-KuG settlement and the §110 measure's; set by back office
+     * (`set_settlement_dates`, audited `settlement_dates_set`), each only where it applies.
+     */
+    kugFinalSettlementDate: date("kug_final_settlement_date", { mode: "string" }),
+    measure110SettlementDate: date("measure110_settlement_date", { mode: "string" }),
   },
   (t) => [
     check("project_dsv_template_version", sql`${t.dsvTemplateVersion} ~ '^v[1-9][0-9]{0,3}$'`),
@@ -394,6 +402,7 @@ export const exceptionEvidenceKind = pgEnum(
   values(ExceptionEvidenceKind),
 );
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
+export const funded110 = pgEnum("funded110", values(Funded110));
 export const auditStream = pgEnum("audit_stream", values(AuditStream));
 export const accessCategory = pgEnum("access_category", values(AccessCategory));
 export const assignmentEndReason = pgEnum("assignment_end_reason", values(AssignmentEndReason));
@@ -626,6 +635,15 @@ export const participation = pgTable(
       withTimezone: true,
       mode: "string",
     }),
+    /**
+     * Whether the participation was funded under §110 SGB III (data-protection.md, funding; Q217):
+     * a fact back office records with its documented source (`set_funding_status`, audited
+     * `funding_status_set`); `unknown` until then. TG entry is never proof of Transfer-KuG.
+     */
+    funded110: funded110("funded110").notNull().default("unknown"),
+    funded110Source: text("funded110_source"),
+    funded110SetBy: uuid("funded110_set_by").references((): AnyPgColumn => staffUser.id),
+    funded110SetAt: timestamp("funded110_set_at", { withTimezone: true, mode: "string" }),
     createdAt: createdAt(),
   },
   (t): PgTableExtraConfigValue[] => [
@@ -636,6 +654,10 @@ export const participation = pgTable(
     }),
     index("participation_project_id_idx").on(t.projectId),
     check("participation_tg_dates_ordered", sql`${t.tgStart} <= ${t.tgEnd}`),
+    check(
+      "participation_funded110_recorded",
+      sql`(${t.funded110SetAt} is null) = (${t.funded110SetBy} is null) and (${t.funded110SetAt} is null) = (${t.funded110Source} is null) and (${t.funded110Source} is null or char_length(${t.funded110Source}) between 1 and 200 and ${t.funded110Source} = btrim(${t.funded110Source}) and ${t.funded110Source} !~ '[[:cntrl:]]')`,
+    ),
     check(
       "participation_placement_agentur_key_format",
       sql`${t.placementAgenturKey} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
@@ -1972,7 +1994,7 @@ export const document = pgTable(
     ),
     check(
       "document_deleted",
-      sql`(${t.deletedAt} is null) = (${t.deletedBy} is null) and (${t.deletedBy} is null or ${t.deletedBy} in ('participant', 'user')) and coalesce(${t.deletedBy} = 'user', false) = (${t.deletedByStaffUserId} is not null) and coalesce(${t.deletedBy} = 'user', false) = (${t.deleteReason} is not null) and (${t.deletedAt} is null or ${t.fileName} is null)`,
+      sql`(${t.deletedAt} is null) = (${t.deletedBy} is null) and (${t.deletedBy} is null or ${t.deletedBy} in ('participant', 'user', 'system')) and coalesce(${t.deletedBy} = 'user', false) = (${t.deletedByStaffUserId} is not null) and coalesce(${t.deletedBy} = 'user', false) = (${t.deleteReason} is not null) and (${t.deletedAt} is null or ${t.fileName} is null)`,
     ),
     check("document_purged", sql`${t.purgedAt} is null or ${t.deletedAt} is not null`),
     check(
@@ -3769,6 +3791,30 @@ export const tgEntryReconciliationStep = pgTable(
   ],
 );
 
+/**
+ * One run of the retention job (ADR-0008; ADR-0002, the retention role): the Berlin day it ran
+ * for, whether it was a dry run, its transaction and, once closed, its summary of counts per class
+ * and outcome. No subject: no participation, person or record id. Written only by the
+ * `retention_*` functions; while open, it lets that transaction's retention path through the
+ * immutability triggers.
+ */
+export const retentionRun = pgTable(
+  "retention_run",
+  {
+    id: uuid("id").primaryKey(),
+    runDay: dateColumn("run_day").notNull(),
+    dryRun: boolean("dry_run").notNull(),
+    openedTxid: bigint("opened_txid", { mode: "bigint" }).notNull(),
+    openedAt: instant("opened_at").notNull().defaultNow(),
+    closedAt: instant("closed_at"),
+    summary: jsonb("summary"),
+  },
+  (t) => [
+    check("retention_run_closed", sql`(${t.closedAt} is null) = (${t.summary} is null)`),
+    index("retention_run_opened_at_idx").on(t.openedAt),
+  ],
+);
+
 export const tables = [
   staffUser,
   region,
@@ -3816,6 +3862,7 @@ export const tables = [
   dsvCustomerNotice,
   tgEntryReconciliation,
   tgEntryReconciliationStep,
+  retentionRun,
   signedDeclaration,
   asuRecord,
   asuRegistration,

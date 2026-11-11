@@ -93,6 +93,9 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["withdrawnOn", "profilingDoneOn"], "internal", "case_internal", false, record),
   // The Agentur the participant is placed with (Q139), a key; listed with the case data
   field("placementAgenturKey", "internal", "case_internal", false, { listable: true, ...record }),
+  // Whether the participation was funded under §110 SGB III, with its documented source (Q217):
+  // back office records it; retention's input, never proof of Transfer-KuG
+  field("funded110", "internal", "case_internal", false, record),
   // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route and the
   // registrations with their proof, codes and dates only, listable
   // and the Kug 200b offer's decline, withdrawals and their BA notice (Q185); the submissions to an

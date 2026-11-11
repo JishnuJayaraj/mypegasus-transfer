@@ -22,7 +22,12 @@ export {
 } from "./messaging/mock";
 export { FilesystemFileStorage } from "./storage/filesystem";
 export { MemoryFileStorage } from "./storage/memory";
-export { assertStorageKey, FileNotFound, type FileStorage } from "./storage/storage";
+export {
+  assertStorageKey,
+  FileNotFound,
+  type FileStorage,
+  type StoredObject,
+} from "./storage/storage";
 export { MockVirusScanner } from "./virus-scan/mock";
 export { ScannerUnavailable, type ScanVerdict, type VirusScanner } from "./virus-scan/virus-scan";
 export { createTextMeasure, fillAcroForm, pageCount, readAcroFormValues } from "./pdf/acroform";

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { assertStorageKey, FileNotFound, type FileStorage } from "./storage";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
+import { assertStorageKey, FileNotFound, type FileStorage, type StoredObject } from "./storage";
 
 /**
  * Storage in a local directory for development and e2e (`STORAGE_DIR`, default
@@ -44,5 +44,25 @@ export class FilesystemFileStorage implements FileStorage {
 
   async delete(key: string): Promise<void> {
     await rm(this.#path(key), { force: true });
+  }
+
+  async list(prefix: string): Promise<StoredObject[]> {
+    const root = this.#path(prefix);
+    const found: StoredObject[] = [];
+    let entries;
+    try {
+      entries = await readdir(root, { recursive: true, withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+    for (const entry of entries) {
+      // A write in progress (`<key>.<uuid>.tmp`) is no object yet.
+      if (!entry.isFile() || entry.name.endsWith(".tmp")) continue;
+      const path = join(entry.parentPath, entry.name);
+      const key = [prefix, ...path.slice(root.length + 1).split(sep)].join("/");
+      found.push({ key, modifiedAt: (await stat(path)).mtime });
+    }
+    return found.toSorted((a, b) => (a.key < b.key ? -1 : 1));
   }
 }

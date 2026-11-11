@@ -52,6 +52,21 @@ export function fileStorageContract(name: string, create: () => Promise<FileStor
       await expect(storage.delete(key)).resolves.toBeUndefined();
     });
 
+    it("lists the objects under a prefix in key order, with when each was written", async () => {
+      const storage = await create();
+      const other = "documents/1b5f4b8e-5d8a-4d55-9a57-6f1f0a3c2e11";
+      expect(await storage.list("documents")).toEqual([]);
+      await storage.put(other, content);
+      await storage.put(key, content);
+      await storage.put("exports/a", content);
+      const listed = await storage.list("documents");
+      expect(listed.map((object) => object.key)).toEqual([key, other]);
+      for (const object of listed) expect(object.modifiedAt).toBeInstanceOf(Date);
+      await storage.delete(key);
+      expect((await storage.list("documents")).map((object) => object.key)).toEqual([other]);
+      expect(await storage.list("documents/0b5f4b8e")).toEqual([]);
+    });
+
     it.each(["", "../secret", "documents/../../etc", "/absolute", "Documents/A", "a//b", "a/"])(
       "refuses the key %j without repeating it",
       async (bad) => {
@@ -60,6 +75,7 @@ export function fileStorageContract(name: string, create: () => Promise<FileStor
           () => storage.put(bad, content),
           () => storage.get(bad),
           () => storage.delete(bad),
+          () => storage.list(bad),
         ]) {
           const error = await call().then(
             () => null,

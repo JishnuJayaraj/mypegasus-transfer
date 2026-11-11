@@ -153,6 +153,8 @@ describe("audit event types (ADR-0002)", () => {
       "tg_entry_reconciled",
       "reconciliation_reviewed",
       "reconciliation_replied",
+      "settlement_dates_set",
+      "funding_status_set",
     ]);
   });
 
@@ -274,6 +276,8 @@ describe("audit event types (ADR-0002)", () => {
       "tg_entry_reconciled",
       "reconciliation_reviewed",
       "reconciliation_replied",
+      "settlement_dates_set",
+      "funding_status_set",
     ]);
   });
 

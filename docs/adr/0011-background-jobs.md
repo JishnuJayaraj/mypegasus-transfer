@@ -188,3 +188,14 @@ returns with no change (counts 0), like a project without open participations. T
 service refuses any transition of a draft project too (`project_not_active`), and
 `change_participation_status` refuses it in the database (ADR-0002). Activation is one-way, so a
 project planned as active stays active until its changes are applied.
+
+## Note 2026-11-11: the retention job (Slice 7, PR 7-7a)
+
+`pnpm jobs:retention [--dry-run] [--today YYYY-MM-DD]` runs one retention run in its own process
+as `transfer_retention` (`RETENTION_DATABASE_URL`), never inside the API or its pg-boss workers, so
+the API never holds that credential; its environment has no `DATABASE_URL` (`parseRetentionEnv`).
+On the cluster it becomes a scheduled job with only that credential (Slice 9). The run is one
+transaction for the `Clock`'s Berlin day (`--today` stands it at that day, refused with
+`NODE_ENV=production`; a day after the database's is `run_not_due`), idempotent, with the data
+catalog's periods and prerequisites only; it prints and logs counts per class and outcome, never a
+subject, and exits non-zero with a stable code (`run_not_due`, `invalid_arguments`, …).

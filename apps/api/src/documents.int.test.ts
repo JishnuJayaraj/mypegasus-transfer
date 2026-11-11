@@ -318,6 +318,7 @@ describe("the portal (data-protection.md, uploads)", () => {
       put: () => Promise.reject(new Error("synthetic outage")),
       get: (key) => storage.get(key),
       delete: (key) => storage.delete(key),
+      list: (prefix) => storage.list(prefix),
     };
     const failing = testApp({ clock, fileStorage: broken, virusScanner: scanner });
     const failed = await failing.app.request(

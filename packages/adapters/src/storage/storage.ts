@@ -11,7 +11,14 @@ export interface FileStorage {
   get(key: string): Promise<Uint8Array>;
   /** Removes the object; a missing key succeeds (the purge job retries). */
   delete(key: string): Promise<void>;
+  /**
+   * The objects under `prefix/` (a key itself), with when each was last written, in key order;
+   * the retention job finds orphaned objects with it (ADR-0006, `FileStorage.list`).
+   */
+  list(prefix: string): Promise<StoredObject[]>;
 }
+
+export type StoredObject = { key: string; modifiedAt: Date };
 
 export class FileNotFound extends Error {
   constructor() {

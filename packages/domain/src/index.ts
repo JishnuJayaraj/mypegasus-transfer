@@ -1382,3 +1382,27 @@ export {
   mayTakeSomeContactStep,
   type ContactTransition,
 } from "./lifecycle/contact-status";
+export {
+  credentialCutoff,
+  Funded110,
+  mayReadFunding,
+  mayRecordFunding,
+  RetentionClass,
+  retentionActivation,
+  retentionDue,
+  RetentionPrerequisite,
+  retentionRules,
+  settlementDatesRequired,
+  workingCopyTriggers,
+  type RetentionDue,
+  type RetentionPeriod,
+  type RetentionPeriods,
+  type RetentionPrerequisites,
+  type RetentionRule,
+} from "./retention/rules";
+export {
+  FundingRequest,
+  FundingView,
+  SettlementDatesRequest,
+  SettlementDatesView,
+} from "./retention/api";

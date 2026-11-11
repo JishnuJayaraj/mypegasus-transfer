@@ -13,6 +13,7 @@ import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
+import { Funded110 } from "../retention/rules";
 import { ProjectType } from "../project";
 import { ProjectRole } from "../enums";
 import { AssignmentEndReason, MemberRemovalReason } from "../projects/team";
@@ -270,6 +271,10 @@ export const AuditEventType = z.enum([
   "tg_entry_reconciled",
   "reconciliation_reviewed",
   "reconciliation_replied",
+  // Retention's inputs (data-protection.md, funding and settlement dates; Q52, Q217), written only
+  // by `set_settlement_dates` and `set_funding_status`: which date was set, the funding's code
+  "settlement_dates_set",
+  "funding_status_set",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -401,6 +406,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "tg_entry_reconciled",
   "reconciliation_reviewed",
   "reconciliation_replied",
+  "settlement_dates_set",
+  "funding_status_set",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1693,6 +1700,26 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ reconciliationId: z.uuid(), replyCode: ReconciliationReplyCode }),
+  }),
+  /**
+   * Back office set the project's settlement dates (data-protection.md, settlement dates; Q52):
+   * which of them changed; a project's dates, never a person's.
+   */
+  event("settlement_dates_set", {
+    ...ofProject,
+    actor: staffActor,
+    details: z.strictObject({
+      fields: z
+        .array(z.enum(["kugFinalSettlementDate", "measure110SettlementDate"]))
+        .min(1)
+        .max(2),
+    }),
+  }),
+  /** Back office recorded the funding (Q217): its code, never the documented source. */
+  event("funding_status_set", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ funded110: Funded110 }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

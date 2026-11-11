@@ -221,3 +221,41 @@ function oidcEnv(env: z.output<typeof schema>): OidcEnv {
     redirectUrl: redirect.href,
   };
 }
+
+const retentionSchema = schema
+  .pick({ NODE_ENV: true, LOG_LEVEL: true, CLOCK: true, STORAGE_ADAPTER: true, STORAGE_DIR: true })
+  .extend({ RETENTION_DATABASE_URL: z.url() });
+
+export type RetentionEnv = Pick<
+  Env,
+  "nodeEnv" | "logLevel" | "clock" | "storageAdapter" | "storageDir"
+> & {
+  retentionDatabaseUrl: string;
+};
+
+/**
+ * The retention job's environment (ADR-0002, the retention role): its own database URL and the
+ * store, never `DATABASE_URL` or the API's secrets, so its process holds only that credential.
+ * Errors name the variable, never its value.
+ */
+export function parseRetentionEnv(
+  source: Record<string, string | undefined> = process.env,
+): RetentionEnv {
+  const set = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ""));
+  const result = retentionSchema.safeParse(set);
+  if (!result.success) {
+    const names = result.error.issues.map((issue) => `${String(issue.path[0])} (${issue.code})`);
+    throw new Error(`Invalid environment variables: ${names.join(", ")} (see .env.example)`);
+  }
+  const env = result.data;
+  createClock({ CLOCK: env.CLOCK, NODE_ENV: env.NODE_ENV });
+  return {
+    nodeEnv: env.NODE_ENV,
+    logLevel: env.LOG_LEVEL,
+    clock: env.CLOCK,
+    storageAdapter: env.STORAGE_ADAPTER,
+    storageDir:
+      env.STORAGE_DIR ?? fileURLToPath(new URL("../../../.data/documents", import.meta.url)),
+    retentionDatabaseUrl: env.RETENTION_DATABASE_URL,
+  };
+}

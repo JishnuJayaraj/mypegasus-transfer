@@ -96,6 +96,9 @@ const statusFunctions = [
   "reconcile_tg_entry",
   "review_reconciliation",
   "reply_reconciliation_clarification",
+  // Slice 7, PR 7-7a: retention's inputs (back office)
+  "set_settlement_dates",
+  "set_funding_status",
   "lock_participation",
   "create_participation",
   "change_participation_status",
@@ -270,6 +273,16 @@ const statusFunctions = [
   "request_evidence_correction",
   "decide_evidence_correction",
 ];
+// Slice 7, PR 7-7a: SECURITY DEFINER, granted to transfer_retention only (retention.int.test.ts).
+const retentionFunctions = [
+  "retention_open_run",
+  "retention_close_run",
+  "retention_purge_credentials",
+  "retention_working_copies",
+  "retention_purge_working_copy",
+  "retention_known_objects",
+];
+
 const helpers = [
   "validate_dsv_scan",
   "assert_dsv_participant_date",
@@ -325,6 +338,11 @@ const helpers = [
   "lock_activating_session",
   "count_activation_failure",
   "insert_one_time_code",
+  // Slice 7, PR 7-7a: the retention role's functions (granted to transfer_retention only,
+  // retention.int.test.ts), the trigger path and the audit trail's append-only trigger
+  "in_retention_run",
+  "retention_run_of",
+  "audit_append_only",
   "verify_one_time_code",
   "participant_account_usable",
   "lock_active_session",
@@ -518,11 +536,13 @@ describe("transfer_app and the Slice 1 tables (ADR-0002)", () => {
        where n.nspname = 'public' order by p.proname`,
     );
     expect(rows.map((r) => r.proname).toSorted()).toEqual(
-      [...statusFunctions, ...helpers].toSorted(),
+      [...statusFunctions, ...retentionFunctions, ...helpers].toSorted(),
     );
     for (const row of rows) {
       expect(row.rolname).toBe("transfer_owner");
-      expect(row.prosecdef).toBe(statusFunctions.includes(row.proname));
+      expect(row.prosecdef).toBe(
+        statusFunctions.includes(row.proname) || retentionFunctions.includes(row.proname),
+      );
       expect(row.proconfig).toEqual(["search_path=pg_catalog, public, pg_temp"]);
       expect(row.prosrc).not.toMatch(/\bexecute\b|\bformat\s*\(/i);
     }

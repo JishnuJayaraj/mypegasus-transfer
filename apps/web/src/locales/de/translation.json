@@ -1957,7 +1957,8 @@
       "entry_clarification_instructed": "Eintritt: Weisung erfasst",
       "entry_clarification_requested": "Eintritt: Rückfrage an die Projektleitung",
       "dsv_customer_notified": "Kunde über die Aufhebung informiert",
-      "tg_entry_reconciled": "Eintritt nachträglich erfasst"
+      "tg_entry_reconciled": "Eintritt nachträglich erfasst",
+      "funding_status_set": "Förderung nach § 110 SGB III erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -3919,6 +3920,13 @@
         "requested": "Rückfrage",
         "instructed": "Weisung"
       }
+    }
+  },
+  "funding": {
+    "codes": {
+      "known_yes": "gefördert",
+      "known_no": "nicht gefördert",
+      "unknown": "unbekannt"
     }
   },
   "reconciliation": {
