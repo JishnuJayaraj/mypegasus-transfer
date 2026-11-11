@@ -1371,3 +1371,12 @@ export {
   WithdrawRefusal,
   withdrawRefusal,
 } from "./lifecycle/withdrawal";
+export {
+  contactEdges,
+  ContactStatusRefusal,
+  ContactStatusRequest,
+  ContactStatusTarget,
+  contactTransitions,
+  mayTakeSomeContactStep,
+  type ContactTransition,
+} from "./lifecycle/contact-status";

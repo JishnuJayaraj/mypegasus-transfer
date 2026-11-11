@@ -1116,9 +1116,25 @@
       "invite": "Zu Termin einladen",
       "assisted": "Assistierte Erfassung starten",
       "withdraw": "Zurückziehen",
+      "contactStatus": "Kontaktstatus",
       "correctEndReason": "Grund korrigieren",
       "reconcile": "Eintritt nachträglich erfassen",
       "correctWithdrawnOn": "Rückzugsdatum korrigieren"
+    },
+    "contactStatus": {
+      "title": "Kontaktstatus",
+      "current": "Aktueller Status: {{status}}",
+      "to": "Neuer Status",
+      "choose": "Bitte einen neuen Status wählen.",
+      "save": "Speichern",
+      "errors": {
+        "failed": "Speichern nicht möglich. Bitte erneut versuchen.",
+        "stale": "Die Teilnahme wurde inzwischen geändert. Bitte neu laden.",
+        "forbidden": "Sie dürfen den Kontaktstatus dieser Teilnahme nicht ändern.",
+        "before_cutoff": "Die letzte Aufnahmefrist ist überschritten: „Kontaktiert“ ist nicht mehr möglich.",
+        "no_edge": "Dieser Wechsel ist vom aktuellen Status aus nicht möglich.",
+        "project_not_active": "Das Projekt ist nicht aktiv."
+      }
     },
     "withdrawal": {
       "title": "Zurückziehen",

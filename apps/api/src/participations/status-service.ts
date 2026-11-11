@@ -26,6 +26,7 @@ import {
   projectFinalEntryDate,
   profilingDoneOnProblem,
   profilingTransitions,
+  contactTransitions,
   requestProfilingException,
   revokeProfilingException,
   statusFieldOfTrack,
@@ -518,6 +519,25 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
         current = { ...current, status: edge.to as MainStatus };
       }
       return null;
+    },
+
+    /**
+     * The manual contact steps for the actor (process-and-lifecycle.md, the manual contact
+     * statuses), as `changeStatus` decides them. A read: no lock, nothing written.
+     */
+    contactTransitions(actor: ServiceActor, participationId: string) {
+      return transaction(async (tx) => {
+        const loaded = await load(tx, participationId, actor, false);
+        const context = {
+          ...loaded.context,
+          facts: await facts.facts(tx, { participationId, currentRequest: loaded.exception }),
+        };
+        return contactTransitions(
+          context,
+          (edge) => mayPerformTransition(actor, edge, loaded.target).ok,
+          loaded.projectStatus === "active",
+        );
+      });
     },
 
     /**

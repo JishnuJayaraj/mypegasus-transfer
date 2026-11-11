@@ -891,3 +891,14 @@ participation's related queries and the project's work list/dashboard.
   `dateCorrections { profilingDoneOn, withdrawnOn }` (each `{ pending, mayRequest }` or null; the PL
   only) and `DsvView` gains `signatureCorrections { mayRequest, pending[] }`. Logs carry ids and
   codes (`fieldKey`, `paper`, `signatureKind`), never a date or the source.
+
+#### The manual contact statuses (7-9)
+
+- `POST /participations/{id}/contact-status` (the PL, the assigned consultant/profiler; Q60):
+  `{ to: "contacted" | "unreachable", statusVersion }`; `200 ParticipationDetail`. Visibility `404`,
+  then `403` when the viewer may take no contact step (or not this one), `422 project_not_active`,
+  `409 stale_status`, then `422` at `/to`: `no_edge` (e.g. from `informed` or a terminal status),
+  `before_cutoff` (`unreachable → contacted` after the admission cutoff). Through
+  `change_participation_status`; no new SQL function or audit event type.
+- `ParticipationDetail.capabilities` gains `contactStatus`: the targets the viewer may set now, by
+  the edges, the permission, the draft gate and the guards. Logs carry ids and codes only.

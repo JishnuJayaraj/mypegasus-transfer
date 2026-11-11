@@ -196,6 +196,7 @@ const options = {
     withdraw: true,
     correctEndReason: false,
     reconcileTgEntry: false,
+    contactStatus: [] as ("contacted" | "unreachable")[],
   },
   refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
 } as const;
@@ -240,6 +241,7 @@ describe("participationDetail", () => {
         withdraw: true,
         correctEndReason: false,
         reconcileTgEntry: false,
+        contactStatus: [],
       },
       refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
     });

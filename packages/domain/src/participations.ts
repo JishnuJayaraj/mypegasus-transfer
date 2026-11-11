@@ -12,6 +12,7 @@ import {
 } from "./projects/participation-dates";
 import { DsvStatus, EndReason, MainStatus, ProfilingStatus } from "./lifecycle/enums";
 import { WithdrawRefusal } from "./lifecycle/withdrawal";
+import { ContactStatusTarget } from "./lifecycle/contact-status";
 import { ActivationStatus } from "./activation/status";
 import { PrivacyNoticeState } from "./privacy/notice-state";
 import { AgenturKey } from "./projects/agentur-settings";
@@ -285,6 +286,11 @@ export const ParticipationDetail = z
       viewDsv: z.boolean(),
       /** "Zurückziehen" (the PL; process-and-lifecycle.md, manual withdrawal). */
       withdraw: z.boolean(),
+      /**
+       * "Kontaktstatus" (the PL, the assigned consultant/profiler; process-and-lifecycle.md, the
+       * manual contact statuses): the targets the viewer may set now, by the edges and guards.
+       */
+      contactStatus: z.array(ContactStatusTarget),
       /** "Grund korrigieren" (the PL, a recorded end reason; Q72). */
       correctEndReason: z.boolean(),
       /**

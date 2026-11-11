@@ -1,3 +1,4 @@
+import { ContactStatusDialog } from "../../components/contact-status";
 import { useCorrectionRequest } from "../../components/evidence-correction";
 import {
   EndReasonDialog,
@@ -157,7 +158,14 @@ function ParticipationPage() {
   const worklist = useQuery(worklistQuery(api, projectId));
   const [panel, setPanel] = useState<OverviewPanel | null>(null);
   const [dialog, setDialog] = useState<
-    "remind" | "invite" | "assisted" | "withdraw" | "endReason" | "reconcile" | null
+    | "remind"
+    | "invite"
+    | "assisted"
+    | "withdraw"
+    | "endReason"
+    | "reconcile"
+    | "contactStatus"
+    | null
   >(null);
   const [printed, setPrinted] = useState<RecoveryPrinted | null>(null);
   const fromList = useRouterState({ select: (state) => state.location.state.worklistSearch });
@@ -229,6 +237,15 @@ function ParticipationPage() {
       : []),
     ...(detail.capabilities.startAssistedMode
       ? [{ label: t("participant.actions.assisted"), onClick: () => setDialog("assisted") }]
+      : []),
+    // process-and-lifecycle.md, the manual contact statuses (Q215): by its capability.
+    ...(detail.capabilities.contactStatus?.length
+      ? [
+          {
+            label: t("participant.actions.contactStatus"),
+            onClick: () => setDialog("contactStatus"),
+          },
+        ]
       : []),
     // process-and-lifecycle.md, manual withdrawal and the end reason (Q72), by capability.
     ...(detail.capabilities.correctEndReason
@@ -402,6 +419,9 @@ function ParticipationPage() {
         />
       )}
       {withdrawnOnCorrection.element}
+      {dialog === "contactStatus" && (
+        <ContactStatusDialog detail={detail} onClose={() => setDialog(null)} />
+      )}
       {dialog === "withdraw" && <WithdrawDialog detail={detail} onClose={() => setDialog(null)} />}
       {dialog === "reconcile" && (
         <ReconciliationDialog participationId={participationId} onClose={() => setDialog(null)} />
