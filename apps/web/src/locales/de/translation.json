@@ -988,7 +988,8 @@
       "appointments": "Termine",
       "profiling": "Profiling",
       "asu": "Arbeitsuche",
-      "dsv": "DSV"
+      "dsv": "DSV",
+      "retention": "Aufbewahrung"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -3532,6 +3533,26 @@
           "outcome_not_allowed": "Diese Entscheidung ist im jetzigen Stand nicht möglich."
         }
       }
+    },
+    "legalHolds": {
+      "listTitle": "Aufbewahrungssperren",
+      "empty": "Keine aktiven Aufbewahrungssperren.",
+      "columns": {
+        "project": "Projekt",
+        "scope": "Umfang",
+        "reason": "Grund",
+        "placedOn": "Gesetzt am",
+        "actions": "Aktionen"
+      },
+      "item": "Sperre in {{project}} vom {{date}}",
+      "release": "Freigeben",
+      "confirm": "Freigeben",
+      "ownHold": "Von Ihnen gesetzt",
+      "source": "Weisung (Rechtsrat oder Datenschutzbeauftragte/r)",
+      "sourceHelp": "Zum Beispiel Datum und Aktenzeichen der Weisung, höchstens 200 Zeichen",
+      "released": "Die Sperre ist freigegeben.",
+      "alreadyReleased": "Die Sperre war bereits freigegeben.",
+      "failed": "Die Sperre konnte nicht freigegeben werden."
     }
   },
   "corrections": {
@@ -4017,6 +4038,106 @@
       "save": "Antwort erfassen",
       "saved": "Die Antwort ist erfasst; die Regionale Betriebsleitung prüft weiter.",
       "hint": "Einen Nachweis ergänzen Sie über seine eigene Funktion (z. B. Scan hochladen); hier halten Sie die Antwort fest."
+    }
+  },
+  "settlement": {
+    "title": "Abrechnung",
+    "loading": "Abrechnungsdaten werden geladen …",
+    "failed": "Die Abrechnungsdaten konnten nicht geladen werden.",
+    "kugFinalSettlementDate": "Schlussabrechnung Transfer-KuG",
+    "measure110SettlementDate": "Schlussabrechnung § 110 SGB III",
+    "missing": "Fehlt (erforderlich)",
+    "notRequired": "Nicht erforderlich",
+    "fundingUnknown": "Bei mindestens einer Teilnahme ist die Förderung nach § 110 noch unbekannt. Die Aufbewahrung des Nachweissatzes kann bis dahin nicht enden.",
+    "hint": "Erforderlich ist das Datum der Transfer-KuG-Schlussabrechnung, sobald eine Teilnahme in die TG eingetreten ist (nur eine vorsichtige Annahme, kein Nachweis von Transfer-KuG), und das Datum der § 110-Schlussabrechnung, sobald eine Teilnahme gefördert ist.",
+    "edit": "Abrechnungsdaten erfassen",
+    "save": "Speichern",
+    "invalidDate": "Datum als TT.MM.JJJJ eingeben",
+    "errors": {
+      "failed": "Die Daten konnten nicht gespeichert werden.",
+      "stale_settlement_dates": "Die Daten wurden inzwischen geändert. Bitte neu öffnen.",
+      "project_unchanged": "Die Daten sind bereits so erfasst."
+    }
+  },
+  "retention": {
+    "save": "Speichern",
+    "classes": {
+      "personnel_file": "Personalakte",
+      "health_record": "Gesundheitsangaben",
+      "form_working_copy": "Erzeugte Formulare",
+      "evidence_set": "Nachweissatz (unterschriebene BA-Formulare)"
+    },
+    "kinds": {
+      "dsv_offer": "DSV-Angebote",
+      "dsv_contract": "DSV-Vertragsdaten",
+      "dsv_scan_signature": "DSV-Unterschriften",
+      "participant_reminder": "Erinnerungsprotokoll",
+      "appointment_booking": "Terminbuchungen",
+      "consent_record": "Einwilligungen",
+      "participant_channel": "Kontaktwege",
+      "participant_details": "Kontaktdaten",
+      "participant_profile": "Selbstauskunft",
+      "participant_profiling": "Profiling-Erklärungen",
+      "participant_profiling_assessment": "Profiling-Einschätzung",
+      "participant_health_data": "Gesundheitsangaben (Selbstauskunft)",
+      "participant_profiling_health_assessment": "Gesundheitseinschätzung (Profiling)"
+    },
+    "reasons": {
+      "litigation": "Rechtsstreit",
+      "authority_request": "Anfrage einer Behörde",
+      "documented_dispute": "Dokumentierte Streitigkeit",
+      "dpo_instruction": "Weisung der/des Datenschutzbeauftragten"
+    },
+    "evidenceOnly": "Nur noch der Nachweissatz ist vorhanden. Zugriff nur über Notfallzugriff.",
+    "funding": {
+      "title": "Förderung",
+      "loading": "Förderung wird geladen …",
+      "failed": "Die Förderung konnte nicht geladen werden.",
+      "value": "Förderung nach § 110 SGB III",
+      "source": "Beleg",
+      "sourceHelp": "Zum Beispiel Aktenzeichen des Bescheids, höchstens 200 Zeichen",
+      "values": {
+        "known_yes": "Gefördert",
+        "known_no": "Nicht gefördert",
+        "unknown": "Unbekannt"
+      },
+      "hint": "Der TG-Eintritt ist kein Nachweis einer Förderung oder von Transfer-KuG. Solange die Förderung unbekannt ist, wird nichts gelöscht, was davon abhängt.",
+      "edit": "Förderung erfassen",
+      "incomplete": "Förderung wählen und Beleg eingeben",
+      "errors": {
+        "failed": "Die Förderung konnte nicht gespeichert werden.",
+        "stale_funding": "Die Förderung wurde inzwischen geändert. Bitte neu öffnen.",
+        "funding_unchanged": "Die Förderung ist bereits so erfasst."
+      }
+    },
+    "holds": {
+      "title": "Aufbewahrungssperren",
+      "loading": "Sperren werden geladen …",
+      "failed": "Die Sperren konnten nicht geladen werden.",
+      "none": "Keine Aufbewahrungssperren.",
+      "scope": "Umfang",
+      "reason": "Grund",
+      "basis": "Grundlage",
+      "basisHelp": "Zum Beispiel Aktenzeichen oder Schreiben, höchstens 200 Zeichen",
+      "placedOn": "Gesetzt am",
+      "state": "Stand",
+      "active": "Aktiv",
+      "releasedOn": "Freigegeben am {{date}}",
+      "documents_one": "{{count}} Dokument",
+      "documents_other": "{{count}} Dokumente",
+      "hint": "Eine Sperre hält nur die gewählten Daten zurück, nie die ganze Teilnahme. Freigeben kann sie die regionale Betriebsleitung unter „Freigaben“.",
+      "place": "Sperre setzen",
+      "scopeHint": "Wählen Sie die Bereiche oder Datensätze, die zurückgehalten werden. Alle Bereiche zugleich sind nicht möglich.",
+      "classes": "Ganze Bereiche",
+      "records": "Einzelne Datensätze",
+      "choose": "Bitte wählen",
+      "incomplete": "Grund wählen und Grundlage eingeben",
+      "errors": {
+        "failed": "Die Sperre konnte nicht gesetzt werden.",
+        "stale_holds": "Die Sperren wurden inzwischen geändert. Bitte neu öffnen.",
+        "hold_scope_empty": "Mindestens einen Bereich oder Datensatz wählen",
+        "hold_scope_too_broad": "Nicht alle Bereiche zugleich: eine Sperre gilt nie der ganzen Teilnahme"
+      }
     }
   }
 }

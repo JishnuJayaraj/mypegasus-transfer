@@ -300,7 +300,13 @@ describe("Freigaben: corrections", () => {
         }),
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
       "GET /api/v1/reviews": () =>
-        json({ items: [], corrections: [correction], clarifications: [], reconciliations: [] }),
+        json({
+          items: [],
+          corrections: [correction],
+          clarifications: [],
+          reconciliations: [],
+          legalHolds: [],
+        }),
       [`POST ${decisionPath}`]: decision,
     });
     renderApp("/reviews", api);
@@ -353,6 +359,7 @@ describe("Freigaben: corrections", () => {
           ],
           clarifications: [],
           reconciliations: [],
+          legalHolds: [],
         }),
     });
     renderApp("/reviews", api);

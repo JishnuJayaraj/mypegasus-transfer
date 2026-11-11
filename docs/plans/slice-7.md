@@ -447,6 +447,15 @@ orphaned objects are a class of their own (`orphaned_object`, `unset`). No UI: "
 trigger functions and `record_audit_event` recreated; over the estimate, kept as one PR for the
 owner to decide on a split.
 
+**7-7b as built:** the plan's functions and routes, with `GET /participations/{id}/legal-holds`,
+`retention_participations`, `retention_class_documents` (the objects deleted first) and an
+internal `retention_classes_left`; the trigger is attached by the migration to every table naming a
+participation except `audit_event` and `legal_hold` (a test checks it); the hold releases are in
+`GET /reviews` (`legalHolds`). UI: "Abrechnung" on "Einrichtung", the tab "Aufbewahrung" with
+"Förderung" and "Aufbewahrungssperren", hold releases in "Freigaben". Readings: Q235 (assumed).
+**Size:** about 2,400 changed lines without tests, generated code and docs (about 500 the SQL,
+about 750 the UI and its texts); over the estimate, kept as one PR for the owner to decide on a split.
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether

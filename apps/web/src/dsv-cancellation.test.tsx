@@ -66,6 +66,7 @@ const detail = (overrides: object = {}) => ({
     viewProfiling: false,
     viewAsu: false,
     viewDsv: true,
+    viewRetention: false,
     withdraw: true,
     correctEndReason: false,
   },

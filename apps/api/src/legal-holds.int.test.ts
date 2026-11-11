@@ -37,7 +37,7 @@ beforeEach(async () => {
 afterAll(() => Promise.all([db.$client.end(), owner.$client.end()]));
 
 const sql = (text: string, params: unknown[] = []) => owner.$client.query(text, params);
-const participant = (projectId = werkNord) =>
+const participant = (projectId: string = werkNord) =>
   call(owner.$client, "create_participation", { projectId, context: pl }) as Promise<string>;
 const scope = { classes: [], recordKinds: [], documentIds: [] };
 const body = (over: object = {}) => ({

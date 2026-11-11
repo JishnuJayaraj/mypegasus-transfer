@@ -17,7 +17,7 @@ export function evidenceOnlyGuard(deps: Deps): MiddlewareHandler<AppEnv> {
   const session = requireSession(deps);
   return async (c, next) => {
     const id = c.req.param("participationId");
-    if (!id || !UUID.test(id) || /\/legal-holds$/.test(c.req.path)) return next();
+    if (!id || !UUID.test(id) || c.req.path.endsWith("/legal-holds")) return next();
     const [found] = await deps.db
       .select({ projectId: participation.projectId, since: participation.evidenceSetSince })
       .from(participation)

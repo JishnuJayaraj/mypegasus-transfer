@@ -284,6 +284,11 @@ export const ParticipationDetail = z
       viewAsu: z.boolean(),
       /** The tab "DSV" (`ta_tg`): the PL and back office (`employment_contract`). */
       viewDsv: z.boolean(),
+      /**
+       * The tab "Aufbewahrung" with the funding and the legal holds (the PL and back office;
+       * data-protection.md, funding and legal holds).
+       */
+      viewRetention: z.boolean(),
       /** "Zurückziehen" (the PL; process-and-lifecycle.md, manual withdrawal). */
       withdraw: z.boolean(),
       /**

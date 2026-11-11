@@ -17803,6 +17803,7 @@ export interface components {
                 viewProfiling: boolean;
                 viewAsu: boolean;
                 viewDsv: boolean;
+                viewRetention: boolean;
                 withdraw: boolean;
                 contactStatus: components["schemas"]["ContactStatusTarget"][];
                 correctEndReason: boolean;

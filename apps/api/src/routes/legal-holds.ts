@@ -87,12 +87,13 @@ export async function legalHoldReviewItemsOf(
     }));
 }
 
+const context = (c: Context<AppEnv>) =>
+  auditContext(sessionUser(c).id, c.get("requestId") as string);
+
 export function legalHoldRoutes(deps: Deps) {
   const { db, logger } = deps;
   const router = createRouter();
   const middleware = [requireSession(deps)];
-  const context = (c: Context<AppEnv>) =>
-    auditContext(sessionUser(c).id, c.get("requestId") as string);
 
   async function participationFor(c: Context<AppEnv>, participationId: string) {
     const [found] = await db

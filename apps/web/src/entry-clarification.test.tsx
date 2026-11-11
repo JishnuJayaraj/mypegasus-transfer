@@ -62,6 +62,7 @@ const detail = {
     viewProfiling: false,
     viewAsu: false,
     viewDsv: true,
+    viewRetention: false,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };
@@ -387,7 +388,13 @@ describe("the escalated clarifications in Freigaben", () => {
       "GET /api/v1/me": () => json(manager),
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
       "GET /api/v1/reviews": () =>
-        json({ items: [], corrections: [], clarifications: items, reconciliations: [] }),
+        json({
+          items: [],
+          corrections: [],
+          clarifications: items,
+          reconciliations: [],
+          legalHolds: [],
+        }),
       ...routes,
     });
     renderApp("/reviews", mock.api);

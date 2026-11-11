@@ -224,6 +224,12 @@ const perClass: RetentionPeriods = {
   },
 };
 
+const item = (c: "personnel_file" | "health_record", triggers: Record<string, string | null>) => ({
+  class: c,
+  triggers,
+  held: false,
+});
+
 describe("retention per class (data-protection.md, retention per class)", () => {
   const nonSigner = participationRetentionTriggers({
     status: "withdrawn",
@@ -231,14 +237,6 @@ describe("retention per class (data-protection.md, retention per class)", () => 
     withdrawnOn: "2026-03-01",
     enteredTg: false,
     dsvFullyExecuted: false,
-  });
-  const item = (
-    c: "personnel_file" | "health_record",
-    triggers: Record<string, string | null>,
-  ) => ({
-    class: c,
-    triggers,
-    held: false,
   });
 
   it("deletes a non-signer's personnel file on day 91, not 90", () => {

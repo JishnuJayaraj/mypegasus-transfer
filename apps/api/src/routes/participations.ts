@@ -25,6 +25,7 @@ import {
   mayRecordBaReport,
   mayRequestCorrection,
   mayViewAsu,
+  mayPlaceLegalHold,
   mayWorkDsv,
   mayViewProfiling,
   ParticipationListQuery,
@@ -339,6 +340,7 @@ export function participationRoutes(deps: Deps) {
           viewProfiling: mayViewProfiling(subject, target).ok,
           viewAsu: snapshot.project.type === "ta_tg" && mayViewAsu(subject, target).ok,
           viewDsv: snapshot.project.type === "ta_tg" && mayWorkDsv(subject, target).ok,
+          viewRetention: mayPlaceLegalHold(subject, target).ok,
           withdraw: withdraw === null,
           // "Kontaktstatus" (process-and-lifecycle.md, the manual contact statuses): the targets
           // the viewer may set now, as the route decides them.

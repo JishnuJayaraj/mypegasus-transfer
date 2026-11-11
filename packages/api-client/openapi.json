@@ -3201,6 +3201,9 @@
               "viewDsv": {
                 "type": "boolean"
               },
+              "viewRetention": {
+                "type": "boolean"
+              },
               "withdraw": {
                 "type": "boolean"
               },
@@ -3230,6 +3233,7 @@
               "viewProfiling",
               "viewAsu",
               "viewDsv",
+              "viewRetention",
               "withdraw",
               "contactStatus",
               "correctEndReason",
