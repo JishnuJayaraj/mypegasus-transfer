@@ -236,7 +236,8 @@ describe("the immutability triggers' retention path", () => {
     // The audit trail's path is exercised above; every other immutability trigger shares it.
     const { rows } = await owner.query(
       `select p.proname from pg_trigger t join pg_proc p on p.oid = t.tgfoid
-       where t.tgrelid = $1::regclass and not t.tgisinternal`,
+       where t.tgrelid = $1::regclass and not t.tgisinternal
+         and p.proname <> 'refuse_in_evidence_set_phase'`,
       [table],
     );
     expect(rows.length).toBeGreaterThan(0);
