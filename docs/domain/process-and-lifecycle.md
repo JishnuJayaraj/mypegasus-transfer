@@ -1486,7 +1486,7 @@ an entry that stays unsupported.
 
 ### Manual contact statuses as built (7-9)
 
-*(Q60 assumed, Q215 accepted; readings Q233.)*
+*(Q60 assumed, Q215 accepted; Q233 accepted, with its amendment.)*
 
 "Kontaktstatus" in the page header (the PL, the assigned consultant/profiler) moves the main status
 along the existing `manual` edges only: `imported → contacted`, `contacted → unreachable`,
@@ -1494,6 +1494,8 @@ along the existing `manual` edges only: `imported → contacted`, `contacted →
 `POST /participations/{id}/contact-status` calls the status function, which writes the
 `status_changed` event in the same transaction (ADR-0002); no new audit event type. The dialog
 captures the status version when it opens and offers only the targets the capability allows,
-nothing preset; a change meanwhile is `409 stale_status`. `contacted → informed` stays the
+nothing preset; a change meanwhile is `409 stale_status`. A step the viewer may take but which is
+closed now (the admission cutoff, the project not active) is shown in the dialog with its reason and
+no save (Q233); a step the viewer may not take is not shown. No contact note or channel is recorded. `contacted → informed` stays the
 attendance's path (information delivery), and `informed`, `active_in_tg` and the terminal statuses
 have no contact step.

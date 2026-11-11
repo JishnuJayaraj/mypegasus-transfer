@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Edge } from "./edges";
 import type { MainStatus } from "./enums";
 import {
+  blockedContactSteps,
   contactEdges,
   ContactStatusRequest,
   contactTransitions,
@@ -62,6 +63,20 @@ describe("the manual contact statuses (process-and-lifecycle.md, Q215)", () => {
     ]);
     expect(contactTransitions(at("imported"), all, false)).toEqual([
       { to: "contacted", allowed: false, refusal: "project_not_active" },
+    ]);
+  });
+
+  it("lists the authorised but closed steps with their reason, never the forbidden ones (Q233)", () => {
+    expect(
+      blockedContactSteps([
+        { to: "contacted", allowed: false, refusal: "before_cutoff" },
+        { to: "unreachable", allowed: false, refusal: "forbidden" },
+        { to: "contacted", allowed: true, refusal: null },
+        { to: "unreachable", allowed: false, refusal: "project_not_active" },
+      ]),
+    ).toEqual([
+      { to: "contacted", refusal: "before_cutoff" },
+      { to: "unreachable", refusal: "project_not_active" },
     ]);
   });
 

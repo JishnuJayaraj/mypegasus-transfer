@@ -3284,12 +3284,19 @@
                   "tg_start_missing",
                   null
                 ]
+              },
+              "contactStatus": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/BlockedContactStep"
+                }
               }
             },
             "required": [
               "assignEntryWave",
               "setParticipationDates",
-              "withdraw"
+              "withdraw",
+              "contactStatus"
             ],
             "additionalProperties": false
           }
@@ -3626,6 +3633,26 @@
           "contacted",
           "unreachable"
         ]
+      },
+      "BlockedContactStep": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "$ref": "#/components/schemas/ContactStatusTarget"
+          },
+          "refusal": {
+            "type": "string",
+            "enum": [
+              "project_not_active",
+              "before_cutoff"
+            ]
+          }
+        },
+        "required": [
+          "to",
+          "refusal"
+        ],
+        "additionalProperties": false
       },
       "ManualParticipationInput": {
         "type": "object",

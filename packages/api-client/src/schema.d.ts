@@ -17250,6 +17250,7 @@ export interface components {
                 setParticipationDates: "forbidden" | "not_ta_tg" | "wave_required" | "latest_entry_date_missing" | "participation_closed" | "dsv_offer_open" | null;
                 /** @enum {string|null} */
                 withdraw: "forbidden" | "project_not_active" | "status_not_withdrawable" | "dsv_cancellation_missing" | "after_planned_start" | "tg_start_missing" | null;
+                contactStatus: components["schemas"]["BlockedContactStep"][];
             };
         };
         PlacementAgenturChoice: {
@@ -17359,6 +17360,11 @@ export interface components {
         };
         /** @enum {string} */
         ContactStatusTarget: "contacted" | "unreachable";
+        BlockedContactStep: {
+            to: components["schemas"]["ContactStatusTarget"];
+            /** @enum {string} */
+            refusal: "project_not_active" | "before_cutoff";
+        };
         ManualParticipationInput: {
             values: {
                 personnelNumber?: string;

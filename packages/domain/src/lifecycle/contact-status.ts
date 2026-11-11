@@ -33,6 +33,23 @@ export const ContactStatusRefusal = z
   .meta({ id: "ContactStatusRefusal" });
 export type ContactStatusRefusal = z.infer<typeof ContactStatusRefusal>;
 
+/** An authorised contact step closed now, with its reason (ui-patterns.md, C1; Q233). */
+export const BlockedContactStep = z
+  .strictObject({
+    to: ContactStatusTarget,
+    refusal: z.enum(["project_not_active", "before_cutoff"]),
+  })
+  .meta({ id: "BlockedContactStep" });
+export type BlockedContactStep = z.infer<typeof BlockedContactStep>;
+
+/** The steps the viewer may take but which are closed now: never the forbidden ones. */
+export const blockedContactSteps = (steps: readonly ContactTransition[]): BlockedContactStep[] =>
+  steps.flatMap((s) =>
+    s.refusal === "project_not_active" || s.refusal === "before_cutoff"
+      ? [{ to: s.to, refusal: s.refusal }]
+      : [],
+  );
+
 export type ContactTransition = {
   to: ContactStatusTarget;
   allowed: boolean;

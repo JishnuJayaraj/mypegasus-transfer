@@ -1127,6 +1127,10 @@
       "to": "Neuer Status",
       "choose": "Bitte einen neuen Status wählen.",
       "save": "Speichern",
+      "refusals": {
+        "before_cutoff": "„{{status}}“ ist nicht mehr möglich: Die letzte Aufnahmefrist der Welle ist überschritten.",
+        "project_not_active": "„{{status}}“ ist erst möglich, wenn das Projekt aktiv ist."
+      },
       "errors": {
         "failed": "Speichern nicht möglich. Bitte erneut versuchen.",
         "stale": "Die Teilnahme wurde inzwischen geändert. Bitte neu laden.",

@@ -1372,6 +1372,8 @@ export {
   withdrawRefusal,
 } from "./lifecycle/withdrawal";
 export {
+  BlockedContactStep,
+  blockedContactSteps,
   contactEdges,
   ContactStatusRefusal,
   ContactStatusRequest,
