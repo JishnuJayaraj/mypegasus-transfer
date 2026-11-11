@@ -960,6 +960,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `tg_entry_reconciled` | `case` | no | no | `evidenceKinds` |
 | `reconciliation_reviewed` | `review` | no | no | — |
 | `reconciliation_replied` | `review` | no | no | — |
+| `settlement_dates_set` | project-level | no | no | — |
+| `funding_status_set` | `case` | no | no | `funded110` |
 
 ## Aggregates
 

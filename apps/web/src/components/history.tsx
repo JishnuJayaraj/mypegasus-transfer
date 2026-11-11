@@ -197,6 +197,9 @@ export function HistoryTab({
         return list(details.evidenceKinds)
           .map((kind) => coded("reconciliation.evidenceKinds", kind))
           .join(", ");
+      // The §110 funding: its code, never the documented source (Q217).
+      case "funding_status_set":
+        return coded("funding.codes", text(details.funded110) ?? "");
       // "Kunde informiert am" of a cancellation-based withdrawal: the day.
       case "dsv_customer_notified":
         return t("history.customerNotified", { date: formatDate(text(details.notifiedOn)) });

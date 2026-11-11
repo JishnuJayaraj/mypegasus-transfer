@@ -14482,6 +14482,319 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/settlement-dates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's settlement dates (whoever sees the project), which of them apply (the final Transfer-KuG settlement when a participation entered the TG, the §110 settlement when one is funded known_yes) and whether a funding is still unknown */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The settlement dates */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettlementDatesView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /**
+         * Set the project's settlement dates (back office; Q52) against the dates read; null clears one. Audited settlement_dates_set with the names of the dates set
+         * @description Refusals, in this order:
+         *     - `404`: the project is hidden from the viewer.
+         *     - `403`: not back office of the project.
+         *     - `409 stale_settlement_dates` at `/expected`: the dates changed since they were read.
+         *     - `422 project_unchanged`: the dates are the ones recorded.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SettlementDatesRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettlementDatesView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/funding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participation's §110 funding with its documented source (back office and the PL; Q217): known_yes, known_no or unknown */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The funding */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FundingView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /**
+         * Record the participation's §110 funding with its documented source (back office; Q217) against the value and source read. Audited funding_status_set with the code, never the source. TG entry is never proof of Transfer-KuG
+         * @description Refusals, in this order:
+         *     - `404`: the participation is hidden from the viewer.
+         *     - `403`: not back office of the project.
+         *     - `409 stale_funding` at `/expected`: the funding changed since it was read.
+         *     - `422 funding_unchanged`: the value and source are the ones recorded.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FundingRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FundingView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{kind}": {
         parameters: {
             query?: never;
@@ -18095,7 +18408,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested" | "dsv_customer_notified" | "tg_entry_reconciled";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested" | "dsv_customer_notified" | "tg_entry_reconciled" | "funding_status_set";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -20979,6 +21292,75 @@ export interface components {
             code: components["schemas"]["ReconciliationReplyCode"];
             source: string;
             revision: number;
+        };
+        SettlementDatesView: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            kugFinalSettlementDate: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            measure110SettlementDate: string | null;
+            required: {
+                kugFinalSettlementDate: boolean;
+                measure110SettlementDate: boolean;
+                fundingUnknown: boolean;
+            };
+            capabilities: {
+                set: boolean;
+            };
+        };
+        SettlementDatesRequest: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            kugFinalSettlementDate: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            measure110SettlementDate: string | null;
+            expected: {
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                kugFinalSettlementDate: string | null;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                measure110SettlementDate: string | null;
+            };
+        };
+        FundingView: {
+            funded110: components["schemas"]["Funded110"];
+            source: string | null;
+            /** Format: date-time */
+            setAt: string | null;
+            capabilities: {
+                set: boolean;
+            };
+        };
+        /** @enum {string} */
+        Funded110: "known_yes" | "known_no" | "unknown";
+        FundingRequest: {
+            funded110: components["schemas"]["Funded110"];
+            source: string;
+            expected: {
+                funded110: components["schemas"]["Funded110"];
+                source: string | null;
+            };
         };
         ExportLink: {
             url: string;

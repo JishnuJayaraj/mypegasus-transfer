@@ -1,6 +1,11 @@
 import { getTableConfig, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { documentTypeCatalog, fieldCatalog, fieldEntry } from "@transfer/domain";
+import {
+  documentTypeCatalog,
+  fieldCatalog,
+  fieldEntry,
+  retentionActivation,
+} from "@transfer/domain";
 import {
   checkDataCatalog,
   checkFieldColumns,
@@ -9,6 +14,7 @@ import {
   fieldColumns,
   perRowRetention,
   retentionPeriods,
+  retentionPrerequisites,
   type CatalogEntry,
 } from "./data-catalog";
 import { project, tables } from "./schema";
@@ -124,6 +130,7 @@ describe("data catalog", () => {
       kug200b_batch: entry("project_master", "internal"),
       kug200b_batch_member: entry("participation_record", "internal", true),
       agentur_submission: entry("participation_record", "internal", true),
+      retention_run: entry("reference_data", "internal"),
       export_link: entry("access_credential", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
       // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.
@@ -166,7 +173,20 @@ describe("data catalog", () => {
       access_credential: "unset",
       evidence_set: "unset",
       form_working_copy: "unset",
+      orphaned_object: "unset",
       reference_data: "never",
+    });
+  });
+
+  it("keeps every prerequisite of a live deletion unmet: the job is a dry run (Q219)", () => {
+    expect(retentionActivation(retentionPrerequisites)).toEqual({
+      active: false,
+      unmet: [
+        "periods_confirmed",
+        "hold_administration_confirmed",
+        "evidence_only_access_built",
+        "maintenance_rules_complete",
+      ],
     });
   });
 

@@ -1,4 +1,10 @@
-import { fieldCatalog, type DataClass, type FieldEntry } from "@transfer/domain";
+import {
+  fieldCatalog,
+  type DataClass,
+  type FieldEntry,
+  type RetentionPeriods,
+  type RetentionPrerequisites,
+} from "@transfer/domain";
 import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
 import { tables } from "./schema";
 
@@ -11,8 +17,9 @@ export interface CatalogEntry {
 }
 
 /**
- * Retention periods of the classes. `unset` means no deletion job may touch the class yet;
- * the retention job (Slice 7) must refuse to run for it.
+ * Retention periods of the classes (ADR-0008; the rules: `retentionRules` in the domain). `unset`
+ * means no deletion may touch the class: the retention job reports it `period_unset`. The job
+ * reads the periods from here only, never from the environment.
  */
 export const retentionPeriods = {
   project_master: "unset", // Q58
@@ -42,9 +49,25 @@ export const retentionPeriods = {
   // participation's terminal status (`workingCopyExpiry`), a legal hold suspending each; the row
   // and its provenance stay as the tombstone.
   form_working_copy: "unset",
+  // Stored objects without a document row: a day after they were written (data-protection.md,
+  // retention as built); unset with the others until confirmed.
+  orphaned_object: "unset",
   // No personal data: the retention job never touches it.
   reference_data: "never",
-} as const;
+} as const satisfies RetentionPeriods;
+
+/**
+ * The prerequisites of any live deletion (data-protection.md, retention; Q219): until each is
+ * met the retention job is a dry run that computes and counts, and deletes nothing. Confirmed
+ * periods (Q3, Q24), confirmed hold administration (Q218), evidence-only access (break-glass,
+ * not built) and the maintenance rules (backups at most 30 days, an erasure's restore behaviour).
+ */
+export const retentionPrerequisites: RetentionPrerequisites = {
+  periods_confirmed: false,
+  hold_administration_confirmed: false,
+  evidence_only_access_built: false,
+  maintenance_rules_complete: false,
+};
 
 /**
  * The class of a table whose rows carry their own (ADR-0008, per item), in its `retention_class`
@@ -345,6 +368,12 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   },
   // Export links (data-protection.md, exports): a token's SHA-256, the project, the kind, the
   // document ids or the batch, the staff user and session hash, expiry; no file.
+  // A retention job's run: the day, dry or not, and counts per class; no subject.
+  retention_run: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
   export_link: {
     retentionClass: "access_credential",
     dataClass: "internal",
@@ -562,6 +591,10 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     status_version: null,
     placement_agentur_key: "placementAgenturKey",
     placement_agentur_set_at: "placementAgenturKey",
+    funded110: "funded110",
+    funded110_source: "funded110",
+    funded110_set_by: null,
+    funded110_set_at: "funded110",
     created_at: null,
   },
   profiling_exception_evidence_record: {

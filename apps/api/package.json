@@ -12,7 +12,8 @@
     "build": "vite build",
     "start": "CONFIG_DIR=dist/config node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
-    "jobs:lifecycle": "tsx src/scripts/jobs-lifecycle.ts"
+    "jobs:lifecycle": "tsx src/scripts/jobs-lifecycle.ts",
+    "jobs:retention": "tsx src/scripts/jobs-retention.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",

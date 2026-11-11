@@ -39,7 +39,7 @@ async function prepareWorkerDatabases(workers: number): Promise<void> {
       const name = `${templateDatabase}_${worker}`;
       // Objects, their grants and pg-boss's schema come with the copy; database grants don't.
       await client.query(`create database "${name}" template "${templateDatabase}"`);
-      await client.query(`grant connect on database "${name}" to transfer_app`);
+      await client.query(`grant connect on database "${name}" to transfer_app, transfer_retention`);
       // A throwaway database: a commit needn't wait for its WAL flush. What a test sees is the
       // same; only a server crash could lose the last commits.
       await client.query(`alter database "${name}" set synchronous_commit = off`);

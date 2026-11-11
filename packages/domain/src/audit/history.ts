@@ -242,6 +242,10 @@ export const auditProjection: {
   tg_entry_reconciled: shown("case", { details: ["evidenceKinds"] }),
   reconciliation_reviewed: review,
   reconciliation_replied: review,
+  // Retention's inputs: the project's settlement dates are project-level; the funding's code in
+  // the case stream, never its documented source.
+  settlement_dates_set: projectLevel,
+  funding_status_set: shown("case", { details: ["funded110"] }),
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "fieldKey", "paper", "signatureKind", "decision"],
   }),
