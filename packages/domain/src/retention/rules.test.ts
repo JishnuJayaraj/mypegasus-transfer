@@ -288,6 +288,15 @@ describe("retention per class (data-protection.md, retention per class)", () => 
         dsvFullyExecuted: false,
       }),
     ).toEqual({ non_signer_withdrawn: null, closed_without_tg: "2026-04-02", exited: null });
+    // Without a recorded withdrawal day, the day it closed.
+    expect(
+      participationRetentionTriggers({
+        ...facts,
+        withdrawnOn: null,
+        status: "withdrawn",
+        dsvFullyExecuted: false,
+      }).non_signer_withdrawn,
+    ).toBe("2026-04-02");
     expect(
       participationRetentionTriggers({ ...facts, status: "informed", dsvFullyExecuted: false }),
     ).toEqual({ non_signer_withdrawn: null, closed_without_tg: null, exited: null });
@@ -328,6 +337,16 @@ describe("retention per class (data-protection.md, retention per class)", () => 
       },
     };
     expect(retentionDue(item("personnel_file", nonSigner), twice, "2027-01-01").kind).toBe(
+      "period_unset",
+    );
+    const fraction: RetentionPeriods = {
+      ...perClass,
+      health_record: {
+        days: { non_signer_withdrawn: 1.5 },
+        months: { closed_without_tg: 3, exited: 3 },
+      },
+    };
+    expect(retentionDue(item("health_record", nonSigner), fraction, "2027-01-01").kind).toBe(
       "period_unset",
     );
     const missing: RetentionPeriods = {

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { sample } from "../access/profiles";
 import type { PermissionTarget } from "../access/permissions";
 import type { ProjectRole } from "../enums";
-import { holdScopeProblem, mayPlaceLegalHold, mayReleaseLegalHold } from "./holds";
+import {
+  holdScopeProblem,
+  LegalHoldRelease,
+  mayPlaceLegalHold,
+  mayReleaseLegalHold,
+} from "./holds";
 
 const target: PermissionTarget = {
   projectId: sample.projectId,
@@ -72,5 +77,13 @@ describe("legal hold permissions", () => {
         "x",
       ).ok,
     ).toBe(false);
+  });
+});
+
+describe("the documented source", () => {
+  it("is one trimmed line without control characters", () => {
+    expect(LegalHoldRelease.safeParse({ source: "Weisung DSB" }).success).toBe(true);
+    expect(LegalHoldRelease.safeParse({ source: " Weisung" }).success).toBe(false);
+    expect(LegalHoldRelease.safeParse({ source: "Weisung\nDSB" }).success).toBe(false);
   });
 });
