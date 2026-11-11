@@ -40,6 +40,7 @@ import {
   withdrawRefusal,
   ContactStatusRequest,
   mayTakeSomeContactStep,
+  blockedContactSteps,
   effectiveTgStart,
   edges,
   mayPerformTransition,
@@ -256,6 +257,12 @@ export function participationRoutes(deps: Deps) {
       today,
       tgStart: effectiveTgStart(dates, wave),
     });
+    // "Kontaktstatus" (process-and-lifecycle.md, the manual contact statuses): each step as the
+    // route decides it; the allowed ones are the capability, the authorised but closed ones the
+    // refusals (Q233).
+    const contactSteps = ["imported", "contacted", "unreachable"].includes(p.status)
+      ? await statusService.contactTransitions(subject, participationId)
+      : [];
     // "Grund korrigieren" (Q72): the PL, once an end reason is recorded.
     const correctsEndReason =
       p.endReason !== null && mayPerformOperation(subject, { kind: "correctEndReason" }, target).ok;
@@ -334,11 +341,7 @@ export function participationRoutes(deps: Deps) {
           withdraw: withdraw === null,
           // "Kontaktstatus" (process-and-lifecycle.md, the manual contact statuses): the targets
           // the viewer may set now, as the route decides them.
-          contactStatus: ["imported", "contacted", "unreachable"].includes(p.status)
-            ? (await statusService.contactTransitions(subject, participationId))
-                .filter((t) => t.allowed)
-                .map((t) => t.to)
-            : [],
+          contactStatus: contactSteps.filter((t) => t.allowed).map((t) => t.to),
           correctEndReason: correctsEndReason,
           // "Eintritt nachträglich erfassen": as the reconciliation's own route decides it.
           reconcileTgEntry:
@@ -351,6 +354,7 @@ export function participationRoutes(deps: Deps) {
           assignEntryWave: assignment.refusal,
           setParticipationDates: datesChange.refusal,
           withdraw,
+          contactStatus: blockedContactSteps(contactSteps),
         },
       },
     );

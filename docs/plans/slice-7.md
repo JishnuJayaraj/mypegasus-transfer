@@ -435,7 +435,8 @@ Q232 (assumed).
 
 **7-9 as built:** the plan's route through `change_participation_status` (no new SQL function,
 migration or audit event type); `ParticipationDetail.capabilities.contactStatus` lists the targets
-the viewer may set now. Readings: Q233 (assumed).
+the viewer may set now. Q233 accepted 2026-11-11 with one amendment, built in a follow-up PR:
+`refusals.contactStatus` shows an authorised step's reason in the dialog.
 
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`

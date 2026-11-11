@@ -1,4 +1,4 @@
-import { ContactStatusDialog } from "../../components/contact-status";
+import { ContactStatusDialog, contactStatusOffered } from "../../components/contact-status";
 import { useCorrectionRequest } from "../../components/evidence-correction";
 import {
   EndReasonDialog,
@@ -239,7 +239,7 @@ function ParticipationPage() {
       ? [{ label: t("participant.actions.assisted"), onClick: () => setDialog("assisted") }]
       : []),
     // process-and-lifecycle.md, the manual contact statuses (Q215): by its capability.
-    ...(detail.capabilities.contactStatus?.length
+    ...(contactStatusOffered(detail)
       ? [
           {
             label: t("participant.actions.contactStatus"),

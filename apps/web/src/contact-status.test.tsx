@@ -135,6 +135,23 @@ describe("Kontaktstatus", () => {
     ).toBeVisible();
   });
 
+  it("explains an authorised step closed by the cutoff, without a save (Q233)", async () => {
+    setup({
+      status: "unreachable",
+      capabilities: { ...detail().capabilities, contactStatus: [] },
+      refusals: {
+        ...detail().refusals,
+        contactStatus: [{ to: "contacted", refusal: "before_cutoff" }],
+      },
+    });
+    const panel = await openDialog();
+    expect(
+      panel.getByText(/„Kontaktiert“ ist nicht mehr möglich: Die letzte Aufnahmefrist/),
+    ).toBeVisible();
+    expect(panel.queryByRole("radio")).toBeNull();
+    expect(panel.queryByRole("button", { name: "Speichern" })).toBeNull();
+  });
+
   it("is not offered without a target", async () => {
     setup({ capabilities: { ...detail().capabilities, contactStatus: [] } });
     expect(await screen.findByRole("heading", { name: "Beispiel, Erika" })).toBeVisible();

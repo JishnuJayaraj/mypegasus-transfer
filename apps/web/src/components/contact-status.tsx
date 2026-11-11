@@ -28,6 +28,17 @@ function refusalOf(problem: unknown): string {
 }
 
 /**
+ * Whether "Kontaktstatus" is offered: a step open now, or an authorised one closed with a reason
+ * the dialog explains (Q233). (Older fixtures may lack the fields.)
+ */
+export function contactStatusOffered(detail: Detail): boolean {
+  return (
+    (detail.capabilities.contactStatus?.length ?? 0) > 0 ||
+    (detail.refusals.contactStatus?.length ?? 0) > 0
+  );
+}
+
+/**
  * "Kontaktstatus" (process-and-lifecycle.md, the manual contact statuses; Q215): only the targets
  * the capability allows now, nothing preset; the status version read when the dialog opened
  * (ui-patterns.md, C4), so a change meanwhile is a 409.
@@ -38,6 +49,7 @@ export function ContactStatusDialog({ detail, onClose }: { detail: Detail; onClo
   const cache = useQueryClient();
   const [version] = useState(detail.statusVersion);
   const [targets] = useState(detail.capabilities.contactStatus);
+  const blocked = detail.refusals.contactStatus ?? [];
   const [to, setTo] = useState<Target | "">("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,29 +95,44 @@ export function ContactStatusDialog({ detail, onClose }: { detail: Detail; onClo
             status: t(`participants.statuses.${detail.status}`),
           })}
         </p>
-        <RadioButtonGroup
-          name="contact-status"
-          legendText={t("participant.contactStatus.to")}
-          orientation="vertical"
-          valueSelected={to}
-          onChange={(value) => setTo(value as Target)}
-        >
-          {targets.map((target) => (
-            <RadioButton
-              key={target}
-              id={`contact-status-${target}`}
-              value={target}
-              labelText={t(`participants.statuses.${target}`)}
-            />
-          ))}
-        </RadioButtonGroup>
-        <ActionButton
-          disabled={busy}
-          unavailableReason={to === "" ? t("participant.contactStatus.choose") : null}
-          onClick={() => void save()}
-        >
-          {t("participant.contactStatus.save")}
-        </ActionButton>
+        {blocked.map((step) => (
+          <InlineNotification
+            key={step.to}
+            kind="info"
+            title={t(`participant.contactStatus.refusals.${step.refusal}`, {
+              status: t(`participants.statuses.${step.to}`),
+            })}
+            hideCloseButton
+            lowContrast
+          />
+        ))}
+        {targets.length > 0 && (
+          <RadioButtonGroup
+            name="contact-status"
+            legendText={t("participant.contactStatus.to")}
+            orientation="vertical"
+            valueSelected={to}
+            onChange={(value) => setTo(value as Target)}
+          >
+            {targets.map((target) => (
+              <RadioButton
+                key={target}
+                id={`contact-status-${target}`}
+                value={target}
+                labelText={t(`participants.statuses.${target}`)}
+              />
+            ))}
+          </RadioButtonGroup>
+        )}
+        {targets.length > 0 && (
+          <ActionButton
+            disabled={busy}
+            unavailableReason={to === "" ? t("participant.contactStatus.choose") : null}
+            onClick={() => void save()}
+          >
+            {t("participant.contactStatus.save")}
+          </ActionButton>
+        )}
       </Stack>
     </SidePanel>
   );

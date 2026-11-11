@@ -12,7 +12,7 @@ import {
 } from "./projects/participation-dates";
 import { DsvStatus, EndReason, MainStatus, ProfilingStatus } from "./lifecycle/enums";
 import { WithdrawRefusal } from "./lifecycle/withdrawal";
-import { ContactStatusTarget } from "./lifecycle/contact-status";
+import { BlockedContactStep, ContactStatusTarget } from "./lifecycle/contact-status";
 import { ActivationStatus } from "./activation/status";
 import { PrivacyNoticeState } from "./privacy/notice-state";
 import { AgenturKey } from "./projects/agentur-settings";
@@ -304,6 +304,11 @@ export const ParticipationDetail = z
       assignEntryWave: AssignEntryWaveRefusal.nullable(),
       setParticipationDates: SetParticipationDatesRefusal.nullable(),
       withdraw: WithdrawRefusal.nullable(),
+      /**
+       * "Kontaktstatus": the steps the viewer may take but which are closed now, with the reason
+       * (process-and-lifecycle.md, the manual contact statuses; Q233). Forbidden steps aren't listed.
+       */
+      contactStatus: z.array(BlockedContactStep),
     }),
   })
   .meta({ id: "ParticipationDetail" });

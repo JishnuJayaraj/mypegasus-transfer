@@ -146,7 +146,11 @@ describe("POST /participations/{id}/contact-status", () => {
       to: "unreachable",
     });
     await pastCutoff();
-    expect((await detail(id)).capabilities.contactStatus).toEqual([]);
+    const blocked = await detail(id);
+    expect(blocked.capabilities.contactStatus).toEqual([]);
+    // The authorised step shows why it is closed (Q233); back office has no step to explain.
+    expect(blocked.refusals.contactStatus).toEqual([{ to: "contacted", refusal: "before_cutoff" }]);
+    expect((await detail(id, backOffice)).refusals.contactStatus).toEqual([]);
     expect(await codesOf(await set(id, "contacted"), 422)).toEqual(["/to:before_cutoff"]);
     const imported = await participant();
     // imported → contacted has no cutoff guard (the lifecycle transitions table).

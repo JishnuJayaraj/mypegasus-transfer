@@ -901,4 +901,6 @@ participation's related queries and the project's work list/dashboard.
   `before_cutoff` (`unreachable → contacted` after the admission cutoff). Through
   `change_participation_status`; no new SQL function or audit event type.
 - `ParticipationDetail.capabilities` gains `contactStatus`: the targets the viewer may set now, by
-  the edges, the permission, the draft gate and the guards. Logs carry ids and codes only.
+  the edges, the permission, the draft gate and the guards; `refusals.contactStatus` lists the
+  steps the viewer may take but which are closed now (`{ to, refusal: before_cutoff |
+  project_not_active }`, Q233). Logs carry ids and codes only.

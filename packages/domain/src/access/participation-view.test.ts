@@ -198,7 +198,15 @@ const options = {
     reconcileTgEntry: false,
     contactStatus: [] as ("contacted" | "unreachable")[],
   },
-  refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
+  refusals: {
+    assignEntryWave: null,
+    setParticipationDates: null,
+    withdraw: null,
+    contactStatus: [] as {
+      to: "contacted" | "unreachable";
+      refusal: "before_cutoff" | "project_not_active";
+    }[],
+  },
 } as const;
 
 describe("participationDetail", () => {
@@ -243,7 +251,12 @@ describe("participationDetail", () => {
         reconcileTgEntry: false,
         contactStatus: [],
       },
-      refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
+      refusals: {
+        assignEntryWave: null,
+        setParticipationDates: null,
+        withdraw: null,
+        contactStatus: [],
+      },
     });
   });
 
