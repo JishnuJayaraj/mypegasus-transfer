@@ -1676,7 +1676,7 @@ objects in the same run; a storage failure rolls back its database changes for r
 The retention role locks the affected projects before participation rows and locks matching queued
 jobs before deleting them. A matching active or dependency-linked job defers stage two (Q237); stage one
 may already have run. Concurrent creation of job dependencies is not yet coordinated and must be
-resolved before `maintenance_rules_complete` can be confirmed. Audit subject references and subject-record IDs are pseudonymised, including
+resolved before `maintenance_rules_complete` can be confirmed. Every audit event type's detail keys are classified in the domain's audit model (`AuditDetailClass`: `subject`, `subject_record`, `staff`, `reference`; a test fails for an unclassified key), so a new event type names its keys' classes in its own PR. Audit subject references and subject-record IDs are pseudonymised, including
 references in request and job IDs and both audit streams. An erased subject cannot be opened in
 history. A working-copy hold is checked under the participation lock before its object is touched.
 

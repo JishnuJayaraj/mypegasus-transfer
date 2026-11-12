@@ -131,9 +131,23 @@ DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tra
 "participant signed, not fully executed", admission cutoff and system withdrawal (incl. conflict
 flags), TG entry guard, two-stage retention job (ADR-0008).
 Deferred here from Slice 2: the reconciliation route (Q68) and its review.
+**Done** 2026-11-12 (PRs 7-1 to 7-9 and 7-7a to 7-7c, the last #125; the retention follow-up #124):
+plan archived in [`plans/archive/slice-7.md`](plans/archive/slice-7.md); its rules live in ADR-0002,
+ADR-0006, ADR-0008, ADR-0009, ADR-0010, ADR-0011, `domain/ba-forms.md`, `domain/data-protection.md`
+and `domain/process-and-lifecycle.md`; its readings in Q226–Q240.
+Still open from Slice 7, each a pilot gate: the approved DSV wording (Q210), the legal outcomes of a
+signed DSV that never entered (Q220), the cancellation's legal verification (Q46, Q213, Q230), and
+before any live deletion the confirmed periods, the unmapped triggers (Q236), hold administration
+for single documents and identity (Q218, Q238), evidence-only access (break-glass) and the
+maintenance rules (Q237, Q239). Periods stay `unset` and activation off.
+Not in Slice 7: the other field corrections of the evidence set (identity by person-data writes and
+re-import, `tgStart`/`tgEnd` by dates and amendments, `tgEntryDate` by the reconciliation rules,
+`profilingSessions` by the session records; proposed with retention activation, Slice 9); `exitDate`
+comes with Slice 8.
 
 ## Slice 8 — TG module basic (F9)
 Participant file, coaching notes, goals/tasks, qualification plan, applications, exit.
+Plan: [`plans/slice-8.md`](plans/slice-8.md) (PRs 8-1 to 8-8; Q241–Q253).
 
 ## Slice 9 — Reporting (F10) + hardening
 Project report, monthly customer report, exports, accessibility pass, performance pass, the UX
