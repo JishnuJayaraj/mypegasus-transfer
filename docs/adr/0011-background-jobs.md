@@ -199,3 +199,10 @@ transaction for the `Clock`'s Berlin day (`--today` stands it at that day, refus
 `NODE_ENV=production`; a day after the database's is `run_not_due`), idempotent, with the data
 catalog's periods and prerequisites only; it prints and logs counts per class and outcome, never a
 subject, and exits non-zero with a stable code (`run_not_due`, `invalid_arguments`, …).
+
+## 7-7c: queued work and erasure
+
+Stage two locks matching pg-boss job rows and removes queued/completed payloads naming the subject
+or its records before deleting them. A matching active or dependency-linked job makes erasure wait (Q237); concurrent dependency
+creation must be coordinated before the maintenance prerequisite is met; the job's role and activation gate are unchanged. The run obtains exclusive project locks
+before processing stage one to avoid lock upgrades during erasure.

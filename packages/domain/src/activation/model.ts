@@ -33,7 +33,11 @@ export const StepUpMethod = z.enum(["birth_date", "one_time_code"]);
  * withdrawal.
  */
 export const ChannelSuspensionReason = z.enum(["lost_access"]);
-export const ChannelRemovalReason = z.enum(["consent_revoked", "lost_access_replaced"]);
+export const ChannelRemovalReason = z.enum([
+  "consent_revoked",
+  "lost_access_replaced",
+  "retention_erasure",
+]);
 export const ConsentEndReason = z.enum(["revoked", "lost_access_replaced", "superseded"]);
 /**
  * Why a participant session ended: logout, activation (the activating session gives way to an

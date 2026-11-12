@@ -1995,6 +1995,7 @@
       "delivery_failed": "Zustellung fehlgeschlagen",
       "consent_revoked": "Einwilligung widerrufen",
       "lost_access_replaced": "Zugang ersetzt",
+      "retention_erasure": "Adresse durch Aufbewahrungslauf gelöscht",
       "revoked": "Widerrufen",
       "superseded": "Durch neue Einwilligung ersetzt",
       "unreadable": "Nicht lesbar",

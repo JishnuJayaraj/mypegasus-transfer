@@ -59,7 +59,8 @@ export const retentionPeriods = {
 /**
  * The prerequisites of any live deletion (data-protection.md, retention; Q219): until each is
  * met the retention job is a dry run that computes and counts, and deletes nothing. Confirmed
- * periods (Q3, Q24), confirmed hold administration (Q218), evidence-only access (break-glass,
+ * periods (Q3, Q24), confirmed hold administration (Q218, including individual document and identity holds),
+ * evidence-only access (break-glass,
  * not built) and the maintenance rules (backups at most 30 days, an erasure's restore behaviour).
  */
 export const retentionPrerequisites: RetentionPrerequisites = {
@@ -68,6 +69,139 @@ export const retentionPrerequisites: RetentionPrerequisites = {
   evidence_only_access_built: false,
   maintenance_rules_complete: false,
 };
+
+/** Inventory of participation-reference tables (data-protection.md, retention and deletion). */
+export const erasureParticipationTables = [
+  "activation_code",
+  "agentur_submission",
+  "appointment_booking",
+  "assisted_mode",
+  "asu_record",
+  "asu_registration",
+  "audit_event",
+  "ba_reporting_task",
+  "consent_record",
+  "document",
+  "document_link",
+  "dsv_contract",
+  "dsv_customer_notice",
+  "dsv_offer",
+  "dsv_scan_signature",
+  "entry_clarification",
+  "entry_clarification_step",
+  "evidence_correction",
+  "form_generation",
+  "kug200b_batch_member",
+  "kug200b_decline",
+  "kug200b_withdrawal",
+  "legal_hold",
+  "one_time_code_challenge",
+  "participant_account",
+  "participant_assignment",
+  "participant_channel",
+  "participant_details",
+  "participant_health_data",
+  "participant_identifier_data",
+  "participant_identity",
+  "participant_profile",
+  "participant_profiling",
+  "participant_profiling_assessment",
+  "participant_profiling_health_assessment",
+  "participant_reminder",
+  "participant_residence_social_data",
+  "participant_session",
+  "participation_dsv_amendment",
+  "privacy_notice_delivery",
+  "profiling_exception_evidence_record",
+  "profiling_exception_request",
+  "profiling_session",
+  "self_service_notice_acknowledgement",
+  "signed_declaration",
+  "tg_entry_reconciliation",
+  "tg_entry_reconciliation_step",
+] as const;
+
+/** Foreign-key cycle edges that the erasure transaction must defer. */
+export const erasureDeferredForeignKeys: readonly string[] = [
+  "form_generation_document_id_document_id_fk",
+  "document_invalidated_by_correction_evidence_correction_id_fk",
+  "evidence_correction_asu_registration_id_asu_registration_id_fk",
+  "evidence_correction_ba_reporting_task_id_ba_reporting_task_id_f",
+  "participation_current_exception_request_fk",
+];
+
+/** FK parents that can be retained by a hold during erasure (data-protection.md, retained dependencies). */
+export const erasureRetainedDependencies = [
+  { table: "audit_event", referencedBy: ["dsv_offer"], retentionClass: "audit_log" },
+  {
+    table: "activation_code",
+    referencedBy: ["participant_account", "privacy_notice_delivery"],
+    retentionClass: "access_credential",
+  },
+  {
+    table: "agentur_submission",
+    referencedBy: ["asu_registration", "agentur_submission"],
+    retentionClass: "participation_record",
+  },
+  {
+    table: "appointment_booking",
+    referencedBy: ["participant_reminder", "appointment_booking"],
+    retentionClass: "personnel_file",
+  },
+  {
+    table: "asu_registration",
+    referencedBy: ["evidence_correction"],
+    retentionClass: "participation_record",
+  },
+  {
+    table: "ba_reporting_task",
+    referencedBy: ["evidence_correction", "ba_reporting_task"],
+    retentionClass: "participation_record",
+  },
+  {
+    table: "consent_record",
+    referencedBy: ["participant_channel", "participant_reminder"],
+    retentionClass: "personnel_file",
+  },
+  {
+    table: "document",
+    referencedBy: [
+      "asu_registration",
+      "agentur_submission",
+      "consent_record",
+      "dsv_scan_signature",
+      "evidence_correction",
+      "form_generation",
+      "legal_hold",
+    ],
+    retentionClass: "by_document_type",
+  },
+  {
+    table: "dsv_offer",
+    referencedBy: ["document", "dsv_contract", "evidence_correction"],
+    retentionClass: "participation_record",
+  },
+  {
+    table: "evidence_correction",
+    referencedBy: ["document", "dsv_scan_signature", "asu_registration", "ba_reporting_task"],
+    retentionClass: "by_document_type",
+  },
+  {
+    table: "form_generation",
+    referencedBy: ["document", "dsv_offer"],
+    retentionClass: "form_working_copy",
+  },
+  {
+    table: "participant_channel",
+    referencedBy: ["participant_reminder", "consent_record"],
+    retentionClass: "personnel_file",
+  },
+  {
+    table: "participation_dsv_amendment",
+    referencedBy: ["ba_reporting_task"],
+    retentionClass: "participation_record",
+  },
+].map((dependency) => ({ ...dependency, until: "all retained referencing rows are removed" }));
 
 /** Rows waiting for a referencing row (data-protection.md, retained dependencies). */
 export const retainedDependencies = [
@@ -656,6 +790,10 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     funded110_set_by: null,
     funded110_set_at: "funded110",
     evidence_set_since: null,
+    erasure_pending_at: null,
+    erasure_entered_tg: null,
+    erasure_trigger: null,
+    erasure_trigger_on: null,
     created_at: null,
   },
   profiling_exception_evidence_record: {

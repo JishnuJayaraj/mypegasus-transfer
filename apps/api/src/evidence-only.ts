@@ -19,22 +19,35 @@ export function evidenceOnlyGuard(deps: Deps): MiddlewareHandler<AppEnv> {
     const id = c.req.param("participationId");
     if (!id || !UUID.test(id) || c.req.path.endsWith("/legal-holds")) return next();
     const [found] = await deps.db
-      .select({ projectId: participation.projectId, since: participation.evidenceSetSince })
+      .select({
+        projectId: participation.projectId,
+        since: participation.evidenceSetSince,
+        pending: participation.erasurePendingAt,
+      })
       .from(participation)
       .where(eq(participation.id, id));
-    if (!found || found.since === null) return next();
+    if (!found || (found.since === null && found.pending === null)) return next();
     let visible = false;
     const refused = await session(c, async () => {
       visible = (await projectAccess(deps.db, sessionUser(c), found.projectId)).visible;
     });
     if (refused) return refused;
     if (!visible) return next();
+    const code = found.pending ? "erasure_pending" : "evidence_set_phase";
     deps.logger.info(
-      { requestId: c.get("requestId"), participationId: id, outcome: "evidence_set_phase" },
+      { requestId: c.get("requestId"), participationId: id, outcome: code },
       "participation read",
     );
     return problem(c, "forbidden", {
-      errors: [{ pointer: "/", code: "evidence_set_phase", detail: "Break-glass access only" }],
+      errors: [
+        {
+          pointer: "/",
+          code,
+          detail: found.pending
+            ? "Erasure pending; legal-hold administration only"
+            : "Break-glass access only",
+        },
+      ],
     });
   };
 }

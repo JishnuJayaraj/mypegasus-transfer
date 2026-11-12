@@ -460,6 +460,8 @@ about 750 the UI and its texts); over the estimate, kept as one PR for the owner
 
 **7-7b follow-up as built:** Q234 accepted for synthetic development; Q235 amended as recorded in the owner answers. Non-signer personnel and health data use the 90-day branch only with funding `known_no`; unknown blocks it and funded, TA completion and health after closure remain unmapped (Q236). Evidence-only permits holds on evidence, and ordinary work lists and dashboard counts exclude evidence-only participations. Single-document hold workflow remains an activation prerequisite. Periods remain unset and activation off.
 
+**7-7c as built:** stage two applies the participation and settlement gates with synthetic periods, removes unheld rows in a tested order, retains held rows and their FK parents, purges subject jobs and pseudonymises both audit streams. Active jobs defer erasure (Q237); a hold on identity is not individually expressible (Q238). A partial erasure leaves the restricted minimal anchor approved in Q240, hidden from ordinary work while legal-hold administration remains available. Periods stay `unset` and live deletion stays off. The retained-dependency graph and per-event audit detail keys are checked against the schema.
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether

@@ -3,11 +3,13 @@ import { sql, type Database } from "@transfer/db";
 import {
   credentialCutoff,
   evidenceOnlyApplies,
+  evidenceSetDue,
   participationRetentionTriggers,
   RetentionClass,
   retentionActivation,
   retentionDue,
   retentionRules,
+  settlementDatesRequired,
   workingCopyTriggers,
   type Funded110,
   type IsoDate,
@@ -30,7 +32,7 @@ export type ClassOutcome =
   | "applied";
 /**
  * Per class: how many items were due, deleted, kept by a legal hold, and blocked (an `unknown`
- * funding, `funding_unknown`); never which.
+ * funding, a missing required settlement date or an active job); never which.
  */
 export type ClassReport = {
   outcome: ClassOutcome;
@@ -69,6 +71,7 @@ export type RetentionOptions = {
 
 const day = 86_400_000;
 const documentId = /^documents\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+class ErasureNeedsStorage extends Error {}
 
 /**
  * The retention job (ADR-0008, ADR-0011; data-protection.md, retention as built), stage one
@@ -118,6 +121,12 @@ export async function runRetention(
         sql`select retention_open_run(${runDay}::date, ${dryRun}) as result`,
       );
 
+      const stageTwoConfigured =
+        periods.participation_record !== "unset" && periods.participation_record !== "never";
+      if (stageTwoConfigured)
+        await tx.execute(sql`select retention_lock_erasure_projects(${run}::uuid)`);
+      const nonDueWorkingCopies = new Set<string>();
+
       const cutoff = credentialCutoff(periods, runDay);
       if (applies("access_credential") && cutoff) {
         const counts = await scalar<Record<string, number>>(
@@ -132,11 +141,12 @@ export async function runRetention(
       if (applies("form_working_copy")) {
         const { rows } = await tx.execute<{
           document_id: string;
+          participation_id: string;
           generated_on: IsoDate;
           superseded_on: IsoDate | null;
           scan_accepted_on: IsoDate | null;
           closed_on: IsoDate | null;
-        }>(sql`select document_id, generated_on::text, superseded_on::text,
+        }>(sql`select document_id, participation_id, generated_on::text, superseded_on::text,
           scan_accepted_on::text, closed_on::text from retention_working_copies(${run}::uuid)`);
         let deleted = 0;
         for (const row of rows) {
@@ -154,9 +164,24 @@ export async function runRetention(
             periods,
             runDay,
           );
-          if (due.kind !== "due") continue;
+          if (due.kind !== "due") {
+            nonDueWorkingCopies.add(row.participation_id);
+            continue;
+          }
+          const available = await scalar<boolean>(
+            tx,
+            sql`select retention_lock_working_copy(${run}::uuid, ${row.document_id}::uuid) as result`,
+          );
+          if (!available) {
+            classes.form_working_copy.held += 1;
+            continue;
+          }
           classes.form_working_copy.due += 1;
-          if (dryRun || !storage) continue;
+          if (dryRun) continue;
+          if (!storage) {
+            nonDueWorkingCopies.add(row.participation_id);
+            continue;
+          }
           // The object first: a failure after it leaves the row for the next run to record.
           await storage.delete(objectKey(row.document_id));
           const purged = await scalar<boolean>(
@@ -204,29 +229,53 @@ export async function runRetention(
       // class): each class at its own trigger and period, only that class, the held rows kept.
       const perClass = (["health_record", "personnel_file"] as const).filter(applies);
       const reported = classes.participation_record.outcome !== "period_unset";
+      const projectFacts =
+        perClass.length > 0 || reported
+          ? (
+              await tx.execute<ErasureFacts>(sql`select participation_id, any_entered_tg, fundings,
+            kug_final_settlement_date::text, measure110_settlement_date::text, erasure_pending_at, erasure_entered_tg, erasure_trigger, erasure_trigger_on::text from retention_erasure_facts(${run}::uuid)`)
+            ).rows
+          : [];
+      const factsByParticipation = new Map(
+        projectFacts.map((facts) => [facts.participation_id, facts]),
+      );
       if (perClass.length > 0 || reported) {
         const { rows } = await tx.execute<ParticipationFacts>(sql`select participation_id,
           status, closed_on::text, withdrawn_on::text, exit_date::text, entered_tg,
           dsv_fully_executed, funded110, evidence_set_since, held_classes, classes_left
           from retention_participations(${run}::uuid)`);
         for (const row of rows) {
-          if (row.evidence_set_since !== null) continue;
-          const triggers = participationRetentionTriggers({
-            status: row.status,
-            closedOn: row.status === "exited" ? (row.exit_date ?? row.closed_on) : row.closed_on,
-            withdrawnOn: row.withdrawn_on,
-            enteredTg: row.entered_tg,
-            dsvFullyExecuted: row.dsv_fully_executed,
-          });
+          const anchor = factsByParticipation.get(row.participation_id);
+          const enteredTg = anchor?.erasure_entered_tg ?? row.entered_tg;
+          const triggers = anchor?.erasure_pending_at
+            ? {
+                non_signer_withdrawn:
+                  anchor.erasure_trigger === "non_signer_withdrawn"
+                    ? anchor.erasure_trigger_on
+                    : null,
+                closed_without_tg:
+                  anchor.erasure_trigger === "closed_without_tg" ? anchor.erasure_trigger_on : null,
+                exited: anchor.erasure_trigger === "exited" ? anchor.erasure_trigger_on : null,
+              }
+            : participationRetentionTriggers({
+                status: row.status,
+                closedOn:
+                  row.status === "exited" ? (row.exit_date ?? row.closed_on) : row.closed_on,
+                withdrawnOn: row.withdrawn_on,
+                enteredTg,
+                dsvFullyExecuted: row.dsv_fully_executed,
+              });
           const left = new Set(row.classes_left);
-          for (const c of perClass) {
+          for (const c of row.evidence_set_since === null && !anchor?.erasure_pending_at
+            ? perClass
+            : []) {
             if (!left.has(c)) continue;
             const due = retentionDue(
               {
                 class: c,
                 triggers,
                 held: row.held_classes.includes(c),
-                funding: { funded110: row.funded110, enteredTg: row.entered_tg },
+                funding: { funded110: row.funded110, enteredTg },
               },
               periods,
               runDay,
@@ -264,23 +313,116 @@ export async function runRetention(
               apply(c, 1);
             }
           }
-          if (reported) {
-            const record = retentionDue(
-              {
-                class: "participation_record",
-                triggers,
-                held: false,
-                funding: { funded110: row.funded110, enteredTg: row.entered_tg },
-              },
-              periods,
-              runDay,
-            );
+          const record = reported
+            ? retentionDue(
+                {
+                  class: "participation_record",
+                  triggers,
+                  held: false,
+                  funding: { funded110: row.funded110, enteredTg },
+                },
+                periods,
+                runDay,
+              )
+            : null;
+          if (record) {
             if (record.kind === "blocked") classes.participation_record.blocked += 1;
             if (record.kind === "due") classes.participation_record.due += 1;
           }
+          if (stageTwoConfigured && record?.kind === "due") {
+            const project = factsByParticipation.get(row.participation_id);
+            if (!project) continue;
+            const requirements = settlementDatesRequired({
+              anyEnteredTg: project.any_entered_tg,
+              fundings: project.fundings,
+            });
+            if (
+              requirements.fundingUnknown ||
+              (requirements.kugFinalSettlementDate && !project.kug_final_settlement_date) ||
+              (requirements.measure110SettlementDate && !project.measure110_settlement_date)
+            ) {
+              classes.participation_record.blocked += 1;
+              continue;
+            }
+            const hasEvidence = enteredTg || row.funded110 === "known_yes";
+            if (hasEvidence) {
+              const period = periods.evidence_set;
+              const years =
+                period === "unset" ||
+                period === "never" ||
+                period.days?.settled !== undefined ||
+                period.months?.settled !== undefined
+                  ? null
+                  : (period.yearEnds?.settled ?? null);
+              const evidence = evidenceSetDue(
+                {
+                  anyEnteredTg: project.any_entered_tg,
+                  fundings: project.fundings,
+                  kugFinalSettlementDate: project.kug_final_settlement_date,
+                  measure110SettlementDate: project.measure110_settlement_date,
+                },
+                years,
+                runDay,
+              );
+              if (evidence !== "due") continue;
+              classes.evidence_set.due += 1;
+            }
+            const remainingStageOneDue = (["personnel_file", "health_record"] as const).every(
+              (c) =>
+                !left.has(c) ||
+                retentionDue(
+                  {
+                    class: c,
+                    triggers,
+                    held: false,
+                    funding: { funded110: row.funded110, enteredTg },
+                  },
+                  periods,
+                  runDay,
+                ).kind === "due",
+            );
+            if (
+              !remainingStageOneDue ||
+              (left.has("form_working_copy") &&
+                (!applies("form_working_copy") || nonDueWorkingCopies.has(row.participation_id)))
+            )
+              continue;
+            try {
+              const result = await tx.transaction(async (nested) => {
+                const erased = await scalar<{
+                  completed: boolean;
+                  documents: string[];
+                  blocked?: string;
+                }>(
+                  nested,
+                  sql`select retention_erase_participation(${run}::uuid, ${row.participation_id}::uuid) as result`,
+                );
+                if (!dryRun && erased.documents.length && !storage) throw new ErasureNeedsStorage();
+                if (!dryRun && storage)
+                  for (const id of erased.documents) await storage.delete(objectKey(id));
+                return erased;
+              });
+              if (result.blocked) {
+                classes.participation_record.blocked += 1;
+                continue;
+              }
+              if (result.completed) {
+                apply("participation_record", dryRun ? 0 : 1);
+                if (hasEvidence) apply("evidence_set", dryRun ? 0 : 1);
+                continue;
+              }
+              classes.participation_record.held += 1;
+              continue;
+            } catch (error) {
+              if (!(error instanceof ErasureNeedsStorage)) throw error;
+              classes.participation_record.outcome = "no_storage";
+              continue;
+            }
+          }
           if (
             !dryRun &&
-            evidenceOnlyApplies([...left] as RetentionClass[], row.funded110, row.entered_tg) ===
+            !anchor?.erasure_pending_at &&
+            evidenceOnlyApplies([...left] as RetentionClass[], row.funded110, enteredTg) ===
               "applies"
           ) {
             const entered = await scalar<boolean>(
@@ -317,6 +459,18 @@ type ParticipationFacts = {
   evidence_set_since: string | null;
   held_classes: string[];
   classes_left: string[];
+};
+
+type ErasureFacts = {
+  participation_id: string;
+  erasure_pending_at: string | null;
+  erasure_entered_tg: boolean | null;
+  erasure_trigger: string | null;
+  erasure_trigger_on: IsoDate | null;
+  any_entered_tg: boolean;
+  fundings: Funded110[];
+  kug_final_settlement_date: IsoDate | null;
+  measure110_settlement_date: IsoDate | null;
 };
 
 async function scalar<T>(

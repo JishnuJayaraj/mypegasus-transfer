@@ -7,6 +7,7 @@ import {
   desc,
   document,
   eq,
+  isNull,
   kug200bBatch,
   kug200bBatchMember,
   participantIdentity,
@@ -125,7 +126,7 @@ async function factsOf(db: Db, projectId: string) {
     .from(participation)
     .leftJoin(asuRecord, eq(asuRecord.participationId, participation.id))
     .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
-    .where(eq(participation.projectId, projectId));
+    .where(and(eq(participation.projectId, projectId), isNull(participation.erasurePendingAt)));
   // Every signed Kug 200b scan, newest accepted first: a member's may have become unusable.
   const scans: ScanRow[] = await db
     .select({

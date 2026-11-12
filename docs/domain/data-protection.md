@@ -1255,7 +1255,7 @@ so a long payroll rule never keeps a whole profile.
 | Data | Retention (from) |
 |---|---|
 | Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion **90 calendar days after `withdrawnOn`** (manual or automatic withdrawal), if there was no fully executed DSV, funded §110 participation, legal hold or other retention duty. *Assumed (Q77): `unset` in executable configuration until the DPO confirms.* |
-| Non-signers with BA-funded §110 measures | full deletion after 90 days, **except the evidence set** |
+| Non-signers with BA-funded §110 measures | Personnel and health retention mappings remain unconfirmed; the 90-day branch does not apply (Q236). The evidence set follows its own settlement-based period. |
 | Structured health fields (class `health_record`, Q141) | 3 months after beE exit, or with non-signer deletion |
 | Schwerbehinderung status for payroll | with payroll records, as long as payroll needs it |
 | TG personnel file, DSV, profiling, placement data | 3 years after the end of the year of exit |
@@ -1660,3 +1660,48 @@ evidence kinds; `reconciliation_reviewed` and `reconciliation_replied` (stream `
 | `participant_channel` | Referenced by `participant_reminder` | `personnel_file` | After the reminder goes |
 | `consent_record` | Referenced by a reminder, channel, or `kug200b_withdrawal` | `personnel_file` | After all referencing rows go |
 | `dsv_scan_signature` | Its document is held | `personnel_file` | After the document hold is released |
+
+### Stage-two erasure (Slice 7, PR 7-7c; readings Q237–Q238)
+
+The job erases only after the participation-record period and every remaining stage-one class are
+due. For an evidence set it also needs the configured settlement period and every required project
+settlement date; an unknown funding anywhere in the project blocks stage two. Synthetic tests set
+periods and activation explicitly; the catalog's periods remain `unset` and all live-deletion
+prerequisites remain unmet. With a hold, due unheld rows go, the held rows and their transitive
+foreign-key parents remain, and a restricted minimal participation anchor stays until the hold is released (Q240). The anchor keeps only its IDs, statuses, funding, and the trigger kind and day plus the TG-entry flag needed to re-evaluate erasure; its creation timestamp is reset to the time the anchor was made. Personal dates, reasons, wave, placement, funding provenance and the current exception pointer are cleared. Ordinary views and writes exclude the anchor; legal-hold administration remains available. A retained
+activation code has its hashes replaced and is revoked if still open. A channel kept only as a
+dependency has its address erased and is marked removed; an explicitly held channel retains it. The job deletes the unheld
+objects in the same run; a storage failure rolls back its database changes for retry.
+
+The retention role locks the affected projects before participation rows and locks matching queued
+jobs before deleting them. A matching active or dependency-linked job defers stage two (Q237); stage one
+may already have run. Concurrent creation of job dependencies is not yet coordinated and must be
+resolved before `maintenance_rules_complete` can be confirmed. Audit subject references and subject-record IDs are pseudonymised, including
+references in request and job IDs and both audit streams. An erased subject cannot be opened in
+history. A working-copy hold is checked under the participation lock before its object is touched.
+
+The current hold API has no individual identity selector (Q238). A completed, confirmed workflow
+for holding identity, as well as for holding individual documents, is part of
+`hold_administration_confirmed` before live deletion.
+
+**Additional retained dependencies during erasure.** The catalog's
+`erasureRetainedDependencies` lists each reachable foreign-key or documented array dependency; tests compare the list
+with the schema graph and inventory document-ID arrays. A row below remains only while a retained row references it; it goes when all
+retained referencing rows go and its own period permits. The participation row is the held-data
+anchor and goes after the last hold is released. `by_document_type` means the row's own class.
+
+| Table retained | Referenced by retained rows of | Class |
+|---|---|---|
+| `activation_code` | `participant_account`, `privacy_notice_delivery` | `access_credential` (secret revoked and replaced) |
+| `audit_event` | `dsv_offer` status event | `audit_log` |
+| `agentur_submission` | `asu_registration`, `agentur_submission` | `participation_record` |
+| `appointment_booking` | `participant_reminder`, `appointment_booking` | `personnel_file` |
+| `asu_registration` | `evidence_correction` | `participation_record` |
+| `ba_reporting_task` | `evidence_correction`, `ba_reporting_task` | `participation_record` |
+| `consent_record` | `participant_channel`, `participant_reminder` | `personnel_file` |
+| `document` | `asu_registration`, `agentur_submission`, `consent_record`, `dsv_scan_signature`, `evidence_correction`, `form_generation`, `legal_hold` | `by_document_type` |
+| `dsv_offer` | `document`, `dsv_contract`, `evidence_correction` | `participation_record` |
+| `evidence_correction` | `document`, `dsv_scan_signature`, `asu_registration`, `ba_reporting_task` | `by_document_type` |
+| `form_generation` | `document`, `dsv_offer` | `form_working_copy` |
+| `participant_channel` | `participant_reminder`, `consent_record` | `personnel_file` (unheld address erased) |
+| `participation_dsv_amendment` | `ba_reporting_task` | `participation_record` |
