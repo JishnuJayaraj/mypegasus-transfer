@@ -126,6 +126,14 @@ Carbon v12 upgrade (its own PR, `packages/ui` only); the participant timeline's 
 and a project-level view of the waves; aligning the wizard's page progress (Q140) with the
 start page's task count (C5).
 
+## Slice 7b — Foundations before the TG module
+After the owner's review of the application (2026-11-12): database functions as source files and
+generated lists, the domain docs split by topic, and the UI's second layer (a product theme on
+Carbon, a real navigation, the kit's detail header, section cards and step lists) with three
+reference pages: the participant page, the project overview and the project setup. No lifecycle,
+access or API change. Before Slice 8, which builds on it; the remaining screens migrate with
+Slice 9. Plan: [`plans/slice-7b.md`](plans/slice-7b.md) (PRs 7b-1 to 7b-8; Q254–Q258).
+
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of
 "participant signed, not fully executed", admission cutoff and system withdrawal (incl. conflict
