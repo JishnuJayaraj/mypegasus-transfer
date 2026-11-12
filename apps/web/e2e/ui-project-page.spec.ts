@@ -158,7 +158,7 @@ test("the project page: header, tabs, the dashboard's three layers and Einrichtu
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Aktionen" }).click();
   await page.getByRole("menuitem", { name: "Datei importieren" }).click();
-  await expect(page).toHaveURL(/tab=setup#project-import$/);
+  await expect(page).toHaveURL(/\/setup#project-import$/);
   await expect(page.getByRole("region", { name: "Import" })).toBeInViewport();
 
   // "Einrichtung": cards with an anchor list on wide screens; the region is changed here.

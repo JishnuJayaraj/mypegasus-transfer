@@ -162,7 +162,6 @@ export function AppShell(props: AppShellProps) {
           aria-label={props.navLabel}
           expanded={expanded}
           isFixedNav={wide}
-          isChildOfHeader={false}
           onOverlayClick={() => close(false)}
           onKeyDown={onNavKeyDown}
           onClick={(event) => {

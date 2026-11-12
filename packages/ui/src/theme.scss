@@ -55,8 +55,9 @@
   }
 }
 
-// The full-width buttons of a modal's footer stay square: they are the modal's edge.
-.cds--modal-footer .cds--btn {
+// The full-width buttons of a modal's footer and the joined buttons of a set stay square.
+.cds--modal-footer .cds--btn,
+.cds--btn-set .cds--btn {
   border-radius: 0;
 }
 
@@ -64,12 +65,16 @@
 
 // A white panel with a line at its end; the current entry on the soft blue with the blue bar.
 .cds--side-nav {
-  border-inline-end: 1px solid theme.$border-subtle-00;
   background: var(--tp-surface);
 }
 
-.cds--side-nav__link[aria-current="page"],
-.cds--side-nav__link--current {
+// Only while open: collapsed (below 66rem) it has no width, and a border would give it one.
+.cds--side-nav--expanded {
+  border-inline-end: 1px solid theme.$border-subtle-00;
+}
+
+.cds--side-nav a.cds--side-nav__link[aria-current="page"],
+.cds--side-nav a.cds--side-nav__link--current {
   background: colors.$blue-10;
 }
 

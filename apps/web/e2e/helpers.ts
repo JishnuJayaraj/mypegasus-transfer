@@ -110,3 +110,17 @@ export async function choosePortalLanguage(page: Page, language: "Deutsch" | "En
 export async function openPortalAccountMenu(page: Page) {
   await page.getByRole("banner").getByRole("button", { name: "Mein Konto" }).click();
 }
+
+/**
+ * Opens a project's section from the side navigation (ui-patterns.md, navigation): always open
+ * from 66rem, behind the menu button below. An entry's name starts with its label; a badge may
+ * follow ("Teilnehmende 2 überfällig").
+ */
+export async function openSection(page: Page, name: string) {
+  const menu = page.getByRole("button", { name: "Navigation öffnen oder schließen" });
+  if (await menu.isVisible()) await menu.click();
+  await page
+    .getByRole("navigation", { name: "Navigation", exact: true })
+    .getByRole("link", { name: new RegExp(`^${name}( |$)`) })
+    .click();
+}

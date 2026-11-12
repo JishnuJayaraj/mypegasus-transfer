@@ -237,12 +237,18 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## The project page (Slice 5, PR 5-1)
 
-- The tabs, by how often they are used (Slice 6b, PR 6b-4): "Übersicht" (the dashboard),
-  "Teilnehmende" (the work list), "Termine" (the appointments, PR 5b-1), "Agentur" (`ta_tg`),
-  "Einrichtung" and "Team"; the tab, the work list's code filters and its sort are the route's
-  search params (`?tab=participants&status=informed&sort=-deadline`), never a person's value, and
-  `tab` names a tab, never its position (`projectTabs`). Each tab loads its data only while shown,
-  and no panel repeats its tab's label as a heading (ui-patterns.md, principle 6).
+- The sections are routes under the project's layout (`apps/web/src/routes/projects/$projectId.tsx`:
+  the header, then the section's outlet), by how often they are used:
+  `/projects/$projectId/overview` (the dashboard), `/participants` (the work list),
+  `/appointments`, `/agentur` (`ta_tg`; in a `ta_only` project the route shows the overview),
+  `/setup` and `/team` (`components/project-sections.tsx`: the list, the labels, the routes). The
+  side navigation lists them under the project's name (ui-patterns.md, navigation). The work
+  list's code filters and its sort are the search params of `/participants`
+  (`?status=informed&sort=-deadline`), never a person's value. `/projects/$projectId` and every
+  old `?tab=` address redirect to the section's route with the codes and the anchor kept
+  (`routes/projects/$projectId/index.tsx`); without a tab, to the overview. Each section loads its
+  data only while shown and is named once, by the heading under the header (ui-patterns.md,
+  principle 6).
 - The page header (PR 6b-4): the breadcrumb "Projekte", the project's name as the one `h1`, the
   customer, type and status as tags, the region as the metadata line (`RegionText`). Its
   primary action is "Teilnehmende hinzufügen" (the manual creation in a side panel, with the

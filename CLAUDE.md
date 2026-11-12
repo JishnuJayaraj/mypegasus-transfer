@@ -196,7 +196,8 @@ pnpm test             # vitest: unit, component, integration (needs Postgres)
 pnpm test:coverage    # the same with coverage; 100 % thresholds on the domain rules
 pnpm test:e2e         # playwright against the built app (pnpm build first)
 pnpm lint             # oxlint + oxfmt --check + tsconfig guard + template immutability + docs
-                      # check (broken links, a doc over 40 KB, one row per Qnn)
+                      # check (broken links, a doc over 40 KB, one row per Qnn) + layout check
+                      # (no kit class or style import in the apps outside the allowlist)
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
 pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, drift

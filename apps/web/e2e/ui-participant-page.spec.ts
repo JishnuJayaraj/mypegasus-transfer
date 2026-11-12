@@ -235,7 +235,7 @@ test("the participant page: header, Stand, Offen, the timeline and a side panel"
   // Back through the breadcrumb: the work list as it was left, sorted by name descending (C6).
   await page.setViewportSize({ width: 1440, height: 900 });
   await crumbs.getByRole("link", { name: "Teilnehmende", exact: true }).click();
-  await expect(page).toHaveURL(/tab=participants/);
+  await expect(page).toHaveURL(/\/participants\?/);
   await expect(page).toHaveURL(/sort=-name/);
   await expect(page.getByRole("columnheader", { name: /Teilnehmende/ })).toHaveAttribute(
     "aria-sort",

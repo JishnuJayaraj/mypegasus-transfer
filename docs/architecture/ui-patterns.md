@@ -9,7 +9,17 @@ primitives, following the Carbon for IBM Products patterns without depending on
 ## Theme and identity
 
 Carbon's `Theme` zones: `g100` for the header band (staff app and portal), `g10` for the content,
-Carbon's interactive blue as the accent (Q221). The name comes from i18n ("Transferplattform",
+Carbon's interactive blue as the accent (Q221). On top sits the product theme (Q254): white
+cards on the `g10` background with an 8px radius and one soft elevation, 6px on controls, one
+spacing scale. Its tokens are CSS custom properties in `packages/ui/src/theme.scss`
+(`--tp-surface`, `--tp-radius-card`, `--tp-radius-control`, `--tp-elevation`, `--tp-space-1` to
+`--tp-space-7` for 4 to 48px); a component uses the tokens, never a literal radius or shadow.
+
+**Every override of a Carbon class (`.cds--…`) is in `theme.scss` and nowhere else**
+(`theme.test.ts` fails otherwise), under the Carbon version it was checked against, which the
+same test compares with the installed `@carbon/react`. An update of Carbon is therefore a review
+of that one file: each block is checked again and the version raised. An override changes
+appearance or layout only; Carbon's components keep their behaviour and their focus handling. The name comes from i18n ("Transferplattform",
 "Teilnehmerportal"); the mark is a neutral placeholder SVG (`ProductMark`) with a self-hosted
 favicon. Final branding swaps the mark and the favicon only. Dark mode for the content is later
 (roadmap, Slice 6b's deferred items).
@@ -22,15 +32,21 @@ favicon. Final branding swaps the mark and the favicon only. Dark mode for the c
    (tabs) → action (side panel or modal). A control appears in the layer where its object is, and
    only when it can apply: bulk actions only with a selection, admin settings only in
    "Einrichtung".
-3. **One primary action per page,** top right in the page header; secondary actions in its
-   "Aktionen" menu; row actions in the row's overflow menu.
+3. **Buttons have one hierarchy.** One primary button per page, in its header: the next step of
+   the object where the viewer may take it (`nextStep`, C2), else the page's creating action.
+   Every other action sits beside the thing it acts on as an outlined button (`tertiary`) or a
+   text button (`ghost`); further page actions are in the header's "Aktionen" menu with the
+   destructive ones last, row actions in the row's overflow menu. Carbon's dark `secondary` kind
+   is not used: the kit's `Button` has no such kind, and a modal's second button is shown as a
+   text button (theme.scss). A blocked action keeps its prerequisite beside it (C1).
 4. **Status has one visual language** (`StatusTag`, below): red = overdue/blocked, yellow = due
    soon/needs confirmation, green = done, blue = in progress/info, gray = inactive/terminal. Never
    colour alone: the tag's text and icon carry the meaning (WCAG 1.4.1).
 5. **Dates are relative and absolute:** "seit 3 Tagen überfällig · 03.11.2026" in lists; the
    absolute `TT.MM.JJJJ` date is always present (`RelativeDate`).
 6. **Name a heading once.** A tab label is the panel's name; a panel doesn't repeat it as an `h2`.
-   One `h1` per page (the page header's). Headings get their size from one rule, never from the
+   A project's section, which is a route and no tab, is named by one `h2` under the project's
+   header (`SectionHeading`). One `h1` per page (the page header's). Headings get their size from one rule, never from the
    component they sit in: `packages/ui/src/styles.scss` sets `h1` = `heading-04`, `h2` =
    `heading-03`, `h3` = `heading-02` under `:where(.tp-content, .tp-portal-content)`, as weak as an
    element selector so a Carbon component's own heading class (a modal title) still wins. A card's
@@ -38,8 +54,14 @@ favicon. Final branding swaps the mark and the favicon only. Dark mode for the c
 7. **Every state is designed:** loading = a skeleton of the final layout; empty = what this is,
    why it is empty and the next step ("Filter zurücksetzen" when filters cause it); error = what
    failed and how to retry; forbidden = who may see it.
-8. **Spacing and layout come from the primitives** (`Stack`, `Grid`, `Section`, `Card`, a table's
-   `footer`), never from a class named for something else.
+8. **Spacing and layout come from the kit** (`Stack`, `Grid`, `Section`, `Card`, `SectionCard`,
+   `Facts`, a table's `footer`), never from a class in an app. `pnpm lint`
+   (`scripts/check-layout-classes.mjs`) refuses a kit class (a string starting with `tp-`) and a
+   style import in `apps/web` and `apps/portal`, except in the files of
+   `scripts/layout-allowlist.json` that had them before the kit's second layer. The list only
+   shrinks: a screen that migrates loses its entry, and a stale entry fails the check.
+   `@carbon/react` is imported in `packages/ui` only, and a kit component's props name no Carbon
+   type, so the kit's internals can change without touching the apps.
 9. **Data protection stays visible in the design:** nothing in browser storage (the search term
    and the column choice stay in memory, data-protection.md; Q223), sensitive blocks behind
    "Anzeigen", no analytics on work-list interactions, no participant name in a page title
@@ -80,10 +102,16 @@ favicon. Final branding swaps the mark and the favicon only. Dark mode for the c
 
 | Need | Use | Notes |
 |---|---|---|
+| Top of an object's page | `DetailHeader` | `PageHeader`'s props in a card, plus `facts`: the one `h1`, one metadata line, the track tags (C3), up to five key facts (more are dropped: they belong on the page), the primary action and "Aktionen". |
 | Top of a page | `PageHeader` | `breadcrumbs` (ancestor links; the page is the title), `title` (the one `h1`), `tags`, `metadata` (one plain line), `primaryAction` (one), `menuActions` ("Aktionen"; destructive ones last, in red). |
 | A titled part of a page | `Section` | `h2` by default, `level={3}` inside a section, panel or tab. In a tab panel that is named by its tab, no section heading repeats the tab. |
+| One topic that collapses | `SectionCard` | A titled card that collapses to its title and a one-line `summary`; the heading is the button (`aria-expanded`). The open state is component state only (principle 9). `protectedContent` (specially protected data) never starts open, whatever `defaultOpen` says, and the content is in the document only while open. |
+| Label and value pairs | `Facts` | A definition list in two or four columns (`columns`), the label beside or above its value (`labels`); one column at 400 % zoom; a missing value is "–". |
+| Open items with their actions | `NextSteps` | The items in C2's order as the caller gives them, each with its tone as icon and text (`toneLabel`), one line of detail and its own action beside it; `summary` and `more` in the header; without items it says so (`emptyText`). |
+| The steps of one track | `StepList` | For a long tab: the steps at the start, each with its state (icon and text) and one line of status; the selected step's content with its action beside them (below, under 66rem). It starts on the current step. One track only (C3). |
+| The stages of one track as counts | `Funnel` | One row of stages (count over label), each optionally a link to exactly the counted rows (`renderLink`); ended stages (`ended`) are set apart; the row wraps on narrow screens. |
 | One topic as a block | `Card` | Details, a small form, a summary; a card's actions are its own. `id` makes it an in-page link target (`#project-import`). |
-| A count to act on | `CountTile` | A dashboard tile: icon, number, label, a severity border (by `tone`; a zero is neutral) and an arrow, as one link to exactly the counted rows ("1 Überfällig"). Its label is the quick view's with the same filter. `TilesSkeleton` while loading. |
+| A count to act on | `CountTile` | In a `CountTiles` row. A dashboard tile on the theme's surface: icon, number, label, a severity border (by `tone`; a zero is neutral) and an arrow, as one link to exactly the counted rows ("1 Überfällig"). Its label is the quick view's with the same filter. `TilesSkeleton` while loading. |
 | A share of a total | `tp-count-table` with `tp-bar` | A compact count table in a card; the bar's width is set through React's `style` prop (the CSSOM, CSP-safe), the bar is `aria-hidden` and the number beside it is the text. No chart library. |
 | Side by side | `Grid columns={2 or 3}` | One column below 42rem, two from 42rem, three from 66rem; logical properties only. `collapse="wide"` skips the two-column step (one column below 66rem) for columns that only read as a set, such as the participant overview's. |
 | Vertical rhythm | `Stack gap={…}` | A button in a stack is wrapped in a `div` so it keeps its width. |
@@ -93,13 +121,39 @@ favicon. Final branding swaps the mark and the favicon only. Dark mode for the c
 | A list loading | `TableSkeleton headers` | With the real column headers; announced through a hidden status. |
 | A small part loading | `Loading label` | Replaces the loose "Wird geladen…" paragraphs. |
 | Nothing to show | `EmptyState variant` | `noData` (what this is, why it is empty, the next step as `action`), `noMatches` (with `onResetFilters`: "Filter zurücksetzen"), `forbidden` (who may see it), `error` (with `onRetry`: "Erneut versuchen"). Forbidden and error are alerts. |
-| An interactive list | `DataTable` | Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (a named `group`, the only thing that scrolls sideways; tables and reflow, below), selection with a batch bar of its own rendered only with a selection (`batchActions`: four buttons, the rest under "Weitere Aktionen", each told its button for the focus return), a row overflow menu (`rowActions`), `onRowClick` (a click outside the row's controls; the row's link stays the keyboard's way), a column chooser (`columnChooser`, `hiddenColumns` to keep the choice in memory across a navigation), "Weitere anzeigen" over the loaded rows (`pageSize`, `limit`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. Without rows the empty state replaces the table, under the `toolbar` (a search or filter that found nothing stays changeable). |
+| An interactive list | `DataTable` | The table for every list that can exceed five rows (lists move to it with their screens). A text `filter` over the loaded rows (the term in memory only; `renderNoMatches` with its reset replaces the table), `loading` (a skeleton with the shown columns' headers). Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (a named `group`, the only thing that scrolls sideways; tables and reflow, below), selection with a batch bar of its own rendered only with a selection (`batchActions`: four buttons, the rest under "Weitere Aktionen", each told its button for the focus return), a row overflow menu (`rowActions`), `onRowClick` (a click outside the row's controls; the row's link stays the keyboard's way), a column chooser (`columnChooser`, `hiddenColumns` to keep the choice in memory across a navigation), "Weitere anzeigen" over the loaded rows (`pageSize`, `limit`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. Without rows the empty state replaces the table, under the `toolbar` (a search or filter that found nothing stays changeable). |
 | A small read-only table | `SimpleTable` | Its `footer` holds "Mehr laden" of a cursor list or the list's add action. `hideTitle` when the page or card heading already names it (the table keeps the name for assistive technology). |
 | A task over the page (form, filters, bulk action) | `SidePanel` | Below. |
 | An action that may be blocked | `ActionButton unavailableReason` | C1. |
 | A confirmation or a short choice | Carbon `Modal` | As before; a modal with input follows C4. |
 | Progress of tasks (not loading) | a native `progress` in `.tp-task-progress` | With a visible label and the count ("3 von 10 Aufgaben erledigt (30 %)") as its description (the portal, below). |
 | A header menu (user menu, the portal's language switch) | `HeaderPanelAction` | Its content renders only while open; `close()` returns the focus to the button, `close({ returnFocus: false })` after a link. |
+
+### The navigation
+
+From 66rem the side navigation is always open beside the content (16rem, no menu button); below
+it is behind the header's menu button as an overlay that keeps the focus inside until Escape, the
+overlay or a followed link closes it, and returns the focus to the button. The open state is
+component state only.
+
+Its entries, in the focus order after the header: "Arbeit" ("Projekte", and "Freigaben" for a
+regional operations manager), "Verwaltung" ("Mitarbeitende" and "Regionen" for an admin,
+"Eskalationen" for a regional admin and the global admin), then, on any page of a project
+(a participant's or an appointment's page included), the project's name over its sections:
+"Übersicht", "Teilnehmende", "Termine", "Agentur" (only in a `ta_tg` project), "Einrichtung",
+"Team". The sections are shown to everyone who opens the project, as the tabs were; what a
+section shows is decided by its capabilities. An entry is added only where its page exists for
+that role; `apps/web/src/navigation.test.tsx` holds the entries per role. The current page's entry
+has `aria-current="page"`; a participant's page counts as "Teilnehmende", and inside a project
+"Projekte" is current only on the list itself.
+
+A badge (`NavBadge`) shows only a count the viewer already gets from an existing endpoint, and
+its phrase is part of the entry's name ("Teilnehmende 7 überfällig"). The one badge is the
+overdue count of the project's dashboard (`GET /projects/{id}/dashboard`, the viewer's own
+scope) on "Teilnehmende"; at zero, or for a viewer the dashboard refuses, there is none. No
+access or endpoint is added for a badge.
+
+The participant page keeps its tabs: they are parts of one object.
 
 ### The work list
 
@@ -151,7 +205,7 @@ Every number links to the work list with exactly the counted rows.
 
 ### Setup pages
 
-A tab of settings ("Einrichtung") is cards, one per topic, each with an `id`; from 66rem an
+A section of settings ("Einrichtung") is cards, one per topic, each with an `id`; from 66rem an
 in-page anchor list ("Auf dieser Seite") sits beside them and is hidden below, where the cards
 simply follow each other. An admin control (the region's change) is in its card only for those
 who may use it; everyone else reads the value where it is shown (the page header's metadata).
@@ -241,7 +295,14 @@ keys the status map names.
 ## Testing
 
 Each component has component tests in `packages/ui` (jsdom: keyboard paths, roles, C1, C4, no
-browser storage). The pages that use them run axe in the e2e suite (`expectAccessible`) at the
+browser storage). The kit page (`/ui-kit`, reached by its address only) shows every component of the second layer
+in its states on fixed synthetic fixtures (`apps/web/src/components/ui-kit-fixtures.ts`);
+`ui-kit.spec.ts` drives it at 1440, 768, 375 and 320px with axe. `ui-kit-visual.spec.ts` compares
+its pixels with a committed baseline (`apps/web/e2e/__screenshots__/`) on a fixed clock, in CI's
+environment only and with a small tolerance (Q255). A baseline changes only in the PR that
+changes the design, is named in that PR's description for a human to review, and is never
+regenerated to get CI green. The comparison adds to the behaviour tests, axe and the zoom checks.
+The pages that use the components run axe in the e2e suite (`expectAccessible`) at the
 desktop size and, through the `shell` project, at 768 and 375px. Carbon panels, menus and the
 navigation animate (~110–240 ms): a screenshot or an assertion right after a click waits for the
 end state. jsdom never places Carbon's floating menus, so component tests reach a menu through the

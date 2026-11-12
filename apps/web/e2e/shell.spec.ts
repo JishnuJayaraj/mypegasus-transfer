@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 import { seedProjectIds, seedStaffUserIds } from "@transfer/db";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openSection, test } from "./helpers";
 
 // The staff shell at the widths below the preferred 1280px layout (ui-patterns.md, tables and
 // reflow): the project "shell" in playwright.config.ts runs only this file. 375px stands in for
-// 400 % zoom of a 1280px window (WCAG 1.4.10 Reflow); 1440px covers the login page and the rail.
+// 400 % zoom of a 1280px window (WCAG 1.4.10 Reflow); 1440px covers the login page and the open navigation.
 // Read-only on the seeded synthetic data, so it runs beside the other specs.
 
 const projectId = seedProjectIds.werkNord;
@@ -152,7 +152,7 @@ for (const width of [768, 375]) {
       await expect(user).toBeFocused();
       await expect(panel).toHaveCount(0);
 
-      await page.getByRole("tab", { name: "Teilnehmende" }).click();
+      await openSection(page, "Teilnehmende");
       await expect(page).toHaveTitle(
         "Teilnehmende · Restrukturierung Werk Nord – Transferplattform",
       );
@@ -167,36 +167,30 @@ for (const width of [768, 375]) {
 test.describe("staff shell at 1440px", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("the rail beside the content; the menu button pins it open", async ({ page, baseURL }) => {
+  test("the navigation always open beside the content, without a menu button", async ({
+    page,
+    baseURL,
+  }) => {
     await logInAs(page, baseURL!, seedStaffUserIds.admin, "/projects");
     await expect(page.getByRole("heading", { name: "Projekte", level: 1 })).toBeVisible();
-    // The rail: icons visible beside the content, which starts after it.
-    const rail = await nav(page).boundingBox();
+    // Open from 66rem: 16rem wide with its groups, the content starting after it.
+    await expect(menuButton(page)).toHaveCount(0);
+    await expect(nav(page).getByText("Verwaltung", { exact: true })).toBeVisible();
+    const side = await nav(page).boundingBox();
     const main = await page.locator("#main-content").boundingBox();
-    expect(rail!.width).toBeLessThanOrEqual(48);
-    expect(main!.x).toBeGreaterThanOrEqual(rail!.x + rail!.width);
+    expect(side!.width).toBe(256);
+    expect(main!.x).toBeGreaterThanOrEqual(side!.x + side!.width);
     // The content is centred within its max-width (99rem = 1584px at 16px).
     const inner = await page.locator(".tp-content-inner").boundingBox();
     expect(inner!.width).toBeLessThanOrEqual(1584);
-    await shot(page, "projects-1440");
-    // Hovering expands the rail over the content; the content doesn't jump.
+    // Hovering or leaving it changes nothing: it is no rail.
     await nav(page).hover();
-    await expect(nav(page).getByText("Verwaltung", { exact: true })).toBeVisible();
-    expect((await page.locator("#main-content").boundingBox())!.x).toBe(main!.x);
     await page.mouse.move(800, 600);
-
-    await menuButton(page).click();
-    await expect(menuButton(page)).toHaveAttribute("aria-expanded", "true");
-    await expect(nav(page).getByText("Verwaltung", { exact: true })).toBeVisible();
-    await expect.poll(async () => (await nav(page).boundingBox())!.width).toBe(256);
-    await expect
-      .poll(async () => (await page.locator("#main-content").boundingBox())!.x)
-      .toBeGreaterThanOrEqual(256);
+    expect((await nav(page).boundingBox())!.width).toBe(256);
+    expect((await page.locator("#main-content").boundingBox())!.x).toBe(main!.x);
     await expectNoPageScroll(page);
     await expectAccessible(page);
-    await shot(page, "nav-pinned-1440");
-    await menuButton(page).click();
-    await expect(menuButton(page)).toHaveAttribute("aria-expanded", "false");
+    await shot(page, "projects-1440");
     await expectNothingStored(page);
   });
 });

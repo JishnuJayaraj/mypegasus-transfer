@@ -9,6 +9,8 @@ const origin = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "e2e",
+  // One reviewed baseline per name, whatever the project or platform (ui-kit-visual.spec.ts).
+  snapshotPathTemplate: "e2e/__screenshots__/{arg}{ext}",
   globalSetup: "./e2e/global-setup.ts",
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
