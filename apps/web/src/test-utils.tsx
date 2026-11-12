@@ -268,3 +268,14 @@ export async function showWorklistColumn(header: string) {
   await userEvent.click(await screen.findByText("Spalten", { selector: "button" }));
   await userEvent.click(screen.getByLabelText(header, { selector: "input[type=checkbox]" }));
 }
+
+/**
+ * Opens a project's section from the side navigation (ui-patterns.md, navigation). jsdom runs the
+ * narrow layout, where the navigation sits in the closed menu, hence `hidden`.
+ */
+export async function openSection(name: string) {
+  const nav = await screen.findByRole("navigation", { name: "Navigation", hidden: true });
+  // The entry's name starts with its label; a badge may follow ("Teilnehmende 2 überfällig").
+  const entry = new RegExp(`^${name}( |$)`);
+  await userEvent.click(await within(nav).findByRole("link", { name: entry, hidden: true }));
+}

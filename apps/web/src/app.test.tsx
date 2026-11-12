@@ -145,7 +145,7 @@ describe("staff login (Slice 3, PR 3b)", () => {
     expect(await screen.findByText("Sitzung abgelaufen")).toBeInTheDocument();
     expect(screen.getByText("Bitte melden Sie sich erneut an.")).toBeInTheDocument();
     expect(router.state.location.search).toEqual({
-      returnTo: `/projects/${project.id}`,
+      returnTo: `/projects/${project.id}/overview`,
       reason: "expired",
     });
     expect(within(banner()).queryByText("Petra Projektleitung")).not.toBeInTheDocument();

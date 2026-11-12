@@ -85,9 +85,7 @@ describe("Heute zu tun", () => {
     const agentur = more.getByRole("link", { name: "1 Agentur offen" });
     expect(more.getByRole("link", { name: "0 Hinweise" })).toBeInTheDocument();
     await userEvent.click(agentur);
-    await waitFor(() =>
-      expect(router.state.location.search).toEqual({ tab: "participants", agentur: "open" }),
-    );
+    await waitFor(() => expect(router.state.location.search).toEqual({ agentur: "open" }));
     await worklistSection();
     await waitFor(() => expect(shownPersonnelNumbers()).toEqual(["BSP-0001"]));
   });
@@ -155,7 +153,7 @@ describe("Verlauf", () => {
 });
 
 describe("the project page", () => {
-  it("has one h1 with breadcrumb, tags and the region, and the tabs by frequency", async () => {
+  it("has one h1 with breadcrumb, tags and the region, and names the section once", async () => {
     setup([]);
     const header = (await screen.findByRole("heading", { level: 1 })).closest(".tp-page-header")!;
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
@@ -171,24 +169,16 @@ describe("the project page", () => {
     expect(inHeader.getByText("Transferagentur und Transfergesellschaft")).toBeInTheDocument();
     expect(inHeader.getByText("Entwurf")).toBeInTheDocument();
     expect(await inHeader.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
-    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Übersicht",
-      "Teilnehmende",
-      "Termine",
-      "Agentur",
-      "Einrichtung",
-      "Team",
-    ]);
-    // No panel repeats its tab's label as a heading (principle 6, AC 3).
+    // The section is named by one heading under the header (principle 6); navigation.test.tsx
+    // covers the entries.
     await screen.findByRole("region", { name: "Heute zu tun" });
-    expect(screen.queryByRole("heading", { name: "Übersicht" })).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "Übersicht" })).toHaveLength(1);
   });
 
-  it("opens each tab by its search value, whatever its position", async () => {
+  it("opens a section by its old tab address", async () => {
     setup([], ["project_lead"], "?tab=setup");
-    expect(await screen.findByRole("tab", { name: "Einrichtung", selected: true })).toBeVisible();
     expect(await screen.findByRole("region", { name: "Projekt" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Einrichtung" })).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "Einrichtung" })).toHaveLength(1);
     // The anchor list names every card; the import keeps its id for "Datei importieren".
     const anchors = within(screen.getByRole("navigation", { name: "Auf dieser Seite" }));
     expect(anchors.getAllByRole("link").map((link) => link.textContent)).toEqual([
@@ -201,7 +191,7 @@ describe("the project page", () => {
       "Abrechnung",
     ]);
     expect(anchors.getByRole("link", { name: "Import" }).getAttribute("href")).toMatch(
-      /tab=setup#project-import$/,
+      /\/setup#project-import$/,
     );
     expect(document.getElementById("project-import")).toHaveAccessibleName("Import");
   });

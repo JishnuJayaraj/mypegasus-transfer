@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
+  openSection,
   problem,
   project,
   renderApp,
@@ -65,7 +66,7 @@ describe("project page", () => {
     });
     renderApp("/projects", api);
     await userEvent.click(await screen.findByRole("link", { name: "Restrukturierung Werk Nord" }));
-    await userEvent.click(await screen.findByRole("tab", { name: "Einrichtung" }));
+    await openSection("Einrichtung");
     expect(await screen.findByText("Es gibt noch keine Eintrittswellen.")).toBeInTheDocument();
   });
 

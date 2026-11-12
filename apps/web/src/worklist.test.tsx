@@ -10,6 +10,7 @@ import {
   consultant,
   json,
   mockApi,
+  openSection,
   problem,
   project,
   renderApp,
@@ -156,7 +157,6 @@ describe("Übersicht", () => {
     await userEvent.click(tile);
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
-        tab: "participants",
         deadlineState: "upcoming",
       }),
     );
@@ -174,7 +174,7 @@ describe("Übersicht", () => {
       (f) => f.key === "informed",
     )!.filter;
     expect(link.getAttribute("href")).toContain(`status=${filter.status}`);
-    expect(link.getAttribute("href")).toContain("tab=participants");
+    expect(link.getAttribute("href")).toContain("/participants");
     const waves = screen.getByRole("table", { name: "Nach Welle" });
     expect(within(waves).getByRole("row", { name: /Ohne Welle/ })).toHaveTextContent("3");
   });
@@ -188,9 +188,7 @@ describe("Übersicht", () => {
     expect(within(group).getByRole("row", { name: /Termin anstehend/ })).toHaveTextContent("1");
     expect(within(group).getByRole("row", { name: /Nicht erschienen/ })).toHaveTextContent("1");
     await userEvent.click(tile);
-    await waitFor(() =>
-      expect(router.state.location.search).toEqual({ tab: "participants", appointment: "overdue" }),
-    );
+    await waitFor(() => expect(router.state.location.search).toEqual({ appointment: "overdue" }));
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
   });
 
@@ -204,9 +202,7 @@ describe("Übersicht", () => {
       within(group).getByRole("row", { name: /Bestätigung Kug 200b fehlt/ }),
     ).toHaveTextContent("0");
     await userEvent.click(tile);
-    await waitFor(() =>
-      expect(router.state.location.search).toEqual({ tab: "participants", agentur: "open" }),
-    );
+    await waitFor(() => expect(router.state.location.search).toEqual({ agentur: "open" }));
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
     const row = await worklistRow("BSP-0002");
     // The Agentur column is in the chooser (the plan of Slice 6b, D7).
@@ -274,7 +270,6 @@ describe("Teilnehmende", () => {
     await setWorklistFilter("Termine", "upcoming");
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
-        tab: "participants",
         appointment: "upcoming",
       }),
     );
@@ -290,7 +285,6 @@ describe("Teilnehmende", () => {
     await setWorklistFilter("Offene Punkte", "rejected_documents");
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
-        tab: "participants",
         status: "informed",
         actions: "rejected_documents",
       }),
@@ -302,14 +296,12 @@ describe("Teilnehmende", () => {
         name: "Filter entfernen: Offene Punkte: Abgelehnte Unterlagen",
       }),
     );
-    await waitFor(() =>
-      expect(router.state.location.search).toEqual({ tab: "participants", status: "informed" }),
-    );
+    await waitFor(() => expect(router.state.location.search).toEqual({ status: "informed" }));
     await userEvent.click(list().getByRole("button", { name: "Filter (1)" }));
     const panel = await screen.findByRole("dialog", { name: "Filter" });
     expect(within(panel).getByLabelText("Status")).toHaveValue("informed");
     await userEvent.click(within(panel).getByRole("button", { name: "Filter zurücksetzen" }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ tab: "participants" }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
   });
 
   it("while loading, shows a skeleton with the headers and no empty state, search or selection", async () => {
@@ -418,7 +410,7 @@ describe("Teilnehmende", () => {
       await section.findByText("Keine Teilnehmenden entsprechen der Suche und den Filtern.")
     ).closest(".tp-empty-state")! as HTMLElement;
     await userEvent.click(within(empty).getByRole("button", { name: "Filter zurücksetzen" }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ tab: "participants" }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
     await waitFor(() => expect(personnelNumbers()).toHaveLength(items.length));
   });
 
@@ -764,15 +756,11 @@ describe("the work list's order, views and columns (ui-patterns.md; the plan of 
     // deadline (BSP-0001): process-and-lifecycle.md, the work list's next step.
     expect(shownPersonnelNumbers()).toEqual(["BSP-0002", "BSP-0003", "BSP-0001"]);
     await userEvent.click(list().getByRole("button", { name: /Teilnehmende/ }));
-    await waitFor(() =>
-      expect(router.state.location.search).toEqual({ tab: "participants", sort: "name" }),
-    );
+    await waitFor(() => expect(router.state.location.search).toEqual({ sort: "name" }));
     // Beispiel, Größer, Muster.
     expect(shownPersonnelNumbers()).toEqual(["BSP-0003", "BSP-0001", "BSP-0002"]);
     await userEvent.click(list().getByRole("button", { name: /Teilnehmende/ }));
-    await waitFor(() =>
-      expect(router.state.location.search).toEqual({ tab: "participants", sort: "-name" }),
-    );
+    await waitFor(() => expect(router.state.location.search).toEqual({ sort: "-name" }));
     cleanup();
     setup({}, "?tab=participants&sort=-name");
     await worklistRow("BSP-0002");
@@ -845,8 +833,8 @@ describe("the work list's order, views and columns (ui-patterns.md; the plan of 
     expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toMatch(/portal/i);
     expect(window.location.href).not.toMatch(/portal|column/i);
     // Another tab and back keeps the choice (memory); a reload restores the defaults.
-    await userEvent.click(screen.getByRole("tab", { name: "Termine" }));
-    await userEvent.click(screen.getByRole("tab", { name: "Teilnehmende" }));
+    await openSection("Termine");
+    await openSection("Teilnehmende");
     await worklistRow("BSP-0001");
     expect(headers()).toContain("Portal");
     cleanup();
@@ -863,8 +851,8 @@ describe("the work list's order, views and columns (ui-patterns.md; the plan of 
     });
     await userEvent.type(search, "muster");
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
-    await userEvent.click(screen.getByRole("tab", { name: "Termine" }));
-    await userEvent.click(screen.getByRole("tab", { name: "Teilnehmende" }));
+    await openSection("Termine");
+    await openSection("Teilnehmende");
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
     expect(screen.getByRole("searchbox", { name: "Name oder Personalnummer suchen" })).toHaveValue(
       "muster",
@@ -904,7 +892,6 @@ describe("the work list's order, views and columns (ui-patterns.md; the plan of 
     await userEvent.click(views.getByRole("button", { name: "Überfällig (1)" }));
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
-        tab: "participants",
         deadlineState: "overdue",
       }),
     );

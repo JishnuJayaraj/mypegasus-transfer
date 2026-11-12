@@ -2,9 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
+  chooseBatchAction,
   consultant,
   json,
   mockApi,
+  openSection,
   problem,
   project,
   regions,
@@ -14,7 +16,6 @@ import {
   unpinnedConfig,
   worklist,
   worklistItem,
-  chooseBatchAction,
   worklistRow,
 } from "./test-utils";
 
@@ -52,7 +53,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, me = staffUsers[1]) {
 }
 
 const openTeam = async () => {
-  await userEvent.click(await screen.findByRole("tab", { name: "Team" }));
+  await openSection("Team");
   return within(await screen.findByRole("region", { name: "Team" }));
 };
 
@@ -201,7 +202,7 @@ describe("the project's region (Q126)", () => {
     // Not above the tabs (AC 11): the header names the region; changing it is in "Einrichtung".
     expect(await screen.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
     expect(screen.queryByLabelText("Region (Niederlassung)")).toBeNull();
-    await userEvent.click(screen.getByRole("tab", { name: "Einrichtung" }));
+    await openSection("Einrichtung");
     const card = within(await screen.findByRole("region", { name: "Projekt" }));
     await userEvent.selectOptions(
       await card.findByLabelText("Region (Niederlassung)"),
@@ -224,7 +225,7 @@ describe("the project's region (Q126)", () => {
     renderApp(`/projects/${project.id}`, api);
     expect(await screen.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Region ändern" })).toBeNull();
-    await userEvent.click(screen.getByRole("tab", { name: "Einrichtung" }));
+    await openSection("Einrichtung");
     await screen.findByRole("region", { name: "Projekt" });
     expect(screen.queryByLabelText("Region (Niederlassung)")).toBeNull();
   });

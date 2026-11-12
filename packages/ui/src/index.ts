@@ -68,6 +68,7 @@ export { RelativeDate, relativeDate } from "./relative-date";
 export {
   AppShell,
   HeaderPanelAction,
+  NavBadge,
   PortalShell,
   ProductMark,
   SideNavGroup,

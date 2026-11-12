@@ -159,14 +159,13 @@ function AppointmentPage() {
           <RouterLink key="projects" to="/projects">
             {t("projects.title")}
           </RouterLink>,
-          <RouterLink key="project" to="/projects/$projectId" params={{ projectId }}>
+          <RouterLink key="project" to="/projects/$projectId/overview" params={{ projectId }}>
             {project.name}
           </RouterLink>,
           <RouterLink
             key="appointments"
-            to="/projects/$projectId"
+            to="/projects/$projectId/appointments"
             params={{ projectId }}
-            search={{ tab: "appointments" }}
           >
             {t("projectDetail.appointments")}
           </RouterLink>,

@@ -3,6 +3,7 @@ import {
   createLink,
   createRootRouteWithContext,
   Outlet,
+  useParams,
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
@@ -10,23 +11,20 @@ import type { CurrentStaffUser } from "@transfer/domain";
 import {
   AppShell,
   Button,
-  Folder,
   HeaderPanelAction,
   InlineNotification,
-  Location,
   Logout,
+  NavBadge,
   SideNavGroup,
   SideNavLink,
-  TaskApproved,
   ToastProvider,
   UserAvatar,
-  UserMultiple,
-  WarningAlt,
 } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
-import { meQuery, useApi } from "../api";
+import { dashboardQuery, meQuery, projectQuery, useApi } from "../api";
 import { DevUserSwitcher } from "../components/dev-user-switcher";
 import { usePageTitle } from "../page-title";
+import { projectSections, sectionLabelKey, sectionRoute } from "../components/project-sections";
 import type { RouterContext } from "../router";
 
 const NavLink = createLink(SideNavLink);
@@ -60,9 +58,13 @@ function RootLayout() {
   );
 }
 
-/** The side navigation: "Arbeit" for everyone, "Verwaltung" only with an administrative role. */
+/**
+ * The side navigation (ui-patterns.md, navigation): "Arbeit" for everyone, "Verwaltung" only with
+ * an administrative role, then the sections of the project the page belongs to.
+ */
 function Navigation({ user }: { user: CurrentStaffUser }) {
   const { t } = useTranslation();
+  const { projectId } = useParams({ strict: false });
   const has = (test: (grant: CurrentStaffUser["orgRoles"][number]) => boolean) =>
     user.orgRoles.some(test);
   // The global admin's administration (Q126); the API refuses everyone else.
@@ -78,11 +80,12 @@ function Navigation({ user }: { user: CurrentStaffUser }) {
   return (
     <>
       <SideNavGroup label={t("app.navGroups.work")}>
-        <NavLink to="/projects" renderIcon={Folder} {...active}>
+        {/* Inside a project its section is the current page, not the list of projects. */}
+        <NavLink to="/projects" activeOptions={{ exact: Boolean(projectId) }} {...active}>
           {t("projects.title")}
         </NavLink>
         {reviews && (
-          <NavLink to="/reviews" renderIcon={TaskApproved} {...active}>
+          <NavLink to="/reviews" {...active}>
             {t("reviews.title")}
           </NavLink>
         )}
@@ -91,22 +94,60 @@ function Navigation({ user }: { user: CurrentStaffUser }) {
         <SideNavGroup label={t("app.navGroups.admin")}>
           {admin && (
             <>
-              <NavLink to="/admin/staff" renderIcon={UserMultiple} {...active}>
+              <NavLink to="/admin/staff" {...active}>
                 {t("adminStaff.title")}
               </NavLink>
-              <NavLink to="/admin/regions" renderIcon={Location} {...active}>
+              <NavLink to="/admin/regions" {...active}>
                 {t("adminRegions.title")}
               </NavLink>
             </>
           )}
           {escalations && (
-            <NavLink to="/admin/escalations" renderIcon={WarningAlt} {...active}>
+            <NavLink to="/admin/escalations" {...active}>
               {t("escalations.title")}
             </NavLink>
           )}
         </SideNavGroup>
       )}
+      {projectId && <ProjectNavigation projectId={projectId} />}
     </>
+  );
+}
+
+/**
+ * The current project's sections under its name, for everyone who opens the project; "Agentur"
+ * only in a `ta_tg` project. A participant's page belongs to "Teilnehmende". The one badge is
+ * the overdue count of the dashboard the viewer already loads on "Übersicht"; a viewer the
+ * dashboard refuses gets none.
+ */
+function ProjectNavigation({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const { data: project } = useQuery(projectQuery(api, projectId));
+  const { data: dashboard } = useQuery(dashboardQuery(api, projectId));
+  const onParticipant = useRouterState({
+    select: (s) => s.location.pathname.startsWith(`/projects/${projectId}/participations/`),
+  });
+  if (!project) return null;
+  const overdue = dashboard?.counts.tiles.find((tile) => tile.key === "deadline_overdue")?.count;
+  return (
+    <SideNavGroup label={project.name}>
+      {projectSections(project.type === "ta_tg").map((section) => (
+        <NavLink
+          key={section}
+          to={sectionRoute[section]}
+          params={{ projectId }}
+          {...active}
+          {...(section === "participants" &&
+            onParticipant && { isActive: true, "aria-current": "page" as const })}
+        >
+          {t(sectionLabelKey[section])}
+          {section === "participants" && Boolean(overdue) && (
+            <NavBadge count={overdue!} label={t("app.navBadges.overdue", { count: overdue })} />
+          )}
+        </NavLink>
+      ))}
+    </SideNavGroup>
   );
 }
 
@@ -155,7 +196,7 @@ function LogoutButton() {
   }
 
   return (
-    <Button kind="secondary" size="md" renderIcon={Logout} onClick={() => void logout()}>
+    <Button kind="tertiary" size="md" renderIcon={Logout} onClick={() => void logout()}>
       {t("session.logout")}
     </Button>
   );

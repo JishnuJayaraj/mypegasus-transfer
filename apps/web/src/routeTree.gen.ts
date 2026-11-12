@@ -18,6 +18,13 @@ import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
+import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
+import { Route as ProjectsProjectIdAgenturRouteImport } from './routes/projects/$projectId/agentur'
+import { Route as ProjectsProjectIdAppointmentsRouteImport } from './routes/projects/$projectId/appointments'
+import { Route as ProjectsProjectIdOverviewRouteImport } from './routes/projects/$projectId/overview'
+import { Route as ProjectsProjectIdParticipantsRouteImport } from './routes/projects/$projectId/participants'
+import { Route as ProjectsProjectIdSetupRouteImport } from './routes/projects/$projectId/setup'
+import { Route as ProjectsProjectIdTeamRouteImport } from './routes/projects/$projectId/team'
 import { Route as ProjectsProjectIdAppointmentsAppointmentIdRouteImport } from './routes/projects/$projectId_.appointments.$appointmentId'
 import { Route as ProjectsProjectIdParticipationsParticipationIdRouteImport } from './routes/projects/$projectId_.participations.$participationId'
 import { Route as ProjectsProjectIdParticipationsParticipationIdAssistedRouteImport } from './routes/projects/$projectId_.participations.$participationId_.assisted'
@@ -67,6 +74,45 @@ const ProjectsNewRoute = ProjectsNewRouteImport.update({
   path: '/projects/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsProjectIdIndexRoute = ProjectsProjectIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProjectsProjectIdRoute,
+} as any)
+const ProjectsProjectIdAgenturRoute =
+  ProjectsProjectIdAgenturRouteImport.update({
+    id: '/agentur',
+    path: '/agentur',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdAppointmentsRoute =
+  ProjectsProjectIdAppointmentsRouteImport.update({
+    id: '/appointments',
+    path: '/appointments',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdOverviewRoute =
+  ProjectsProjectIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdParticipantsRoute =
+  ProjectsProjectIdParticipantsRouteImport.update({
+    id: '/participants',
+    path: '/participants',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdSetupRoute = ProjectsProjectIdSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => ProjectsProjectIdRoute,
+} as any)
+const ProjectsProjectIdTeamRoute = ProjectsProjectIdTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => ProjectsProjectIdRoute,
+} as any)
 const ProjectsProjectIdAppointmentsAppointmentIdRoute =
   ProjectsProjectIdAppointmentsAppointmentIdRouteImport.update({
     id: '/projects/$projectId_/appointments/$appointmentId',
@@ -93,9 +139,16 @@ export interface FileRoutesByFullPath {
   '/admin/escalations': typeof AdminEscalationsRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/staff': typeof AdminStaffRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/new': typeof ProjectsNewRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/agentur': typeof ProjectsProjectIdAgenturRoute
+  '/projects/$projectId/appointments': typeof ProjectsProjectIdAppointmentsRoute
+  '/projects/$projectId/overview': typeof ProjectsProjectIdOverviewRoute
+  '/projects/$projectId/participants': typeof ProjectsProjectIdParticipantsRoute
+  '/projects/$projectId/setup': typeof ProjectsProjectIdSetupRoute
+  '/projects/$projectId/team': typeof ProjectsProjectIdTeamRoute
+  '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/appointments/$appointmentId': typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   '/projects/$projectId/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
   '/projects/$projectId/participations/$participationId/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
@@ -107,9 +160,15 @@ export interface FileRoutesByTo {
   '/admin/escalations': typeof AdminEscalationsRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/staff': typeof AdminStaffRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
   '/projects': typeof ProjectsIndexRoute
+  '/projects/$projectId/agentur': typeof ProjectsProjectIdAgenturRoute
+  '/projects/$projectId/appointments': typeof ProjectsProjectIdAppointmentsRoute
+  '/projects/$projectId/overview': typeof ProjectsProjectIdOverviewRoute
+  '/projects/$projectId/participants': typeof ProjectsProjectIdParticipantsRoute
+  '/projects/$projectId/setup': typeof ProjectsProjectIdSetupRoute
+  '/projects/$projectId/team': typeof ProjectsProjectIdTeamRoute
+  '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/appointments/$appointmentId': typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   '/projects/$projectId/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
   '/projects/$projectId/participations/$participationId/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
@@ -122,9 +181,16 @@ export interface FileRoutesById {
   '/admin/escalations': typeof AdminEscalationsRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/staff': typeof AdminStaffRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/new': typeof ProjectsNewRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/agentur': typeof ProjectsProjectIdAgenturRoute
+  '/projects/$projectId/appointments': typeof ProjectsProjectIdAppointmentsRoute
+  '/projects/$projectId/overview': typeof ProjectsProjectIdOverviewRoute
+  '/projects/$projectId/participants': typeof ProjectsProjectIdParticipantsRoute
+  '/projects/$projectId/setup': typeof ProjectsProjectIdSetupRoute
+  '/projects/$projectId/team': typeof ProjectsProjectIdTeamRoute
+  '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId_/appointments/$appointmentId': typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   '/projects/$projectId_/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
   '/projects/$projectId_/participations/$participationId_/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
@@ -141,6 +207,13 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/new'
     | '/projects/'
+    | '/projects/$projectId/agentur'
+    | '/projects/$projectId/appointments'
+    | '/projects/$projectId/overview'
+    | '/projects/$projectId/participants'
+    | '/projects/$projectId/setup'
+    | '/projects/$projectId/team'
+    | '/projects/$projectId/'
     | '/projects/$projectId/appointments/$appointmentId'
     | '/projects/$projectId/participations/$participationId'
     | '/projects/$projectId/participations/$participationId/assisted'
@@ -152,9 +225,15 @@ export interface FileRouteTypes {
     | '/admin/escalations'
     | '/admin/regions'
     | '/admin/staff'
-    | '/projects/$projectId'
     | '/projects/new'
     | '/projects'
+    | '/projects/$projectId/agentur'
+    | '/projects/$projectId/appointments'
+    | '/projects/$projectId/overview'
+    | '/projects/$projectId/participants'
+    | '/projects/$projectId/setup'
+    | '/projects/$projectId/team'
+    | '/projects/$projectId'
     | '/projects/$projectId/appointments/$appointmentId'
     | '/projects/$projectId/participations/$participationId'
     | '/projects/$projectId/participations/$participationId/assisted'
@@ -169,6 +248,13 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/new'
     | '/projects/'
+    | '/projects/$projectId/agentur'
+    | '/projects/$projectId/appointments'
+    | '/projects/$projectId/overview'
+    | '/projects/$projectId/participants'
+    | '/projects/$projectId/setup'
+    | '/projects/$projectId/team'
+    | '/projects/$projectId/'
     | '/projects/$projectId_/appointments/$appointmentId'
     | '/projects/$projectId_/participations/$participationId'
     | '/projects/$projectId_/participations/$participationId_/assisted'
@@ -181,7 +267,7 @@ export interface RootRouteChildren {
   AdminEscalationsRoute: typeof AdminEscalationsRoute
   AdminRegionsRoute: typeof AdminRegionsRoute
   AdminStaffRoute: typeof AdminStaffRoute
-  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
   ProjectsNewRoute: typeof ProjectsNewRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ProjectsProjectIdAppointmentsAppointmentIdRoute: typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
@@ -254,6 +340,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId/': {
+      id: '/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof ProjectsProjectIdIndexRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/agentur': {
+      id: '/projects/$projectId/agentur'
+      path: '/agentur'
+      fullPath: '/projects/$projectId/agentur'
+      preLoaderRoute: typeof ProjectsProjectIdAgenturRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/appointments': {
+      id: '/projects/$projectId/appointments'
+      path: '/appointments'
+      fullPath: '/projects/$projectId/appointments'
+      preLoaderRoute: typeof ProjectsProjectIdAppointmentsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/overview': {
+      id: '/projects/$projectId/overview'
+      path: '/overview'
+      fullPath: '/projects/$projectId/overview'
+      preLoaderRoute: typeof ProjectsProjectIdOverviewRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/participants': {
+      id: '/projects/$projectId/participants'
+      path: '/participants'
+      fullPath: '/projects/$projectId/participants'
+      preLoaderRoute: typeof ProjectsProjectIdParticipantsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/setup': {
+      id: '/projects/$projectId/setup'
+      path: '/setup'
+      fullPath: '/projects/$projectId/setup'
+      preLoaderRoute: typeof ProjectsProjectIdSetupRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/team': {
+      id: '/projects/$projectId/team'
+      path: '/team'
+      fullPath: '/projects/$projectId/team'
+      preLoaderRoute: typeof ProjectsProjectIdTeamRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/projects/$projectId_/appointments/$appointmentId': {
       id: '/projects/$projectId_/appointments/$appointmentId'
       path: '/projects/$projectId/appointments/$appointmentId'
@@ -278,6 +413,29 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdAgenturRoute: typeof ProjectsProjectIdAgenturRoute
+  ProjectsProjectIdAppointmentsRoute: typeof ProjectsProjectIdAppointmentsRoute
+  ProjectsProjectIdOverviewRoute: typeof ProjectsProjectIdOverviewRoute
+  ProjectsProjectIdParticipantsRoute: typeof ProjectsProjectIdParticipantsRoute
+  ProjectsProjectIdSetupRoute: typeof ProjectsProjectIdSetupRoute
+  ProjectsProjectIdTeamRoute: typeof ProjectsProjectIdTeamRoute
+  ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
+}
+
+const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdAgenturRoute: ProjectsProjectIdAgenturRoute,
+  ProjectsProjectIdAppointmentsRoute: ProjectsProjectIdAppointmentsRoute,
+  ProjectsProjectIdOverviewRoute: ProjectsProjectIdOverviewRoute,
+  ProjectsProjectIdParticipantsRoute: ProjectsProjectIdParticipantsRoute,
+  ProjectsProjectIdSetupRoute: ProjectsProjectIdSetupRoute,
+  ProjectsProjectIdTeamRoute: ProjectsProjectIdTeamRoute,
+  ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
+}
+
+const ProjectsProjectIdRouteWithChildren =
+  ProjectsProjectIdRoute._addFileChildren(ProjectsProjectIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
@@ -285,7 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEscalationsRoute: AdminEscalationsRoute,
   AdminRegionsRoute: AdminRegionsRoute,
   AdminStaffRoute: AdminStaffRoute,
-  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
   ProjectsNewRoute: ProjectsNewRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   ProjectsProjectIdAppointmentsAppointmentIdRoute:

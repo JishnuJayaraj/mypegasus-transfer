@@ -365,7 +365,7 @@ function ParticipationPage() {
           </RouterLink>,
           <RouterLink
             key="project"
-            to="/projects/$projectId"
+            to="/projects/$projectId/overview"
             params={{ projectId }}
             activeOptions={{ exact: true }}
           >
@@ -373,9 +373,9 @@ function ParticipationPage() {
           </RouterLink>,
           <RouterLink
             key="participants"
-            to="/projects/$projectId"
+            to="/projects/$projectId/participants"
             params={{ projectId }}
-            search={{ ...listSearch?.filter, tab: "participants", sort: listSearch?.sort }}
+            search={{ ...listSearch?.filter, sort: listSearch?.sort }}
             activeOptions={{ exact: true }}
           >
             {t("projectDetail.participants")}
