@@ -8,8 +8,10 @@ import { loadDotEnv } from "./env";
 loadDotEnv();
 const url = process.env.DATABASE_MIGRATION_URL;
 if (!url) throw new Error("Missing environment variable DATABASE_MIGRATION_URL");
-await runMigrations(
+const applied = await runMigrations(
   url,
   fileURLToPath(new URL("./migrations", import.meta.url)),
   fileURLToPath(new URL("./sql", import.meta.url)),
 );
+// File names only.
+console.log(`function sources applied: ${applied.length}`);
