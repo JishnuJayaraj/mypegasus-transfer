@@ -18,14 +18,22 @@ The customer/works council receives reports but has no login in the MVP.
 
 Start here (read the sections your task needs, not everything):
 - Domain & vocabulary: `docs/domain/glossary.md` (German terms are used in code — see below)
-- Process & lifecycle state machine: `docs/domain/process-and-lifecycle.md`
+- Process & lifecycle state machine: `docs/domain/process-and-lifecycle.md` is the index; the
+  rules are one file per topic in `docs/domain/process-and-lifecycle/` (dates, main status and
+  rules, work list, profiling, DSV, ASU and Kug 200b, TG entry, cutoff, appointments, import)
 - Regional variation (BA requirements differ per Agentur): `docs/domain/regional-variation.md`
-- Data protection rules: `docs/domain/data-protection.md`
+- Data protection rules: `docs/domain/data-protection.md` is the index; one file per topic in
+  `docs/domain/data-protection/` (classification, access matrix, documents, self-service, forms
+  and scans, exports, messages, consent, retention, authentication, corrections)
 - Official BA forms (TL 407 profiling, Kug 200b Arbeitsuchendmeldung): `docs/domain/ba-forms.md`
 - Questions: unsettled in `docs/open-questions.md`, confirmed in
-  `docs/decisions/settled-questions.md` (same `Qnn`); the dated round files only if a row isn't enough
+  `docs/decisions/settled-questions.md`, accepted build readings that ask nothing more in
+  `docs/decisions/readings.md` (a `Qnn` has its row in exactly one of the three); the dated round
+  files only if a row isn't enough
 - Product scope (MVP): `docs/prd.md`; build order: `docs/roadmap.md`
-- Architecture and packages: `docs/architecture/overview.md`, decisions in `docs/adr/`
+- Architecture and packages: `docs/architecture/overview.md`, decisions in `docs/adr/`; the
+  database reference (tables, functions, grants as built) per area in
+  `docs/architecture/database/`, indexed by ADR-0002
 - UI principles, contracts and which pattern to use: `docs/architecture/ui-patterns.md`
 
 ## Non-negotiable rules
@@ -83,6 +91,9 @@ the exact state. These are execution checkpoints, not additional human approval 
   its description, readings for the owner in `docs/open-questions.md`. A finished slice's plan
   moves to `docs/plans/archive/`: history, don't read it. Its rules live in `docs/domain/`, the
   ADRs and `docs/architecture/`; a rule found only in an archived plan moves there in your PR.
+- **One current statement per rule** (the agent workflow, §3): a PR that changes behaviour edits
+  the topic's rule text in place; "as built" history goes in the PR description. An existing "as
+  built" section is merged into its rule by the PR that next touches the topic, never in bulk.
 - **Comments cite the doc that holds a rule** (e.g. "process-and-lifecycle.md, BA reporting"),
   never rounds, plan items (R12, AC-40) or plan sections; replace such citations where you touch.
 - **One session per planned PR**; the plan and the PR are the handoff (what goes in it: the agent
@@ -140,7 +151,7 @@ packages/forms    the BA form registry: blank PDFs, field maps, manifests, own H
 packages/adapters interfaces + implementations (ADR-0006)
 fixtures/         synthetic test files only
 docs/             product + domain + architecture docs (source of truth)
-scripts/          session start, tsconfig guard, image smoke test
+scripts/          session start, tsconfig guard, docs check, image smoke test
 Dockerfile        the production image (Node 24): API bundle + both SPAs
 ```
 
@@ -184,7 +195,8 @@ pnpm start            # the built API serving both SPAs on :3001
 pnpm test             # vitest: unit, component, integration (needs Postgres)
 pnpm test:coverage    # the same with coverage; 100 % thresholds on the domain rules
 pnpm test:e2e         # playwright against the built app (pnpm build first)
-pnpm lint             # oxlint + oxfmt --check + tsconfig guard + template immutability
+pnpm lint             # oxlint + oxfmt --check + tsconfig guard + template immutability + docs
+                      # check (broken links, a doc over 40 KB, one row per Qnn)
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
 pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, drift

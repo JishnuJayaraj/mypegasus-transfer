@@ -80,6 +80,23 @@ the lists; the functions themselves are not edited for them. A change to `record
 `retention_erase_participation` is an edit of its template in `packages/db/sql/templates/`,
 followed by `pnpm generate`.
 
+**One current statement per rule.** The domain docs are split by topic:
+`docs/domain/process-and-lifecycle/`, `docs/domain/data-protection/` and, for the database,
+`docs/architecture/database/`; the three old
+files (`process-and-lifecycle.md`, `data-protection.md`, ADR-0002) are indexes that keep every old
+heading as a link. A PR that changes behaviour edits the topic's rule text in place, so the rule
+reads as it holds now. "As built" history (what the PR built, in which order, what it replaced)
+belongs in the PR description, not in a new section of the doc. The existing "as built" sections
+are merged into their rules per topic, by the PR that next touches the topic, as a diff the owner
+can read; never in a bulk rewrite, and never as part of a move. A reading the owner still has to
+accept is a row in [open-questions.md](../open-questions.md) with its status; a row that only
+records how something was built and asks nothing more belongs in
+[decisions/readings.md](../decisions/readings.md), and each `Qnn` has its row in exactly one of
+the three question files. `pnpm lint` (`scripts/check-docs.mjs`) fails on a broken relative link,
+on a doc over 40 KB (split the topic; generated files and `open-questions.md` are excepted) and
+on a question number with no row or several. A split or move of prose is proved with
+`scripts/check-doc-split.mjs`: every sentence once in the new files, nothing added.
+
 The fast tier while working is `pnpm verify:changed`: typecheck, lint and, without coverage, the
 tests related to the files changed against `origin/main`. A change to a migration, a function or trigger source, `setup.sql`,
 `packages/db/src/schema.ts`, the db testing helpers or a Vitest config runs the db and api
