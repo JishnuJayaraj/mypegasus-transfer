@@ -140,7 +140,8 @@ test("the project page: header, sections, the dashboard's three layers and Einri
   const toggle = page.getByRole("button", { name: /^Alle Kennzahlen (anzeigen|ausblenden)$/ });
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("table", { name: "Nach Welle" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Übersicht" })).toHaveCount(0);
+  // The section is named once, by the heading under the header (principle 6).
+  await expect(page.getByRole("heading", { name: "Übersicht" })).toHaveCount(1);
 
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 });
@@ -178,7 +179,7 @@ test("the project page: header, sections, the dashboard's three layers and Einri
   ]);
   const projectCard = page.getByRole("region", { name: "Projekt" });
   await expect(projectCard.getByLabel("Region (Niederlassung)")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Einrichtung" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Einrichtung" })).toHaveCount(1);
   await anchors.getByRole("link", { name: "Kopf der Kug 200a" }).click();
   await expect(page.getByRole("region", { name: "Kopf der Kug 200a" })).toBeInViewport();
   for (const width of widths) {
