@@ -1574,3 +1574,12 @@ The separate role of the retention job (data-protection.md, retention as built; 
   recreated from 0104. A document deletion may now be by `system` (the working copy's purge; the
   `document_deleted` check). 0107 is generated (the enum `funded110`, the columns, `retention_run`),
   0108 hand-written; the upgrade from 0106 is tested (`retention-migration.int.test.ts`).
+
+## 7-7c as built: erasure
+
+`transfer_retention` alone executes the erasure, project-lock and retention-read functions inside an
+open retention run; helper functions remain private. Five foreign keys needed for cycles are
+`DEFERRABLE INITIALLY IMMEDIATE`: ordinary transactions still check them immediately, and only the
+erasure explicitly defers them. Migration from 0110 with existing audit events and privileges is
+tested. Erasure uses exclusive project locks before participant rows and preserves active holds and
+their FK parents (data-protection.md, stage-two erasure). The erasure function alone uses dynamic SQL to traverse its fixed table catalog and schema foreign keys: identifiers are quoted with `pg_catalog.format`, values are parameters, and tests check the inventory and deletion order.

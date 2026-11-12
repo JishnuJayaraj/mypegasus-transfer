@@ -2,6 +2,7 @@ export { createDb, transactionWithClient, type Database } from "./client";
 export {
   checkDataCatalog,
   dataCatalog,
+  erasureParticipationTables,
   retentionPeriods,
   retentionPrerequisites,
   type CatalogEntry,

@@ -514,6 +514,7 @@ export function participationRoutes(deps: Deps) {
             eq(participation.projectId, projectId),
             // The evidence-only phase: break-glass only, never in a list (data-protection.md).
             isNull(participation.evidenceSetSince),
+            isNull(participation.erasurePendingAt),
             scope.kind === "assigned"
               ? inArray(participation.id, [...scope.participationIds])
               : undefined,

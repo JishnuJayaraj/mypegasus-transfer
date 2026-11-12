@@ -135,6 +135,7 @@ export async function loadWorklist(
           and(
             eq(participation.projectId, projectId),
             isNull(participation.evidenceSetSince),
+            isNull(participation.erasurePendingAt),
             scope.kind === "assigned"
               ? inArray(participation.id, [...scope.participationIds])
               : undefined,

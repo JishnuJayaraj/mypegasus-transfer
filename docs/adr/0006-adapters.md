@@ -185,3 +185,10 @@ written, in key order: the retention job finds orphaned objects with it (data-pr
 retention as built). The filesystem adapter walks the directory (a temporary file of a write in
 progress is no object) and reports the file's modification time; the memory adapter stamps each
 write with an injectable `now`. Both pass the shared contract test.
+
+## 7-7c: object deletion during erasure
+
+The erasure function returns the unheld document IDs whose objects remain. The job deletes those
+objects through `FileStorage` before committing the database transaction; a storage error rolls
+back the database changes so a retry can finish. A held working-copy object is checked under the
+participation lock before any deletion (data-protection.md, stage-two erasure).

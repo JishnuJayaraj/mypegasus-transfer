@@ -156,4 +156,4 @@ v1.x: AI document extraction, CV generation, note summaries (behind AI adapter, 
 v2: job matching, qualification suggestions, profiling drafts (AI Act review first),
 payroll/DATEV integration, KuG billing support.
 
-Before live retention deletion, complete the operational workflow for legal holds on individual documents and confirm hold administration. The picker is deferred during synthetic development (Q235).
+Before live retention deletion, complete and confirm operational workflows for legal holds on individual documents and identity. The document picker is deferred during synthetic development (Q235, Q238).

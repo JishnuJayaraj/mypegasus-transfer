@@ -78,7 +78,7 @@ export const retentionRules: Readonly<Record<RetentionClass, RetentionRule>> = {
   participation_record: {
     triggers: participationTriggers,
     stage: 2,
-    applied: false,
+    applied: true,
     dependsOnFunding: true,
   },
   personnel_file: {
@@ -95,7 +95,7 @@ export const retentionRules: Readonly<Record<RetentionClass, RetentionRule>> = {
   },
   audit_log: { triggers: [], stage: 2, applied: false, dependsOnFunding: false },
   access_credential: { triggers: ["ended"], stage: 1, applied: true, dependsOnFunding: false },
-  evidence_set: { triggers: [], stage: 2, applied: false, dependsOnFunding: false },
+  evidence_set: { triggers: ["settled"], stage: 2, applied: true, dependsOnFunding: false },
   form_working_copy: {
     triggers: ["superseded", "scan_accepted", "abandoned", "participation_closed"],
     stage: 1,
@@ -246,9 +246,10 @@ export function workingCopyTriggers(facts: {
 /** What must hold before any live deletion (data-protection.md, retention; Q219). */
 export const RetentionPrerequisite = z.enum([
   "periods_confirmed",
-  // Includes the completed operational workflow for holds on individual documents.
+  // Includes completed operational workflows for holds on individual documents and identity.
   "hold_administration_confirmed",
   "evidence_only_access_built",
+  // Includes synchronization of job-dependency creation with erasure (data-protection.md).
   "maintenance_rules_complete",
 ]);
 export type RetentionPrerequisite = z.infer<typeof RetentionPrerequisite>;
@@ -286,6 +287,35 @@ export function settlementDatesRequired(project: {
     measure110SettlementDate: project.fundings.includes("known_yes"),
     fundingUnknown: project.fundings.includes("unknown"),
   };
+}
+
+/** Evidence-set expiry (data-protection.md, retention and deletion). Years are configuration. */
+export function evidenceSetDue(
+  project: {
+    anyEnteredTg: boolean;
+    fundings: readonly Funded110[];
+    kugFinalSettlementDate: IsoDate | null;
+    measure110SettlementDate: IsoDate | null;
+  },
+  years: number | null,
+  today: IsoDate,
+): "period_unset" | "funding_unknown" | "settlement_missing" | "not_due" | "due" {
+  if (years === null || !Number.isInteger(years) || years < 0) return "period_unset";
+  const required = settlementDatesRequired(project);
+  if (required.fundingUnknown) return "funding_unknown";
+  if (
+    (required.kugFinalSettlementDate && !project.kugFinalSettlementDate) ||
+    (required.measure110SettlementDate && !project.measure110SettlementDate)
+  )
+    return "settlement_missing";
+  const dates = [
+    required.kugFinalSettlementDate ? project.kugFinalSettlementDate : null,
+    required.measure110SettlementDate ? project.measure110SettlementDate : null,
+  ].filter((date): date is IsoDate => date !== null);
+  if (dates.length === 0) return "settlement_missing";
+  const latest = dates.toSorted().at(-1)!;
+  const expires = `${Number(latest.slice(0, 4)) + years}-12-31` as IsoDate;
+  return compareIsoDates(today, expires) > 0 ? "due" : "not_due";
 }
 
 const denied = { ok: false, because: "actor_not_allowed" } as const satisfies Permission;

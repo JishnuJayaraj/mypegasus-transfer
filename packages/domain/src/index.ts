@@ -500,6 +500,7 @@ export {
   StatusField,
   statusFieldOfTrack,
 } from "./audit/events";
+export { auditDetailClassification, type AuditDetailClass } from "./audit/retention";
 export {
   auditProjection,
   auditProjectionRows,
@@ -1391,6 +1392,7 @@ export {
   mayRecordFunding,
   RetentionClass,
   retentionActivation,
+  evidenceSetDue,
   retentionDue,
   RetentionPrerequisite,
   retentionRules,

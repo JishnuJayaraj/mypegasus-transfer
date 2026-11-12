@@ -231,7 +231,7 @@ describe("each class at its own trigger and period", () => {
     await owner.query(`update participation set funded110 = 'unknown' where id = $1`, [nonSigner]);
     const unknown = await run("2026-06-01");
     expect(unknown.classes.participation_record).toMatchObject({
-      outcome: "not_applied",
+      outcome: "counted",
       blocked: 1,
       due: 0,
     });
@@ -241,14 +241,14 @@ describe("each class at its own trigger and period", () => {
         .rows[0].evidence_set_since,
     ).toBeNull();
 
-    // Known `known_no`: due for the erasure (stage two), still kept by this stage.
+    // This participation is known not funded, but another unknown funding blocks stage two.
     await owner.query(
       `update participation set funded110 = 'known_no', funded110_source = 'Bescheid',
          funded110_set_by = $2, funded110_set_at = now() where id = $1`,
       [nonSigner, seedStaffUserIds.backOffice],
     );
     const known = await run("2026-06-02");
-    expect(known.classes.participation_record).toMatchObject({ blocked: 0, due: 1, deleted: 0 });
+    expect(known.classes.participation_record).toMatchObject({ blocked: 1, due: 1, deleted: 0 });
     expect(await count("participant_identity", nonSigner)).toBe(1);
   });
 });

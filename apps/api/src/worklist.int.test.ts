@@ -447,6 +447,62 @@ describe("GET /projects/{id}/dashboard", () => {
       200,
     );
   });
+  it("hides a partial-erasure anchor from ordinary views and keeps hold administration available", async () => {
+    const visible = await person();
+    const restricted = await person(werkNord, {
+      status: "withdrawn",
+      withdrawnOn: "2026-01-01",
+      endReason: "declined_dsv",
+      endReasonSource: "user",
+      funded110: "known_no",
+    });
+    await owner
+      .update(participation)
+      .set({ funded110: "known_no" })
+      .where(eq(participation.projectId, werkNord));
+    await owner.$client.query(
+      `insert into legal_hold (project_id, participation_id, classes, record_kinds, document_ids, reason, basis, placed_by)
+      values ($1, $2, '{}', '{participant_details}', '{}', 'litigation', 'Synthetic hold', $3)`,
+      [werkNord, restricted, projectLead],
+    );
+    const retention = createDb(testDatabaseUrls().retention).$client;
+    const client = await retention.connect();
+    try {
+      await client.query("begin");
+      const run = (await client.query(`select retention_open_run('2026-06-01', false) as id`))
+        .rows[0].id;
+      expect(
+        (
+          await client.query(`select retention_erase_participation($1, $2) as result`, [
+            run,
+            restricted,
+          ])
+        ).rows[0].result.completed,
+      ).toBe(false);
+      await client.query(`select retention_close_run($1, '{}'::jsonb)`, [run]);
+      await client.query("commit");
+    } finally {
+      client.release();
+      await retention.end();
+    }
+    const { items } = await readJson(await worklist(), Worklist);
+    expect(items.map((item) => item.id)).toContain(visible);
+    expect(items.map((item) => item.id)).not.toContain(restricted);
+    const board = await readJson(await dashboard(), ProjectDashboard);
+    for (const group of Object.values(board.counts))
+      for (const { count, filter } of group)
+        expect(count).toBe(items.filter((item) => matchesWorklistFilter(item, filter)).length);
+    expect((await get(`/participations/${restricted}`, as(projectLead))).status).toBe(403);
+    expect((await get(`/participations/${restricted}/legal-holds`, as(projectLead))).status).toBe(
+      200,
+    );
+    await expect(
+      owner.$client.query(
+        `update participation set status_version = status_version + 1 where id = $1`,
+        [restricted],
+      ),
+    ).rejects.toThrow("erasure_pending");
+  });
   it("counts exactly the snapshot's participations by the same filters", async () => {
     await person(werkNord, { entryWaveId: w1.id });
     await person(werkNord, { entryWaveId: w2.id, status: "imported" });

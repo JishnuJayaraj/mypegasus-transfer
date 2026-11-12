@@ -154,6 +154,72 @@ describe("with the catalog or activation off", () => {
 });
 
 describe("with synthetic periods and test activation", () => {
+  it.each(["class", "document"] as const)(
+    "does not purge a working-copy file protected by a %s hold",
+    async (scope) => {
+      const copy = await workingCopy("2025-01-01T10:00:00Z");
+      await owner.query(
+        `insert into legal_hold (project_id, participation_id, classes, record_kinds, document_ids, reason, basis, placed_by)
+      select project_id, participation_id, $3::text[], '{}', $4::uuid[], 'litigation', 'Synthetic reference', $2 from document where id = $1`,
+        [
+          copy,
+          seedStaffUserIds.projectLead,
+          scope === "class" ? ["form_working_copy"] : [],
+          scope === "document" ? [copy] : [],
+        ],
+      );
+      await run("2026-02-01");
+      expect(await count("document where id = $1 and deleted_at is null", [copy])).toBe(1);
+      expect(await storage.get(`documents/${copy}`)).toEqual(new Uint8Array([1]));
+    },
+  );
+
+  it("waits for a concurrently placed hold before deciding whether to purge", async () => {
+    const copy = await workingCopy("2025-01-01T10:00:00Z");
+    const person = (
+      await owner.query(`select participation_id from document where id = $1`, [copy])
+    ).rows[0].participation_id;
+    const placing = await app.connect(),
+      sweep = await db.$client.connect();
+    let waiting: Promise<{ rows: { available: boolean }[] }> | undefined;
+    try {
+      await placing.query("begin");
+      await placing.query(
+        `select place_legal_hold(row('user', $2, null, null, null, 'synthetic', null)::audit_context,
+        $1, '{form_working_copy}', '{}', '{}', 'litigation', 'Synthetic reference', '{}')`,
+        [person, seedStaffUserIds.projectLead],
+      );
+      await sweep.query("begin");
+      const runId = (await sweep.query(`select retention_open_run('2026-02-01', false) as id`))
+        .rows[0].id;
+      const pid = (await sweep.query(`select pg_backend_pid() as id`)).rows[0].id;
+      waiting = sweep.query<{ available: boolean }>(
+        `select retention_lock_working_copy($1, $2) as available`,
+        [runId, copy],
+      );
+      const waits = async () =>
+        Number(
+          (
+            await owner.query(`select count(*) as n from pg_locks where pid = $1 and not granted`, [
+              pid,
+            ])
+          ).rows[0].n,
+        );
+      for (let i = 0; i < 100 && !(await waits()); i++)
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(await waits()).toBe(1);
+      await placing.query("commit");
+      expect((await waiting).rows[0]!.available).toBe(false);
+      await sweep.query(`select retention_close_run($1, '{}'::jsonb)`, [runId]);
+      await sweep.query("commit");
+    } finally {
+      await placing.query("rollback").catch(() => undefined);
+      await waiting?.catch(() => undefined);
+      await sweep.query("rollback").catch(() => undefined);
+      placing.release();
+      sweep.release();
+    }
+  });
   it("keeps an expired activation code referenced by a live session while deleting its neighbour", async () => {
     const first = await informedParticipation(app);
     const second = await informedParticipation(app);

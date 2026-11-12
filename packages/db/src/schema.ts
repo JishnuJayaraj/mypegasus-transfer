@@ -650,9 +650,17 @@ export const participation = pgTable(
      * refused by trigger and ordinary reads by the API (break-glass only).
      */
     evidenceSetSince: timestamp("evidence_set_since", { withTimezone: true, mode: "string" }),
+    erasurePendingAt: timestamp("erasure_pending_at", { withTimezone: true, mode: "string" }),
+    erasureEnteredTg: boolean("erasure_entered_tg"),
+    erasureTrigger: text("erasure_trigger"),
+    erasureTriggerOn: dateColumn("erasure_trigger_on"),
     createdAt: createdAt(),
   },
   (t): PgTableExtraConfigValue[] => [
+    check(
+      "participation_erasure_anchor",
+      sql`(${t.erasurePendingAt} is null and ${t.erasureEnteredTg} is null and ${t.erasureTrigger} is null and ${t.erasureTriggerOn} is null) or (${t.erasurePendingAt} is not null and ${t.erasureEnteredTg} is not null and ${t.erasureTrigger} is not null and ${t.erasureTrigger} in ('non_signer_withdrawn', 'closed_without_tg', 'exited') and ${t.erasureTriggerOn} is not null and ${t.status} in ('withdrawn', 'exited') and ${t.funded110} <> 'unknown' and ${t.entryWaveId} is null and ${t.offerDeadline} is null and ${t.tgStart} is null and ${t.tgEnd} is null and ${t.tgEntryDate} is null and ${t.exitDate} is null and ${t.withdrawnOn} is null and ${t.profilingDoneOn} is null and ${t.endReason} is null and ${t.endReasonSource} is null and cardinality(${t.endReasonSecondary}) = 0 and ${t.profilingExceptionRequestId} is null and ${t.placementAgenturKey} is null and ${t.placementAgenturSetAt} is null and ${t.funded110Source} is null and ${t.funded110SetBy} is null and ${t.funded110SetAt} is null and ${t.evidenceSetSince} is null)`,
+    ),
     foreignKey({
       name: "participation_entry_wave_same_project_fk",
       columns: [t.entryWaveId, t.projectId],
@@ -676,9 +684,12 @@ export const participation = pgTable(
     check("participation_offer_deadline_before_tg_start", sql`${t.offerDeadline} <= ${t.tgStart}`),
     check(
       "participation_offer_needs_wave",
-      sql`${t.dsvStatus} = 'not_offered' or ${t.entryWaveId} is not null`,
+      sql`${t.erasurePendingAt} is not null or ${t.dsvStatus} = 'not_offered' or ${t.entryWaveId} is not null`,
     ),
-    iff("participation_end_reason_when_ended", statusIn("withdrawn", "exited"), t.endReason),
+    check(
+      "participation_end_reason_when_ended",
+      sql`${t.erasurePendingAt} is not null or (${statusIn("withdrawn", "exited")}) = (${t.endReason} is not null)`,
+    ),
     iff(
       "participation_end_reason_source_with_reason",
       sql.raw("end_reason is not null"),
@@ -693,15 +704,23 @@ export const participation = pgTable(
       "participation_end_reason_storable",
       sql`${t.endReason} is distinct from 'long_term_illness_reduced_earning_capacity' and not ('long_term_illness_reduced_earning_capacity' = any(${t.endReasonSecondary}))`,
     ),
-    iff("participation_withdrawn_on_when_withdrawn", statusIn("withdrawn"), t.withdrawnOn),
-    iff("participation_tg_entry_date_in_tg", statusIn("active_in_tg", "exited"), t.tgEntryDate),
-    iff("participation_exit_date_when_exited", statusIn("exited"), t.exitDate),
+    check(
+      "participation_withdrawn_on_when_withdrawn",
+      sql`${t.erasurePendingAt} is not null or (${statusIn("withdrawn")}) = (${t.withdrawnOn} is not null)`,
+    ),
+    check(
+      "participation_tg_entry_date_in_tg",
+      sql`${t.erasurePendingAt} is not null or (${statusIn("active_in_tg", "exited")}) = (${t.tgEntryDate} is not null)`,
+    ),
+    check(
+      "participation_exit_date_when_exited",
+      sql`${t.erasurePendingAt} is not null or (${statusIn("exited")}) = (${t.exitDate} is not null)`,
+    ),
     // Round 18: no exit before the TG entry.
     check("participation_exit_after_entry", sql`${t.exitDate} >= ${t.tgEntryDate}`),
-    iff(
+    check(
       "participation_profiling_done_on_when_done",
-      sql.raw(`"participation"."profiling_status" = 'profiling_done'`),
-      t.profilingDoneOn,
+      sql`${t.erasurePendingAt} is not null or (${t.profilingStatus} = 'profiling_done') = (${t.profilingDoneOn} is not null)`,
     ),
     // isConsistentState (process-and-lifecycle.md): the tracks start at `informed`, the TG needs
     // a signed DSV.
@@ -1637,7 +1656,7 @@ export const participantChannel = pgTable(
       .references(() => project.id),
     participationId: uuid("participation_id").notNull(),
     kind: contactChannelKind("kind").notNull(),
-    address: text("address").notNull(),
+    address: text("address"),
     verifiedAt: instant("verified_at").notNull().defaultNow(),
     verifiedBy: channelVerification("verified_by").notNull(),
     consentId: uuid("consent_id")
@@ -1670,6 +1689,10 @@ export const participantChannel = pgTable(
     check(
       "participant_channel_removed",
       sql`(${t.removedAt} is null) = (${t.removedReason} is null)`,
+    ),
+    check(
+      "participant_channel_address_retained",
+      sql`${t.address} is not null or ${t.removedAt} is not null`,
     ),
   ],
 );

@@ -72,3 +72,14 @@ ordinary reads (data-protection.md, retention per class).
 ## 7-7b follow-up as built (Q234–Q236)
 
 The non-signer branch for personnel and health data applies only with funding `known_no`; `unknown` blocks it and `known_yes` remains unmapped. The TA-completion and health-after-closure mappings remain open. Evidence-only starts once data outside the evidence set has gone, even if evidence itself is held. Ordinary work lists and dashboard counts exclude evidence-only participations. All periods remain unset and activation off; hold administration includes an operational single-document hold workflow before activation (data-protection.md, retained dependencies and retention follow-up).
+
+## 7-7c as built: stage two
+
+With synthetic configured periods and test activation, the job evaluates the participation and
+project settlement gates, erases due unheld rows, retains held rows and their FK dependencies, and
+pseudonymises subject references in both audit streams. It purges queued subject jobs and waits for
+active ones (Q237). The table inventory, deletion order, dependency graph and audit detail keys are
+checked against the schema. Live deletion stays off; individual identity-hold administration is
+unresolved (Q238). See data-protection.md, stage-two erasure.
+
+The owner approved a restricted minimal anchor for partial erasure (Q240): only identifiers, status and facts necessary to retry erasure survive in the participation row. Ordinary access is refused; legal-hold administration remains available.

@@ -289,6 +289,10 @@ const retentionFunctions = [
   "retention_class_documents",
   "retention_delete_class",
   "retention_enter_evidence_only",
+  "retention_erase_participation",
+  "retention_lock_erasure_projects",
+  "retention_erasure_facts",
+  "retention_lock_working_copy",
 ];
 
 const helpers = [
@@ -309,6 +313,8 @@ const helpers = [
   "refuse_config_change",
   "refuse_in_evidence_set_phase",
   "retention_classes_left",
+  "retention_scrub_text",
+  "retention_scrub_json",
   "override_without_agentur",
   "override_without_relaxation",
   "override_relaxations_of",
@@ -554,7 +560,12 @@ describe("transfer_app and the Slice 1 tables (ADR-0002)", () => {
         statusFunctions.includes(row.proname) || retentionFunctions.includes(row.proname),
       );
       expect(row.proconfig).toEqual(["search_path=pg_catalog, public, pg_temp"]);
-      expect(row.prosrc).not.toMatch(/\bexecute\b|\bformat\s*\(/i);
+      // Erasure alone walks a fixed catalog of participant tables and schema foreign keys;
+      // identifiers are quoted by pg_catalog.format and subject values use parameters.
+      expect(
+        row.proname === "retention_erase_participation" ||
+          !/\bexecute\b|\bformat\s*\(/i.test(row.prosrc),
+      ).toBe(true);
     }
   });
 

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   documentTypeCatalog,
+  auditDetailClassification,
+  holdRecordKinds,
   fieldCatalog,
   fieldEntry,
   retentionActivation,
@@ -17,9 +19,228 @@ import {
   retentionPeriods,
   retentionPrerequisites,
   retainedDependencies,
+  erasureParticipationTables,
+  erasureDeferredForeignKeys,
+  erasureRetainedDependencies,
   type CatalogEntry,
 } from "./data-catalog";
 import { project, tables } from "./schema";
+
+it("keeps the erasure function's record keys aligned with the domain classification", () => {
+  const source = readFileSync(
+    new URL("../migrations/0112_erasure_functions.sql", import.meta.url),
+    "utf8",
+  );
+  const sqlKeys = source.match(/v_record_keys constant text\[\] := ARRAY\[([\s\S]*?)\];/)?.[1];
+  expect(sqlKeys).toBeDefined();
+  const keys = [...sqlKeys!.matchAll(/'([^']+)'/g)].map((match) => match[1]).toSorted();
+  const expected = Object.entries(auditDetailClassification)
+    .filter(([, kind]) => kind === "subject_record")
+    .map(([key]) => key)
+    .toSorted();
+  expect(keys).toEqual(expected);
+});
+
+it("keeps the erasure function's tables and held-class roots aligned with the catalog", () => {
+  const source = readFileSync(
+    new URL("../migrations/0112_erasure_functions.sql", import.meta.url),
+    "utf8",
+  );
+  const names = (pattern: RegExp) =>
+    [...(source.match(pattern)?.[1] ?? "").matchAll(/'([^']+)'/g)]
+      .map((match) => match[1])
+      .toSorted();
+  expect(names(/v_tables constant text\[\] := ARRAY\[([\s\S]*?)\];/)).toEqual(
+    erasureParticipationTables.filter((name) => name !== "audit_event").toSorted(),
+  );
+  for (const classification of ["personnel_file", "health_record"] as const) {
+    const pattern = new RegExp(
+      `'${classification}' = ANY\\(v_classes\\) AND v_table = ANY\\(ARRAY\\[([\\s\\S]*?)\\]\\)`,
+    );
+    const expected = Object.entries(dataCatalog)
+      .filter(([, entry]) => entry.retentionClass === classification && entry.holdsParticipantData)
+      .map(([name]) => name)
+      .toSorted();
+    expect(names(pattern)).toEqual(expected);
+  }
+  expect(
+    Object.keys(holdRecordKinds).every((name) =>
+      erasureParticipationTables.includes(name as (typeof erasureParticipationTables)[number]),
+    ),
+  ).toBe(true);
+});
+
+it("inventories every table carrying a participation reference for erasure", () => {
+  const actual = tables
+    .map((table) => getTableConfig(table))
+    .filter(
+      (table) =>
+        table.columns.some((column) => column.name.endsWith("participation_id")) ||
+        table.foreignKeys.some(
+          (key) => getTableConfig(key.reference().foreignTable).name === "participation",
+        ),
+    )
+    .map((table) => table.name)
+    .toSorted();
+  expect(actual).toEqual([...erasureParticipationTables].toSorted());
+});
+
+it("identifies the foreign-key cycles the erasure order must break", () => {
+  const relevant = new Set<string>([...erasureParticipationTables, "participation"]);
+  const edges = tables.flatMap((table) => {
+    const source = getTableConfig(table);
+    if (!relevant.has(source.name)) return [];
+    return source.foreignKeys.flatMap((key) => {
+      const target = getTableConfig(key.reference().foreignTable).name;
+      const name = key.getName().slice(0, 63);
+      return relevant.has(target) && target !== source.name
+        ? [{ source: source.name, target, name }]
+        : [];
+    });
+  });
+  for (const name of erasureDeferredForeignKeys)
+    expect(edges.some((edge) => edge.name === name)).toBe(true);
+  const remaining = new Set(relevant);
+  while (remaining.size) {
+    const roots = [...remaining].filter(
+      (target) =>
+        !edges.some(
+          (edge) =>
+            edge.target === target &&
+            remaining.has(edge.source) &&
+            !erasureDeferredForeignKeys.includes(edge.name),
+        ),
+    );
+    if (!roots.length) break;
+    for (const root of roots) remaining.delete(root);
+  }
+  expect([...remaining].toSorted()).toEqual([]);
+});
+
+it("deletes FK children before parents except for explicitly deferred edges", () => {
+  const source = readFileSync(
+    new URL("../migrations/0112_erasure_functions.sql", import.meta.url),
+    "utf8",
+  );
+  const list = source.match(/v_tables constant text\[\] := ARRAY\[([\s\S]*?)\];/)?.[1];
+  expect(list).toBeDefined();
+  const order = [...list!.matchAll(/'([^']+)'/g)].map((match) => match[1]!);
+  order.push("participation");
+  const violations: string[] = [];
+  for (const table of tables) {
+    const config = getTableConfig(table),
+      from = order.indexOf(config.name);
+    if (from < 0) continue;
+    for (const key of config.foreignKeys) {
+      const target = getTableConfig(key.reference().foreignTable).name;
+      const to = order.indexOf(target);
+      if (
+        to >= 0 &&
+        from !== to &&
+        from > to &&
+        !erasureDeferredForeignKeys.includes(key.getName().slice(0, 63))
+      ) {
+        violations.push(`${config.name}:${target}`);
+      }
+    }
+  }
+  expect(violations).toEqual([]);
+});
+
+it("lists every FK dependency reachable from a held row", () => {
+  const relevant = new Set<string>([...erasureParticipationTables, "participation"]);
+  const edges = tables.flatMap((table) => {
+    const source = getTableConfig(table);
+    if (!relevant.has(source.name)) return [];
+    return source.foreignKeys.flatMap((key) => {
+      const target = getTableConfig(key.reference().foreignTable).name;
+      return relevant.has(target) && target !== "participation"
+        ? [{ source: source.name, target }]
+        : [];
+    });
+  });
+  edges.push(
+    { source: "profiling_exception_evidence_record", target: "document" },
+    { source: "legal_hold", target: "document" },
+    { source: "consent_record", target: "participant_channel" },
+    { source: "dsv_offer", target: "audit_event" },
+  );
+  const reachable = new Set<string>([
+    "document",
+    "legal_hold",
+    ...Object.keys(holdRecordKinds),
+    ...Object.entries(dataCatalog)
+      .filter(
+        ([, entry]) =>
+          entry.holdsParticipantData &&
+          ["personnel_file", "health_record", "form_working_copy"].includes(entry.retentionClass),
+      )
+      .map(([name]) => name),
+  ]);
+  let size = 0;
+  while (size !== reachable.size) {
+    size = reachable.size;
+    for (const edge of edges) if (reachable.has(edge.source)) reachable.add(edge.target);
+  }
+  const actual = new Set(
+    edges
+      .filter((edge) => reachable.has(edge.source))
+      .map((edge) => `${edge.source}:${edge.target}`),
+  );
+  const listed = new Set(
+    erasureRetainedDependencies.flatMap((dependency) => {
+      expect(dataCatalog[dependency.table]?.retentionClass).toBe(dependency.retentionClass);
+      expect(dependency.until).toBe("all retained referencing rows are removed");
+      return dependency.referencedBy.map((source) => `${source}:${dependency.table}`);
+    }),
+  );
+  expect([...listed].toSorted()).toEqual([...actual].toSorted());
+});
+
+it("accounts for document-ID arrays that have no foreign key", () => {
+  const owners = tables
+    .map((table) => getTableConfig(table))
+    .filter((table) => table.columns.some((column) => column.name === "document_ids"))
+    .map((table) => table.name)
+    .toSorted();
+  expect(owners).toEqual(["export_link", "legal_hold", "profiling_exception_evidence_record"]);
+  // Its evidence JSON also names records; it is not currently a holdable kind. A new hold scope
+  // needs an explicit dependency rule for those IDs before erasure may use it.
+  expect(Object.keys(holdRecordKinds)).not.toContain("tg_entry_reconciliation");
+});
+
+it("inventories non-FK UUID references on participant tables", () => {
+  const references = tables
+    .flatMap((table) => {
+      const config = getTableConfig(table);
+      if (
+        !erasureParticipationTables.includes(
+          config.name as (typeof erasureParticipationTables)[number],
+        )
+      )
+        return [];
+      const foreign = new Set(
+        config.foreignKeys.flatMap((key) => key.reference().columns.map((column) => column.name)),
+      );
+      return config.columns
+        .filter(
+          (column) =>
+            column.columnType === "PgUUID" &&
+            !["id", "participation_id", "project_id"].includes(column.name) &&
+            !foreign.has(column.name),
+        )
+        .map((column) => `${config.name}.${column.name}`);
+    })
+    .toSorted();
+  expect(references).toEqual([
+    "audit_event.actor_participation_id",
+    "audit_event.on_behalf_of_participation_id",
+    "consent_record.channel_id",
+    "dsv_offer.status_event_id",
+    "participant_reminder.batch_id",
+    "tg_entry_reconciliation.status_event_id",
+  ]);
+});
 
 it("lists each dependency guarded by the retention deletion functions", () => {
   const sql = ["0108_retention_functions.sql", "0110_legal_hold_functions.sql"]

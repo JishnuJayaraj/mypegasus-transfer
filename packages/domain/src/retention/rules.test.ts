@@ -5,6 +5,7 @@ import type { ProjectRole } from "../enums";
 import {
   credentialCutoff,
   evidenceOnlyApplies,
+  evidenceSetDue,
   participationRetentionTriggers,
   mayReadFunding,
   mayRecordFunding,
@@ -117,11 +118,13 @@ describe("retentionDue (ADR-0008; data-protection.md, retention)", () => {
     });
   });
 
-  it("applies only the credentials and working copies; the rest is reported", () => {
+  it("applies the configured stage-one classes and stage-two erasure", () => {
     expect(RetentionClass.options.filter((c) => retentionRules[c].applied)).toEqual([
+      "participation_record",
       "personnel_file",
       "health_record",
       "access_credential",
+      "evidence_set",
       "form_working_copy",
       "orphaned_object",
     ]);
@@ -418,6 +421,50 @@ describe("retention per class (data-protection.md, retention per class)", () => 
         "2026-02-01",
       ),
     ).toBeNull();
+  });
+});
+
+describe("evidence-set expiry (data-protection.md, retention and deletion)", () => {
+  const project = {
+    anyEnteredTg: true,
+    fundings: ["known_yes"] as const,
+    kugFinalSettlementDate: "2025-03-01",
+    measure110SettlementDate: "2026-06-01",
+  };
+  it("waits for the day after the end of the configured year", () => {
+    expect(evidenceSetDue(project, 4, "2030-12-31")).toBe("not_due");
+    expect(evidenceSetDue(project, 4, "2031-01-01")).toBe("due");
+  });
+  it("blocks unknown funding, missing required dates and unset periods", () => {
+    expect(evidenceSetDue({ ...project, fundings: ["unknown"] }, 4, "2032-01-01")).toBe(
+      "funding_unknown",
+    );
+    expect(evidenceSetDue({ ...project, kugFinalSettlementDate: null }, 4, "2032-01-01")).toBe(
+      "settlement_missing",
+    );
+    expect(evidenceSetDue({ ...project, measure110SettlementDate: null }, 4, "2032-01-01")).toBe(
+      "settlement_missing",
+    );
+    expect(evidenceSetDue(project, null, "2032-01-01")).toBe("period_unset");
+    expect(evidenceSetDue(project, -1, "2032-01-01")).toBe("period_unset");
+    expect(evidenceSetDue(project, 0.5, "2032-01-01")).toBe("period_unset");
+    expect(
+      evidenceSetDue({ ...project, anyEnteredTg: false, fundings: ["known_no"] }, 4, "2032-01-01"),
+    ).toBe("settlement_missing");
+    expect(
+      evidenceSetDue(
+        { ...project, anyEnteredTg: false, kugFinalSettlementDate: null },
+        4,
+        "2031-01-01",
+      ),
+    ).toBe("due");
+    expect(
+      evidenceSetDue(
+        { ...project, fundings: ["known_no"], measure110SettlementDate: null },
+        4,
+        "2030-01-01",
+      ),
+    ).toBe("due");
   });
 });
 
