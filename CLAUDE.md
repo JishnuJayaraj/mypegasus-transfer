@@ -128,8 +128,9 @@ apps/portal       React SPA for participants (mobile-first, own login, ADR-0001)
 apps/api          Hono API; in production also serves both built SPAs (/ and /portal/)
 packages/domain   entities, lifecycle state machine, field catalog, Zod schemas, completeness
                   rules (no I/O, no system time)
-packages/db       Drizzle schema, migrations (SECURITY DEFINER status functions and grants are
-                  hand-written), synthetic seed, data catalog
+packages/db       Drizzle schema, migrations (tables, types, grants, data), the function and
+                  trigger sources in sql/ (one file each: what a function does today; ADR-0002,
+                  function sources), synthetic seed, data catalog
 packages/api-client  generated OpenAPI document + types and the typed client
 packages/ui       Carbon wrappers, layout, tokens, i18n helpers
 packages/self-service-ui  the self-service wizard, shared by both SPAs (no staff code)
@@ -158,6 +159,9 @@ Dockerfile        the production image (Node 24): API bundle + both SPAs
   The deny rules for `.env` etc. in `.claude/settings.json` are a **guardrail, not a security
   boundary**. Real secrets live in the cluster's secret store, never in the repo or a local file
   an agent can read.
+- A database function or trigger is changed by editing its file in `packages/db/sql/`, never by
+  re-pasting it into a migration; a migration is for tables, types, data and dropped signatures
+  (ADR-0002, function sources). Never edit a merged migration.
 - Every table holding participant data has a `project_id` column (RLS is added before the
   pilot, ADR-0002/0005).
 - API: OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1`
@@ -183,7 +187,8 @@ pnpm verify:changed   # while working: typecheck, lint, tests related to changes
                       # never instead of verify, build and test:e2e before a push
 pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
 pnpm db:generate      # drizzle-kit: SQL migration from the schema
-pnpm db:migrate       # app migrations, then pg-boss's schema and its grants
+pnpm db:migrate       # app migrations, then the changed function sources (packages/db/sql),
+                      # then pg-boss's schema and its grants
 pnpm db:seed          # synthetic data only
 pnpm db:reset         # dev only: empty schema, migrate, seed
 pnpm jobs:lifecycle [--today YYYY-MM-DD]   # the nightly lifecycle sweep once (dev/CI only)

@@ -18,6 +18,47 @@ validated by the resolved Zod/JSON schema. Audit log is an append-only table.
 - jsonb fields need careful indexing if they become filter criteria; promote to columns when
   a field becomes universal.
 
+## Function and trigger sources
+
+The current rule (Slice 7b, D1; Q256). The amendments below name the migration that first held a
+function: that is history. **What a function does today is in its source file.**
+
+- **One file per function and per table's triggers.** `packages/db/sql/functions/<area>/<name>.sql`
+  holds the function (`CREATE OR REPLACE FUNCTION`, every overload), its owner and its grants
+  (`REVOKE ALL … FROM PUBLIC`, then each `GRANT EXECUTE`); `packages/db/sql/triggers/<table>.sql`
+  holds the table's triggers (`CREATE OR REPLACE TRIGGER`). Names are schema-qualified, so a
+  source doesn't depend on the session's `search_path`. `packages/db/sql/manifest.json` lists
+  every source in the order it is applied; a file the manifest doesn't list, or a listed file that
+  is missing, stops the run.
+- **Changing a function is editing its file.** `pnpm db:migrate` runs the migrations and, after
+  they have committed, applies every source whose SHA-256 differs from the one recorded in
+  `function_source` (name, hash, time; no personal data, `reference_data`, owner only), in the
+  manifest's order, **in one transaction or not at all**. A failed migration ends the run before
+  any source, and the runner itself refuses a database that isn't at the journal's last
+  migration. `db:reset`, the test databases, the e2e setup and the image (`dist/migrate.js` with
+  `dist/sql`) all go through `runMigrations`, so there is one path. A second run applies nothing.
+- **A new function** is a new file, listed in the manifest after the functions it calls (an SQL
+  function's body is checked when it is created), with its owner and grants.
+- **A migration is still needed, and only, for** tables, types, enum values, grants on tables and
+  data, and for dropping a function, an old signature or a return type (`CREATE OR REPLACE` can't
+  change those), together with removing or changing the source. Sources run after the migrations,
+  so a function may use an enum value added in the same PR; a migration never calls a function
+  whose source the same PR changes.
+- **The allowlist** (`migrationOwnedFunctions` in the manifest): a function that a table's
+  constraint, default or index expression depends on has no source and stays in migrations,
+  because replacing it would not revalidate the rows or rebuild the index. It is empty today; a
+  test fails when it differs from what the catalog's dependencies say.
+- **Merged migrations are never edited** and stay the history. The first sources are
+  `pg_get_functiondef` and `pg_get_triggerdef` of a database migrated to `0115`, bodies verbatim
+  (`packages/db/sql/extraction-baseline.json` holds their hashes).
+- **Tested** (`function-sources.int.test.ts`): a database from the migrations alone and one with
+  the sources have the same definition, owner, privileges, `SECURITY DEFINER` and configuration
+  for every function and trigger whose source is as extracted (a source changed later is reviewed
+  as the diff of its file); a second apply is a no-op; a function or trigger without a source, and
+  a source that defines nothing, fail; a database at `0115` with synthetic rows upgrades to the
+  same functions, triggers, privileges and rows; a failing source, a failed migration and a
+  database behind its migrations leave nothing applied.
+
 ## Amendments 2026-10-15
 
 Decided (from the decisions log):

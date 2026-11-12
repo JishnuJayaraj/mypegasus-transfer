@@ -66,8 +66,14 @@ Coverage thresholds remain required; a passing coverage number does not establis
 **Checkpoint:** the behavior and its material failure case work, with matching contracts across
 the touched layers. Run the focused checks, then take the next step within the same approved PR.
 
+A change to a database function or trigger is an edit of its source file
+(`packages/db/sql/functions/<area>/<name>.sql`, `packages/db/sql/triggers/<table>.sql`), applied
+by `pnpm db:migrate`; the diff of that file is the change. Write a migration only for what a
+source can't express: tables, types, data, a dropped function or signature (ADR-0002, function
+sources).
+
 The fast tier while working is `pnpm verify:changed`: typecheck, lint and, without coverage, the
-tests related to the files changed against `origin/main`. A change to a migration, `setup.sql`,
+tests related to the files changed against `origin/main`. A change to a migration, a function or trigger source, `setup.sql`,
 `packages/db/src/schema.ts`, the db testing helpers or a Vitest config runs the db and api
 projects in full, since imports don't reveal what depends on them. It prints what it runs and
 why. It is never the gate before a push (§4).

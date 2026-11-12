@@ -386,6 +386,7 @@ describe("data catalog", () => {
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),
+      function_source: entry("reference_data", "internal"),
       config_template_version: entry("reference_data", "internal"),
       project_template_pin: entry("project_master", "internal"),
       project_config_override: entry("project_master", "internal"),

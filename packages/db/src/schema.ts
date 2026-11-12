@@ -3428,6 +3428,22 @@ export const jobRun = pgTable(
 );
 
 /**
+ * The function and trigger sources applied to this database (ADR-0002, function sources): one row
+ * per file of `packages/db/sql/manifest.json` with the SHA-256 of the content last applied.
+ * `db:migrate` applies a source whose hash differs and writes the row in the same transaction.
+ * Written by the owner only; the runtime roles have no privilege on it.
+ */
+export const functionSource = pgTable(
+  "function_source",
+  {
+    name: text("name").primaryKey(),
+    sha256: text("sha256").notNull(),
+    appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [check("function_source_sha256_is_hex", sql`${t.sha256} ~ '^[0-9a-f]{64}$'`)],
+);
+
+/**
  * Participant assignments (Q62): the PL assigns a participation to members holding `consultant`
  * in its project, zero or more per participation. Rows are closed, never deleted (`ended_*`):
  * by `unassign_participation`, when the consultant role is removed, or when the account is
@@ -3957,6 +3973,7 @@ export const tables = [
   lifecycleEdge,
   auditEvent,
   jobRun,
+  functionSource,
   configTemplateVersion,
   projectTemplatePin,
   projectConfigOverride,

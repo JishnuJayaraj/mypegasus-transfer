@@ -3,7 +3,7 @@
 // Runs `pnpm typecheck`, `pnpm lint` and Vitest without coverage on the tests related to the files
 // changed against the base (default origin/main): committed since the merge base, staged,
 // unstaged and untracked, as `vitest --changed` sees them. Imports don't reveal what depends on a
-// migration (and the SECURITY DEFINER functions written in them), the setup SQL, the Drizzle
+// migration, a function or trigger source (`packages/db/sql`), the setup SQL, the Drizzle
 // schema, the db testing helpers or a Vitest config, so a change to one of those runs the db and
 // api projects in full. It prints what it runs and why. `pnpm verify`, `pnpm build` and
 // `pnpm test:e2e` stay the gate before a push.
@@ -35,7 +35,10 @@ const fullDatabaseRules = [
     pattern: /^packages\/db\/migrations\//,
     why: "a migration (SECURITY DEFINER functions, grants)",
   },
-  { pattern: /^packages\/db\/sql\//, why: "the roles and databases of `pnpm db:setup`" },
+  {
+    pattern: /^packages\/db\/sql\//,
+    why: "a function or trigger source, or the roles and databases of `pnpm db:setup`",
+  },
   { pattern: /^packages\/db\/src\/schema\.ts$/, why: "the Drizzle schema" },
   { pattern: /^packages\/db\/src\/testing\//, why: "the db testing helpers" },
   { pattern: /(^|\/)vitest\.(config|workers)\.[cm]?[jt]s$/, why: "a Vitest config" },

@@ -1,0 +1,1 @@
+CREATE OR REPLACE TRIGGER staff_session_ends_assisted_modes AFTER UPDATE OF ended_at ON public.staff_session FOR EACH ROW WHEN (((old.ended_at IS NULL) AND (new.ended_at IS NOT NULL))) EXECUTE FUNCTION public.end_assisted_modes_of_session();
