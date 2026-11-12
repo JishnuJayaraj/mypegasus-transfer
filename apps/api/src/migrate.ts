@@ -14,4 +14,4 @@ const applied = await runMigrations(
   fileURLToPath(new URL("./sql", import.meta.url)),
 );
 // File names only.
-console.log(`function sources applied: ${applied.length}`);
+process.stdout.write(`function sources applied: ${applied.length}\n`);
