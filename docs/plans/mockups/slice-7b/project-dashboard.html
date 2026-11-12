@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mock-up: Projekt, Übersicht</title>
+    <link rel="stylesheet" href="mockup.css" />
+  </head>
+  <body>
+    <div class="top">
+      ▸ Transferplattform <span class="sp"></span><span class="user">Petra Projektleitung</span>
+    </div>
+    <div class="layout">
+      <nav class="nav">
+        <a href="#">Projekte</a>
+        <div class="grp">Restrukturierung Werk Nord</div>
+        <a class="sub on" href="#">Übersicht</a>
+        <a class="sub" href="#">Teilnehmende</a>
+        <a class="sub" href="#">Termine</a>
+        <a class="sub" href="#">Agentur</a>
+        <a class="sub" href="#">Einrichtung</a>
+        <a class="sub" href="#">Team</a>
+      </nav>
+      <main>
+        <div class="crumbs">Projekte</div>
+        <div class="hero" style="margin-bottom: 18px">
+          <div>
+            <h1>Restrukturierung Werk Nord</h1>
+            <div class="meta">
+              Beispiel Maschinenbau GmbH · Transferagentur und Transfergesellschaft · Niederlassung
+              Nord
+            </div>
+            <div class="tags"><span class="tag green">Aktiv</span></div>
+          </div>
+          <span class="sp"></span>
+          <a class="btn sec" href="#">Aktionen ▾</a>
+          <a class="btn pri" href="#">Teilnehmende hinzufügen</a>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi red"><b>7</b><span>Überfällig →</span></div>
+          <div class="kpi yellow"><b>12</b><span>In den nächsten 14 Tagen →</span></div>
+          <div class="kpi blue"><b>23</b><span>Angaben oder Unterlagen fehlen →</span></div>
+          <div class="kpi"><b>0</b><span>Termine zu klären</span></div>
+        </div>
+
+        <div class="cols" style="margin-top: 16px">
+          <div>
+            <div class="card">
+              <div class="head">
+                <h2>Verlauf</h2>
+                <span class="sum">84 Teilnehmende</span>
+              </div>
+              <div class="funnel">
+                <div><b>6</b><span>Importiert</span></div>
+                <div><b>8</b><span>Kontaktiert</span></div>
+                <div><b>3</b><span>Nicht erreichbar</span></div>
+                <div><b>38</b><span>Informiert</span></div>
+                <div><b>21</b><span>In der TG</span></div>
+                <div class="end"><b>5</b><span>Ausgeschieden</span></div>
+                <div class="end"><b>3</b><span>Ausgetreten</span></div>
+              </div>
+              <p class="sum" style="margin-top: 10px">
+                Jede Zahl öffnet die Liste mit genau diesen Personen.
+              </p>
+            </div>
+
+            <div class="card">
+              <div class="head">
+                <h2>Dringend</h2>
+                <span class="sum">die 3 ältesten überfälligen Punkte</span><span class="sp"></span>
+                <a class="btn ghost sm" href="#">Alle 7 in der Liste</a>
+              </div>
+              <table>
+                <tr>
+                  <th>Teilnehmende</th>
+                  <th>Nächster Schritt</th>
+                  <th>Fällig</th>
+                  <th>Beratung</th>
+                </tr>
+                <tr>
+                  <td><a href="#">Normalverbraucher, Anna</a><small>BSP-0016</small></td>
+                  <td>Arbeitsuchendmeldung fehlt</td>
+                  <td><span class="tag red">seit 2 Tagen</span><small>05.02.2027</small></td>
+                  <td>Bernd Beratung</td>
+                </tr>
+                <tr>
+                  <td><a href="#">Beispiel, Bruno</a><small>BSP-0031</small></td>
+                  <td>DSV-Angebotsfrist abgelaufen</td>
+                  <td><span class="tag red">seit 1 Tag</span><small>06.02.2027</small></td>
+                  <td>—</td>
+                </tr>
+                <tr>
+                  <td><a href="#">Muster, Carla</a><small>BSP-0042</small></td>
+                  <td>Teilnahme am Termin nicht erfasst</td>
+                  <td><span class="tag red">seit 1 Tag</span><small>06.02.2027</small></td>
+                  <td>Bernd Beratung</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="card">
+              <div class="head">
+                <span class="chev">▾</span>
+                <h2>Kennzahlen</h2>
+                <span class="sum">nur Werte über 0 · 31 weitere ohne Befund</span
+                ><span class="sp"></span><a class="btn ghost sm" href="#">Alle anzeigen</a>
+              </div>
+              <div class="tags" style="margin-top: 12px; gap: 8px">
+                <span class="chip">Profiling in Arbeit <b>14</b></span>
+                <span class="chip">DSV unterschrieben, nicht vollständig <b>4</b></span>
+                <span class="chip">TL 407 einreichen <b>6</b></span>
+                <span class="chip">Kein Aktivierungscode <b>9</b></span>
+                <span class="chip">Datenschutzhinweis fällig <b>3</b></span>
+                <span class="chip">BA-Meldung offen <b>2</b></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card side">
+            <h3>Diese Woche</h3>
+            <p>
+              <b>Di 09.02.</b> Infoveranstaltung W2 · 18 gebucht<br />
+              <b>Fr 12.02.</b> Unterschriftsfrist W1 · 9 offen<br />
+              <b>Mo 15.02.</b> TL 407 an Agentur · 6 offen
+            </p>
+            <h3>Wellen</h3>
+            <p>
+              W1 · TG-Beginn 01.03.2027 · 41 Personen<br />
+              W2 · TG-Beginn 01.04.2027 · 43 Personen
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+    <div class="cap">Mock-up 3 · Projektübersicht · synthetische Daten</div>
+  </body>
+</html>
