@@ -187,7 +187,7 @@ function Channels() {
                     lowContrast
                   />
                   <Stack gap={3}>
-                    <Button kind="secondary" onClick={() => setConfirming(undefined)}>
+                    <Button kind="tertiary" onClick={() => setConfirming(undefined)}>
                       {t("channels.cancel")}
                     </Button>
                     <Button kind="danger" disabled={busy} onClick={() => void remove(channel.id)}>
@@ -254,7 +254,7 @@ function UpgradeNotice(props: {
           <Button disabled={props.busy} onClick={props.onAgree}>
             {t("channels.upgrade.agree")}
           </Button>
-          <Button kind="secondary" disabled={props.busy} onClick={props.onLater}>
+          <Button kind="tertiary" disabled={props.busy} onClick={props.onLater}>
             {t("channels.upgrade.later")}
           </Button>
         </Stack>

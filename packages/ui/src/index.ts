@@ -1,7 +1,6 @@
 // The apps use Carbon only through this package (CLAUDE.md, tech stack). The patterns are in
 // docs/architecture/ui-patterns.md.
 export {
-  Button,
   ButtonSet,
   Checkbox,
   ComboBox,
@@ -48,6 +47,7 @@ export {
   WarningAlt,
 } from "@carbon/icons-react";
 export { ActionButton } from "./action";
+export { Button, type ButtonKind } from "./button";
 export {
   batchActionsShown,
   DataTable,
@@ -59,6 +59,12 @@ export {
   type SortDirection,
   type TableSort,
 } from "./data-table";
+export { DetailHeader, detailHeaderFacts } from "./detail-header";
+export { Facts, type Fact } from "./facts";
+export { Funnel, type FunnelStage } from "./funnel";
+export { NextSteps, type NextStep } from "./next-steps";
+export { SectionCard } from "./section-card";
+export { StepList, type Step, type StepState } from "./step-list";
 export { formatDate, formatTimestamp, parseDisplayDate } from "./dates";
 export { DateField } from "./fields";
 export { createI18n, syncDocumentLanguage, UI_NAMESPACE, uiResources } from "./i18n";

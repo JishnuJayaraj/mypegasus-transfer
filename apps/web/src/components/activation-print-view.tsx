@@ -40,7 +40,7 @@ export function ActivationPrintView({
     <section className="tp-print-view" aria-label={t(`activation.print.${kind}`)}>
       <div className="tp-print-controls">
         <Button onClick={() => window.print()}>{t("activation.print.print")}</Button>
-        <Button kind="secondary" onClick={onClose}>
+        <Button kind="tertiary" onClick={onClose}>
           {t("activation.print.close")}
         </Button>
       </div>
@@ -78,7 +78,7 @@ export function NoticePrintView({ items, onClose }: { items: NoticeItem[]; onClo
     <section className="tp-print-view" aria-label={t("activation.print.notice")}>
       <div className="tp-print-controls">
         <Button onClick={() => window.print()}>{t("activation.print.print")}</Button>
-        <Button kind="secondary" onClick={onClose}>
+        <Button kind="tertiary" onClick={onClose}>
           {t("activation.print.close")}
         </Button>
       </div>

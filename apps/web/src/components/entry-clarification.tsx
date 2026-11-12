@@ -189,7 +189,7 @@ export function EntryClarification({ participationId }: { participationId: strin
                   <div>
                     <ActionButton
                       size="md"
-                      kind="secondary"
+                      kind="tertiary"
                       unavailableReason={null}
                       onClick={() => setReconciling(true)}
                     >

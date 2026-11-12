@@ -380,7 +380,7 @@ function AgenturSettingForm(props: {
           invalidText={invalid("confirmedOn")?.invalidText}
         />
         <ButtonSet>
-          <Button kind="secondary" onClick={onDone}>
+          <Button kind="tertiary" onClick={onDone}>
             {t("overrides.cancel")}
           </Button>
           <Button type="submit" disabled={save.isPending}>

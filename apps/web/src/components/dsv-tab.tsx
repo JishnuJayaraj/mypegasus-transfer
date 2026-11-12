@@ -287,7 +287,7 @@ export function DsvTab({
                 {view.capabilities.offer && !generation.stale && (
                   <Button
                     disabled={busy}
-                    kind="secondary"
+                    kind="tertiary"
                     size="sm"
                     onClick={() => void offer(generation.generationId)}
                   >
@@ -296,7 +296,7 @@ export function DsvTab({
                 )}
                 {generation.capabilities.open ? (
                   <Button
-                    kind="secondary"
+                    kind="tertiary"
                     size="sm"
                     aria-label={t("dsv.generations.openAt", {
                       at: formatTimestamp(generation.generatedAt),

@@ -1,0 +1,301 @@
+// The product theme over Carbon (ui-patterns.md, theme): white cards on the `g10` background, an
+// 8px radius and one soft elevation on cards, 6px on controls, one spacing scale.
+//
+// This file holds the theme's tokens and EVERY override of a Carbon class (`.cds--…`); no other
+// stylesheet names one (theme.test.ts). Each override was checked against the Carbon version
+// below: when @carbon/react is updated, each block is checked again and the version raised.
+// Carbon's components keep their behaviour and their focus handling: nothing here removes an
+// outline or changes a state.
+//
+// Checked against: @carbon/react 1.118.0
+@use "@carbon/react/scss/theme";
+@use "@carbon/react/scss/colors";
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/type";
+
+:root {
+  --tp-surface: #{colors.$white};
+  --tp-radius-card: 8px;
+  --tp-radius-control: 6px;
+  --tp-elevation: 0 1px 2px rgb(0 0 0 / 8%), 0 2px 8px rgb(0 0 0 / 6%);
+  // The spacing scale (Carbon's steps under the theme's names): 4, 8, 12, 16, 24, 32, 48px.
+  --tp-space-1: #{$spacing-02};
+  --tp-space-2: #{$spacing-03};
+  --tp-space-3: #{$spacing-04};
+  --tp-space-4: #{$spacing-05};
+  --tp-space-5: #{$spacing-06};
+  --tp-space-6: #{$spacing-07};
+  --tp-space-7: #{$spacing-09};
+}
+
+// ---- Theme: controls (1.118.0) -------------------------------------------------------------
+
+// Buttons, the menu button and the fields get the control radius. The focus outline follows it.
+.cds--btn,
+.cds--text-input,
+.cds--text-area,
+.cds--select-input,
+.cds--search-input {
+  border-radius: var(--tp-radius-control);
+}
+
+// A modal's second button (Carbon renders the dark `secondary` kind, which reads as disabled):
+// shown as a text button on the modal's surface (ui-patterns.md, principle 3).
+.cds--modal-footer .cds--btn--secondary {
+  background: transparent;
+  color: theme.$link-primary;
+
+  &:hover {
+    background: theme.$layer-hover-01;
+    color: theme.$link-primary-hover;
+  }
+
+  &:active {
+    background: theme.$layer-active-01;
+  }
+}
+
+// The full-width buttons of a modal's footer stay square: they are the modal's edge.
+.cds--modal-footer .cds--btn {
+  border-radius: 0;
+}
+
+// ---- Theme: the side navigation (1.118.0) --------------------------------------------------
+
+// A white panel with a line at its end; the current entry on the soft blue with the blue bar.
+.cds--side-nav {
+  border-inline-end: 1px solid theme.$border-subtle-00;
+  background: var(--tp-surface);
+}
+
+.cds--side-nav__link[aria-current="page"],
+.cds--side-nav__link--current {
+  background: colors.$blue-10;
+}
+
+// An entry's badge sits at the end of its text instead of being cut off with it.
+.cds--side-nav__link-text {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-03;
+}
+
+// The shell's content offset is the shell's alone: Carbon's sibling rules would offset the
+// content at any width. From 66rem the navigation (16rem) is always open beside the content.
+.tp-shell > .cds--content.tp-content {
+  margin-inline-start: 0;
+}
+
+@media (min-width: 66rem) {
+  .tp-shell--nav > .cds--content.tp-content {
+    margin-inline-start: 16rem;
+  }
+}
+
+@media print {
+  .cds--header,
+  .cds--side-nav {
+    display: none !important;
+  }
+
+  .tp-shell > .cds--content.tp-content {
+    padding: 0;
+    margin: 0;
+  }
+}
+
+// ---- Layout corrections (1.118.0) ----------------------------------------------------------
+
+// A button never grows past its container (Carbon allows 20rem, wider than a card at 375px) and
+// a button set wraps, instead of pushing the page sideways; a long label wraps inside.
+:where(.tp-content, .tp-portal-content) .cds--btn {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.cds--btn-set {
+  flex-wrap: wrap;
+  row-gap: $spacing-03;
+}
+
+// A Carbon stack's one implicit column may not grow past its container (a wide fieldset would
+// push the page sideways otherwise).
+.cds--stack-vertical {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+// Carbon's menu button (its styles live in @carbon/styles only): the chevron turns when open.
+.cds--menu-button__container {
+  display: inline-flex;
+}
+
+.cds--menu-button__trigger svg {
+  transition: transform 110ms;
+}
+
+.cds--menu-button__trigger--open svg {
+  transform: rotate(180deg);
+}
+
+// ---- Inside the kit's components (1.118.0) -------------------------------------------------
+
+// The header panels (user menu, language list): full-width buttons.
+.tp-header-panel .cds--btn,
+.tp-user-list .cds--btn {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+.tp-user-list .cds--btn[aria-current="true"] {
+  font-weight: 600;
+}
+
+.tp-language-list .cds--btn[aria-pressed="true"] {
+  @include type.type-style("heading-compact-01");
+
+  background: theme.$layer-selected-01;
+}
+
+// A header tag (a customer's or type's name) wraps instead of truncating: Carbon turns a
+// truncated tag into a button with a tooltip, a tab stop that does nothing, and at 400% zoom
+// the full text must stay readable.
+.tp-page-header-tags .cds--tag,
+.tp-detail-header-tags .cds--tag {
+  max-inline-size: 100%;
+  block-size: auto;
+  min-block-size: 1.125rem;
+}
+
+.tp-page-header-tags .cds--tag__label,
+.tp-detail-header-tags .cds--tag__label {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tp-filter-tags .cds--tag,
+.tp-status-tags .cds--tag {
+  margin: 0;
+}
+
+// Compact choices: Carbon keeps room for an icon at a button's end; a quick view has none.
+.tp-quick-views .cds--btn {
+  padding-inline-end: $spacing-05;
+}
+
+// A disclosure within a table cell: the text colour, underlined, so it keeps its contrast on a
+// selected or hovered row too (WCAG 1.4.3).
+.tp-next-step .cds--btn--ghost {
+  min-block-size: auto;
+  padding-inline: 0;
+  color: theme.$text-primary;
+  text-decoration: underline;
+}
+
+.tp-appointment .cds--btn {
+  inline-size: 100%;
+  max-inline-size: 20rem;
+}
+
+// "angegeben" with its "Anzeigen": the small button doesn't widen the row.
+.tp-inline-actions .cds--btn {
+  min-block-size: 0;
+  padding-block: 0;
+}
+
+.tp-page-skeleton-block.cds--skeleton__placeholder {
+  inline-size: 100%;
+  block-size: 12rem;
+}
+
+.tp-tile-skeleton.cds--skeleton__placeholder {
+  inline-size: 100%;
+  block-size: 7.5rem;
+  border-radius: var(--tp-radius-card);
+}
+
+// The data table's header stays in view inside its scroll container.
+.tp-data-table-scroll .cds--data-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+}
+
+// Status tags (principle 4): Carbon has no yellow tag, so "warning" is yellow-10 with the warning
+// colour as its border; the icon and the text carry the meaning.
+.tp-status-tag--warning.cds--tag {
+  border: 1px solid theme.$support-warning;
+  background-color: colors.$yellow-10;
+  color: theme.$text-primary;
+}
+
+// The side panel (ui-patterns.md): a Carbon modal at the inline end, full height, 30rem wide;
+// full width below 42rem.
+.tp-side-panel.cds--modal {
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.tp-side-panel .cds--modal-container {
+  position: relative;
+  inset: auto;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  block-size: 100%;
+  max-block-size: 100%;
+
+  @media (min-width: 42rem) {
+    inline-size: 30rem;
+  }
+}
+
+// Low viewports (400 % zoom: 320 × 180–256 CSS px): the whole panel scrolls as one, so the footer
+// and the discard question stay reachable instead of being cut off below the body.
+@media (max-height: 30rem) {
+  .tp-side-panel .cds--modal-container {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .tp-side-panel .cds--modal-content {
+    overflow: visible;
+    max-block-size: none;
+  }
+}
+
+
+// The toolbar wraps on narrow screens instead of pushing the page sideways.
+.tp-data-table .cds--table-toolbar {
+  block-size: auto;
+  min-block-size: $spacing-09;
+}
+
+.tp-data-table .cds--toolbar-content {
+  flex-wrap: wrap;
+  block-size: auto;
+
+  // The search takes the room the others leave, on their line while there is room.
+  .cds--toolbar-search-container-persistent {
+    flex: 1 1 14rem;
+    inline-size: auto;
+  }
+}
+
+// The batch bar in its own toolbar: in the flow, wrapping on narrow screens, never wider
+// than the page.
+.tp-data-table .cds--batch-actions {
+  position: relative;
+  flex-wrap: wrap;
+  block-size: auto;
+  min-block-size: $spacing-09;
+  max-inline-size: 100%;
+}
+
+.tp-data-table .cds--batch-actions .cds--action-list {
+  flex-wrap: wrap;
+  block-size: auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}

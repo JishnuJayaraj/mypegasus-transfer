@@ -105,7 +105,7 @@ export function Kug200aHeader({ projectId }: { projectId: string }) {
                   })}
                 />
               ))}
-              <Button type="submit" kind="secondary" disabled={save.isPending}>
+              <Button type="submit" kind="tertiary" disabled={save.isPending}>
                 {t("kug200aHeader.save")}
               </Button>
             </Stack>

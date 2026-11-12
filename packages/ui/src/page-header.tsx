@@ -12,7 +12,7 @@ export interface MenuAction {
   danger?: boolean;
 }
 
-interface PageHeaderProps {
+export interface PageHeaderProps {
   title: string;
   /**
    * The ancestors of this page, each a link (the app's router link); the page itself is the
@@ -29,6 +29,58 @@ interface PageHeaderProps {
   menuActions?: MenuAction[];
 }
 
+/** The ancestors of a page as a breadcrumb trail; none, nothing. */
+export function Crumbs({ items }: { items?: ReactNode[] }) {
+  const { t } = useTranslation(UI_NAMESPACE);
+  if (!items || items.length === 0) return null;
+  return (
+    <Breadcrumb noTrailingSlash aria-label={t("pageHeader.breadcrumb")}>
+      {items.map((crumb, index) => (
+        <BreadcrumbItem key={index}>{crumb}</BreadcrumbItem>
+      ))}
+    </Breadcrumb>
+  );
+}
+
+/**
+ * A header's actions (ui-patterns.md, principle 3): the "Aktionen" menu with the destructive
+ * entries last, then the page's one primary action.
+ */
+export function HeaderActions({
+  primaryAction,
+  menuActions = [],
+}: {
+  primaryAction?: ReactNode;
+  menuActions?: MenuAction[];
+}) {
+  const { t } = useTranslation(UI_NAMESPACE);
+  // On narrow screens the actions wrap to the start of the line, so the menu opens from there.
+  const wide = useMediaQuery("(min-width: 42rem)");
+  const ordered = [...menuActions.filter((a) => !a.danger), ...menuActions.filter((a) => a.danger)];
+  if (!primaryAction && ordered.length === 0) return null;
+  return (
+    <div className="tp-page-header-actions">
+      {ordered.length > 0 && (
+        <MenuButton
+          label={t("pageHeader.actions")}
+          kind="tertiary"
+          menuAlignment={wide ? "bottom-end" : "bottom-start"}
+        >
+          {ordered.map((action) => (
+            <MenuItem
+              key={action.label}
+              label={action.label}
+              kind={action.danger ? "danger" : "default"}
+              onClick={action.onClick}
+            />
+          ))}
+        </MenuButton>
+      )}
+      {primaryAction}
+    </div>
+  );
+}
+
 /**
  * The top of every staff page (ui-patterns.md, page header): breadcrumbs, the page's one `h1`,
  * tags and a metadata line, the primary action and the "Aktionen" menu at the end. It wraps on
@@ -40,47 +92,17 @@ export function PageHeader({
   metadata,
   tags,
   primaryAction,
-  menuActions = [],
+  menuActions,
 }: PageHeaderProps) {
-  const { t } = useTranslation(UI_NAMESPACE);
-  // On narrow screens the actions wrap to the start of the line, so the menu opens from there.
-  const wide = useMediaQuery("(min-width: 42rem)");
-  const ordered = [...menuActions.filter((a) => !a.danger), ...menuActions.filter((a) => a.danger)];
   return (
     <div className="tp-page-header">
-      {breadcrumbs && breadcrumbs.length > 0 && (
-        <Breadcrumb noTrailingSlash aria-label={t("pageHeader.breadcrumb")}>
-          {breadcrumbs.map((crumb, index) => (
-            <BreadcrumbItem key={index}>{crumb}</BreadcrumbItem>
-          ))}
-        </Breadcrumb>
-      )}
+      <Crumbs items={breadcrumbs} />
       <div className="tp-page-header-main">
         <div className="tp-page-header-title">
           <h1>{title}</h1>
           {tags && <div className="tp-page-header-tags">{tags}</div>}
         </div>
-        {(primaryAction || ordered.length > 0) && (
-          <div className="tp-page-header-actions">
-            {ordered.length > 0 && (
-              <MenuButton
-                label={t("pageHeader.actions")}
-                kind="tertiary"
-                menuAlignment={wide ? "bottom-end" : "bottom-start"}
-              >
-                {ordered.map((action) => (
-                  <MenuItem
-                    key={action.label}
-                    label={action.label}
-                    kind={action.danger ? "danger" : "default"}
-                    onClick={action.onClick}
-                  />
-                ))}
-              </MenuButton>
-            )}
-            {primaryAction}
-          </div>
-        )}
+        <HeaderActions primaryAction={primaryAction} menuActions={menuActions} />
       </div>
       {metadata && <p className="tp-page-header-metadata">{metadata}</p>}
     </div>

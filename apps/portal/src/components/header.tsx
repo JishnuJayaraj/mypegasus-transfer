@@ -70,7 +70,7 @@ function AccountMenu({ firstName }: { firstName: string }) {
           >
             {t("account.title")}
           </Link>
-          <Button kind="secondary" renderIcon={Logout} onClick={() => void logout()}>
+          <Button kind="tertiary" renderIcon={Logout} onClick={() => void logout()}>
             {t("account.logout")}
           </Button>
         </>

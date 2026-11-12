@@ -135,7 +135,7 @@ function Appointments() {
           >
             {t(kind === "book" ? "appointments.yesBook" : "appointments.yesCancel")}
           </Button>
-          <Button kind="secondary" onClick={() => setConfirming(undefined)}>
+          <Button kind="tertiary" onClick={() => setConfirming(undefined)}>
             {t("appointments.back")}
           </Button>
         </Stack>

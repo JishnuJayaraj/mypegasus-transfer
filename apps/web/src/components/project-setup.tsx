@@ -284,7 +284,7 @@ function PinForm(props: {
         ))}
       </Select>
       <ButtonSet>
-        <Button kind="secondary" disabled={pin.isPending} onClick={() => pin.mutate(false)}>
+        <Button kind="tertiary" disabled={pin.isPending} onClick={() => pin.mutate(false)}>
           {t("setup.pinFurther")}
         </Button>
         {setsProjectAgentur && (

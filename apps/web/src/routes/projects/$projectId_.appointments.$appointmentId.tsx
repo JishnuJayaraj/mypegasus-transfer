@@ -483,7 +483,7 @@ function Bookings({
         <BookParticipant appointment={appointment} projectId={projectId} onBooked={onChanged} />
       )}
       {appointment.capabilities.recordAttendance && (
-        <Button kind="secondary" onClick={() => setRecording(true)}>
+        <Button kind="tertiary" onClick={() => setRecording(true)}>
           {t("appointments.attendance.record")}
         </Button>
       )}

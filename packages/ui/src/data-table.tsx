@@ -17,11 +17,13 @@ import {
   TableSelectRow,
   TableToolbar,
   TableToolbarContent,
+  TableToolbarSearch,
 } from "@carbon/react";
 import { Column } from "@carbon/icons-react";
 import { useId, useMemo, useRef, useState, type MouseEvent, type ReactNode, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { UI_NAMESPACE } from "./i18n";
+import { TableSkeleton } from "./states";
 
 export interface DataColumn<T> {
   key: string;
@@ -99,8 +101,20 @@ interface DataTableProps<T extends { id: string }> {
   scrollRef?: Ref<HTMLDivElement>;
   /** More rows on the server (a cursor): "Weitere anzeigen" fetches them. */
   loadMore?: { onClick: () => void; pending?: boolean };
-  /** Further toolbar content (e.g. the search, 6b-3). */
+  /** Further toolbar content (e.g. a search over the server's rows). */
   toolbar?: ReactNode;
+  /**
+   * A text filter over the loaded rows: a row stays when `text` contains the term (ignoring
+   * case). The term is component state only, never stored (ui-patterns.md, principle 9).
+   * `noMatches` replaces the table when no row stays (an EmptyState with its reset).
+   */
+  filter?: {
+    label: string;
+    text: (item: T) => string;
+    noMatches: (reset: () => void) => ReactNode;
+  };
+  /** The rows are still loading: a skeleton with the real column headers. */
+  loading?: boolean;
 }
 
 const collator = new Intl.Collator("de", { numeric: true, sensitivity: "base" });
@@ -174,11 +188,18 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
   const triggers = useRef(new Map<string, HTMLElement | null>());
   const more = useRef<HTMLDivElement>(null);
 
+  const [term, setTerm] = useState("");
+  const { filter } = props;
+
   const columns = props.columns.filter((column) => !hidden.has(column.key));
-  const sorted = useMemo(
-    () => sortItems(props.items, sort, props.columns),
-    [props.items, sort, props.columns],
-  );
+  const sorted = useMemo(() => {
+    const needle = term.trim().toLocaleLowerCase("de");
+    const items =
+      filter && needle
+        ? props.items.filter((item) => filter.text(item).toLocaleLowerCase("de").includes(needle))
+        : props.items;
+    return sortItems(items, sort, props.columns);
+  }, [props.items, sort, props.columns, filter, term]);
   const shown = sorted.slice(0, limit);
   const { selection, rowActions, scrollRef } = props;
   const selected = selection?.selected;
@@ -188,7 +209,11 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
     props.items.every((i) => selected.has(i.id));
   const someSelected = selected !== undefined && selected.size > 0 && !allSelected;
 
+  if (props.loading) {
+    return <TableSkeleton headers={columns.map((column) => column.header)} label={props.title} />;
+  }
   const empty = props.items.length === 0;
+  const noMatches = !empty && sorted.length === 0;
   // Without rows the empty state replaces the table; a toolbar stays, so a search or a filter
   // that found nothing can still be changed (ui-patterns.md, principle 7).
   if (empty && !props.toolbar) return <>{props.emptyState}</>;
@@ -202,10 +227,21 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
 
   return (
     <div className="tp-data-table">
-      {(props.toolbar || (props.columnChooser && !empty)) && (
+      {(props.toolbar || ((props.columnChooser || filter) && !empty)) && (
         <TableToolbar aria-label={props.title}>
           <TableToolbarContent>
             {props.toolbar}
+            {filter && !empty && (
+              <TableToolbarSearch
+                id={`${id}-filter`}
+                persistent
+                labelText={filter.label}
+                placeholder={filter.label}
+                autoComplete="off"
+                value={term}
+                onChange={(event) => setTerm(typeof event === "string" ? event : event.target.value)}
+              />
+            )}
             {props.columnChooser && !empty && (
               <Button
                 kind="ghost"
@@ -260,6 +296,7 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
         </TableToolbar>
       )}
       {empty && props.emptyState}
+      {noMatches && filter?.noMatches(() => setTerm(""))}
       {props.columnChooser && choosing && !empty && (
         <fieldset id={`${id}-columns`} className="tp-column-chooser">
           <legend>{t("dataTable.columnsLegend")}</legend>
@@ -280,7 +317,7 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
           ))}
         </fieldset>
       )}
-      {!empty && (
+      {!empty && !noMatches && (
         <>
           {/* A scroll container must be reachable by keyboard (WCAG 2.1.1, axe scrollable-region-focusable). */}
           {/* A group, not a region: the page's own section names the list (one landmark per list). */}

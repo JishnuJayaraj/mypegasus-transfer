@@ -179,7 +179,7 @@ export function StartAssistedMode(props: {
   return (
     <>
       {!props.controlled && (
-        <Button kind="secondary" onClick={() => setOpen(true)}>
+        <Button kind="tertiary" onClick={() => setOpen(true)}>
           {props.label ?? t("participant.assisted.start")}
         </Button>
       )}

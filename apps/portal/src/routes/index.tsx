@@ -59,7 +59,7 @@ function Welcome() {
         </Card>
         <Card title={t("home.activateTitle")} description={t("home.activateText")}>
           <div>
-            <ButtonLink to="/activate" kind="secondary" renderIcon={ArrowRight}>
+            <ButtonLink to="/activate" kind="tertiary" renderIcon={ArrowRight}>
               {t("home.activate")}
             </ButtonLink>
           </div>

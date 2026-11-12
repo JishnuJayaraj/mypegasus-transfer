@@ -493,7 +493,7 @@ function Deactivation({ account, onDone }: { account: Account; onDone: () => voi
             hideCloseButton
           />
           <ButtonSet>
-            <Button kind="secondary" onClick={() => setConfirming(false)}>
+            <Button kind="tertiary" onClick={() => setConfirming(false)}>
               {t("projectForm.cancel")}
             </Button>
             <Button

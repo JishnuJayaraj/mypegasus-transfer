@@ -86,7 +86,7 @@ export function ProjectRegion({ projectId }: { projectId: string }) {
       )}
       <div>
         <Button
-          kind="secondary"
+          kind="tertiary"
           disabled={!regionId || regionId === project.regionId || change.isPending}
           onClick={() => change.mutate()}
         >

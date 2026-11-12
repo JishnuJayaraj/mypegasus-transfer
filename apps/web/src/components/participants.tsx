@@ -465,7 +465,7 @@ export function Participants({
         footer={
           <>
             <Button
-              kind="secondary"
+              kind="tertiary"
               disabled={activeFilters === 0}
               onClick={() => changeFilter({})}
             >
@@ -1132,13 +1132,13 @@ function BulkActivation({
           {t("activation.bulk.letters")}
         </Button>
         <Button
-          kind="secondary"
+          kind="tertiary"
           disabled={!mayIssue || pending || (requiresReplacement && !replace)}
           onClick={() => void issue("sheet")}
         >
           {t("activation.bulk.sheets")}
         </Button>
-        <Button kind="secondary" disabled={!mayNotice || pending} onClick={() => void notice()}>
+        <Button kind="tertiary" disabled={!mayNotice || pending} onClick={() => void notice()}>
           {t("activation.bulk.notices")}
         </Button>
       </div>
