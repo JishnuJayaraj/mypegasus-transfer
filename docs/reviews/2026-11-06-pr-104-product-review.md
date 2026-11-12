@@ -2,7 +2,7 @@
 
 Reviewed 2026-11-06. PR: <https://github.com/JishnuJayaraj/mypegasus-transfer/pull/104>.
 Head: `48ebac6`. This records the product owner's decisions as given; the revised plan
-([slice-7.md](../plans/slice-7.md)) follows in the same PR. This does not constitute external DPO,
+([slice-7.md](../plans/archive/slice-7.md)) follows in the same PR. This does not constitute external DPO,
 legal, works-council or Agentur confirmation.
 
 ## Standards (corrections before 7-7a–c)

@@ -1,6 +1,9 @@
 # Slice 7 — DSV (F8)
 
-Status: **approved by the product owner for implementation on synthetic data** (2026-11-06, as
+Status: **done** 2026-11-12 (7-1 to 7-9 and 7-7a to 7-7c, the last PR #125; the 7-7b follow-up #124);
+archived, its rules in `domain/process-and-lifecycle.md`, `domain/data-protection.md`,
+`domain/ba-forms.md`, ADR-0002, ADR-0006, ADR-0008, ADR-0009, ADR-0010 and ADR-0011. Was **approved by
+the product owner for implementation on synthetic data** (2026-11-06, as
 present at `4063466`: plan PR #104 with its two product reviews; Q210–Q219 as recorded, Q220
 open). Existing pilot gates and live-deletion restrictions remain in force.
 This revision carries the review's corrections (and the second review's of the same day: holds on
@@ -17,7 +20,7 @@ tracking), the list "participant signed, not fully executed", the admission cuto
 withdrawal with their conflict flags, the TG entry guard on real DSV facts, the two-stage retention
 job (ADR-0008); from Slice 2 the reconciliation route (Q68) and its review.
 Builds on: the DSV track's edges and guards (`canTransition`, the status service,
-`apply_status_change`; the generated [transitions table](../domain/generated/lifecycle-transitions.md)),
+`apply_status_change`; the generated [transitions table](../../domain/generated/lifecycle-transitions.md)),
 the guard-facts provider (`apps/api/src/participations/guard-facts.ts`: the DSV facts fail closed
 today and the seed overlays synthetic ones), the planner's cutoff rules and flags
 (`packages/domain/src/lifecycle/planner.ts`) and the nightly sweep (ADR-0011), the form registry and
@@ -791,7 +794,7 @@ Enum values are added in their PR's generated migration and compared as text in 
 
 ## Questions
 
-Decided in [the review](../reviews/2026-11-06-pr-104-product-review.md): Q210–Q219 (their rows). New:
+Decided in [the review](../../reviews/2026-11-06-pr-104-product-review.md): Q210–Q219 (their rows). New:
 Q220. Existing ones the slice rests on: Q3, Q24, Q46 (verify), Q52, Q64, Q68, Q69, Q71, Q72, Q77,
 Q80, Q88, Q97, Q110, Q122, Q141, Q145, Q156, Q166, Q179.
 
