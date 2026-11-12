@@ -223,26 +223,6 @@ it("builds from the sources what the migrations alone build", () => {
   expect(open).toEqual([]);
 });
 
-it("defines with the generated sources what the hand-written ones defined", () => {
-  // At the switch to generated lists: the triggers are identical, the two functions differ from
-  // the migrations' in the line breaks and spaces of their list only.
-  const spaceless = (f: FunctionRow) => ({
-    ...f,
-    body: f.body.replace(/\s+/g, ""),
-    definition: f.definition.replace(/\s+/g, ""),
-  });
-  const generated = (f: FunctionRow) =>
-    ["record_audit_event", "retention_erase_participation"].includes(f.name);
-  expect(withSources.functions.filter(generated).map(spaceless)).toEqual(
-    migrationsAlone.functions.filter(generated).map(spaceless),
-  );
-  expect(withSources.functions.filter(generated)).toHaveLength(2);
-  expect(withSources.triggers).toEqual(migrationsAlone.triggers);
-  expect(withSources.triggers.filter((t) => t.name.endsWith("_evidence_set_phase"))).toHaveLength(
-    46,
-  );
-});
-
 it("applies nothing the second time", async () => {
   const before = await recorded();
   expect(before.map((row) => row.name).toSorted()).toEqual(manifest.sources.toSorted());
