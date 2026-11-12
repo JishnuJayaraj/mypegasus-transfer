@@ -141,7 +141,7 @@ export function AppointmentsTab({ projectId, taTg }: { projectId: string; taTg: 
             </Button>
           )}
           {capabilities.createConsultation && (
-            <Button kind="secondary" renderIcon={Add} onClick={() => setCreating("consultation")}>
+            <Button kind="tertiary" renderIcon={Add} onClick={() => setCreating("consultation")}>
               {t("appointments.createConsultation")}
             </Button>
           )}
@@ -486,7 +486,7 @@ export function AppointmentForm({
           </Select>
         )}
         <ButtonSet>
-          <Button kind="secondary" onClick={onCancel}>
+          <Button kind="tertiary" onClick={onCancel}>
             {t("appointments.form.cancel")}
           </Button>
           <Button type="submit" disabled={save.isPending}>

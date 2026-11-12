@@ -8,6 +8,9 @@
       "work": "Arbeit",
       "admin": "Verwaltung"
     },
+    "navBadges": {
+      "overdue": "{{count}} überfällig"
+    },
     "closeNotification": "Meldung schließen",
     "notFound": "Diese Seite gibt es nicht.",
     "notFoundTitle": "Seite nicht gefunden",

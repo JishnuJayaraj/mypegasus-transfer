@@ -398,7 +398,7 @@ function PageStep(props: {
         </Form.Provider>
         <div className="tp-wizard-actions">
           {previous && (
-            <Button kind="secondary" disabled={busy} onClick={() => props.onStep(previous)}>
+            <Button kind="tertiary" disabled={busy} onClick={() => props.onStep(previous)}>
               {t("actions.back")}
             </Button>
           )}
@@ -441,7 +441,7 @@ function DocumentsStep(props: {
       />
       <div className="tp-wizard-actions">
         {previous && (
-          <Button kind="secondary" onClick={() => props.onStep(previous)}>
+          <Button kind="tertiary" onClick={() => props.onStep(previous)}>
             {t("actions.back")}
           </Button>
         )}

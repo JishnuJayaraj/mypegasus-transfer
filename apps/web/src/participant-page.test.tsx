@@ -151,7 +151,6 @@ describe("the participant page header", () => {
     await userEvent.click(back);
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
-        tab: "participants",
         deadlineState: "overdue",
         sort: "-name",
       }),

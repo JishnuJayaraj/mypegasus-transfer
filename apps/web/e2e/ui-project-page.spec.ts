@@ -6,7 +6,7 @@ import { expect, expectAccessible, test } from "./helpers";
 import { worklistParticipations } from "./participants";
 
 // The project page, its dashboard and the projects list (docs/architecture/ui-patterns.md; UX
-// foundation plan, 6b-4): the page header with breadcrumb, tags and region; the tabs by
+// foundation plan, 6b-4): the page header with breadcrumb, tags and region; the sections by
 // frequency; "Einrichtung" as cards with an anchor list; the dashboard's three layers. Each width
 // passes axe without a horizontal page scroll (D10). The test brings its own project (created
 // through the staff API) and participations (owner fixtures). Synthetic data only; the suite fails
@@ -94,7 +94,7 @@ async function expectNoPageScroll(page: Page) {
   );
 }
 
-test("the project page: header, tabs, the dashboard's three layers and Einrichtung as cards", async ({
+test("the project page: header, sections, the dashboard's three layers and Einrichtung as cards", async ({
   page,
   baseURL,
 }) => {
@@ -111,11 +111,14 @@ test("the project page: header, tabs, the dashboard's three layers and Einrichtu
   await expect(header.getByText("Kunde: Beispiel Präzisionsteile GmbH")).toBeVisible();
   await expect(header.getByText("Entwurf", { exact: true })).toBeVisible();
   await expect(header.getByText("Region: Niederlassung Nord (NORD)")).toBeVisible();
-  // AC 11: no region select above the tabs.
+  // No region select in the header; the sections are the navigation's entries under the project.
   await expect(page.getByLabel("Region (Niederlassung)")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText([
+  await expect(
+    page.getByRole("navigation", { name: "Navigation", exact: true }).getByRole("link"),
+  ).toHaveText([
+    "Projekte",
     "Übersicht",
-    "Teilnehmende",
+    /^Teilnehmende/,
     "Termine",
     "Agentur",
     "Einrichtung",
@@ -137,7 +140,8 @@ test("the project page: header, tabs, the dashboard's three layers and Einrichtu
   const toggle = page.getByRole("button", { name: /^Alle Kennzahlen (anzeigen|ausblenden)$/ });
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("table", { name: "Nach Welle" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Übersicht" })).toHaveCount(0);
+  // The section is named once, by the heading under the header (principle 6).
+  await expect(page.getByRole("heading", { name: "Übersicht" })).toHaveCount(1);
 
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 });
@@ -158,7 +162,7 @@ test("the project page: header, tabs, the dashboard's three layers and Einrichtu
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Aktionen" }).click();
   await page.getByRole("menuitem", { name: "Datei importieren" }).click();
-  await expect(page).toHaveURL(/tab=setup#project-import$/);
+  await expect(page).toHaveURL(/\/setup#project-import$/);
   await expect(page.getByRole("region", { name: "Import" })).toBeInViewport();
 
   // "Einrichtung": cards with an anchor list on wide screens; the region is changed here.
@@ -175,7 +179,7 @@ test("the project page: header, tabs, the dashboard's three layers and Einrichtu
   ]);
   const projectCard = page.getByRole("region", { name: "Projekt" });
   await expect(projectCard.getByLabel("Region (Niederlassung)")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Einrichtung" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Einrichtung" })).toHaveCount(1);
   await anchors.getByRole("link", { name: "Kopf der Kug 200a" }).click();
   await expect(page.getByRole("region", { name: "Kopf der Kug 200a" })).toBeInViewport();
   for (const width of widths) {

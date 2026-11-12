@@ -98,7 +98,7 @@ export function StepUp(props: {
       )}
       <div className="tp-wizard-actions">
         {props.previous && (
-          <Button kind="secondary" disabled={busy} onClick={() => props.onStep(props.previous!)}>
+          <Button kind="tertiary" disabled={busy} onClick={() => props.onStep(props.previous!)}>
             {t("actions.back")}
           </Button>
         )}

@@ -168,7 +168,7 @@ export function TemplateMigration(props: {
         ))}
       </Select>
       <ButtonSet>
-        <Button kind="secondary" onClick={onCancel}>
+        <Button kind="tertiary" onClick={onCancel}>
           {t("migration.cancel")}
         </Button>
         <Button kind="tertiary" disabled={busy} onClick={() => show.mutate()}>

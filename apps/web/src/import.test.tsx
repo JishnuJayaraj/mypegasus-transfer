@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
+  openSection,
   problem,
   project,
   renderApp,
@@ -132,7 +133,7 @@ describe("the import wizard", () => {
       decisions: { confirmWarnings: false, possibleDuplicates: {} },
     });
     // The work list reads the new participants when it is shown.
-    await userEvent.click(screen.getByRole("tab", { name: "Teilnehmende" }));
+    await openSection("Teilnehmende");
     expect(await screen.findByText(/Es gibt noch keine Teilnehmenden/)).toBeInTheDocument();
     expect(calls.some((c) => c.key === `GET ${path}/worklist`)).toBe(true);
   });

@@ -208,7 +208,7 @@ function StatusSection({
         {allowed.map(({ to }) => (
           <Button
             key={to}
-            kind={to === "profiling_declined" ? "danger--tertiary" : "secondary"}
+            kind={to === "profiling_declined" ? "danger--tertiary" : "tertiary"}
             disabled={step.isPending}
             onClick={() => (to === "profiling_declined" ? setDeclining(true) : step.mutate(to))}
           >

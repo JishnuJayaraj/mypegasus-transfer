@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
+  openSection,
   problem,
   project,
   renderApp,
@@ -27,8 +28,8 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config = unpinnedConf
   });
 }
 
-const openSection = async () => {
-  await userEvent.click(await screen.findByRole("tab", { name: "Einrichtung" }));
+const openHeaderCard = async () => {
+  await openSection("Einrichtung");
   return within(
     (await screen.findByRole("heading", { name: "Kopf der Kug 200a" })).closest("section")!,
   );
@@ -38,7 +39,7 @@ describe("the Kug 200a's header", () => {
   it("sends only the changed keys, an emptied one as null", async () => {
     const { api, calls } = setup({ [`PATCH ${path}`]: () => json(project) });
     renderApp(`/projects/${project.id}?tab=setup`, api);
-    const section = await openSection();
+    const section = await openHeaderCard();
     await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "123-456");
     await userEvent.clear(
       section.getByLabelText("Betriebsnummer des personalabgebenden Betriebes"),
@@ -60,7 +61,7 @@ describe("the Kug 200a's header", () => {
       [`PATCH ${path}`]: () => json(project),
     });
     const { queryClient } = renderApp(`/projects/${project.id}?tab=setup`, api);
-    const section = await openSection();
+    const section = await openHeaderCard();
     await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "123-456");
     // PL B saves another Betriebsnummer; this page's project is refreshed in the background.
     betriebsnummer = "11112222";
@@ -84,7 +85,7 @@ describe("the Kug 200a's header", () => {
         }),
     });
     renderApp(`/projects/${project.id}?tab=setup`, api);
-    const section = await openSection();
+    const section = await openHeaderCard();
     await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
     expect(await section.findByText("Nichts geändert.")).toBeInTheDocument();
     await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "TK-1");
@@ -97,7 +98,7 @@ describe("the Kug 200a's header", () => {
   it("reports a failed save", async () => {
     const { api } = setup({ [`PATCH ${path}`]: () => problem(403, "forbidden") });
     renderApp(`/projects/${project.id}?tab=setup`, api);
-    const section = await openSection();
+    const section = await openHeaderCard();
     await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "1");
     await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
     expect(
@@ -112,7 +113,7 @@ describe("the Kug 200a's header", () => {
     };
     const { api } = setup({}, readOnly);
     renderApp(`/projects/${project.id}?tab=setup`, api);
-    const section = await openSection();
+    const section = await openHeaderCard();
     expect(section.queryByRole("button", { name: "Angaben übernehmen" })).toBeNull();
     expect(section.getByText("87654321")).toBeInTheDocument();
     expect(section.getAllByText("nicht erfasst")).toHaveLength(2);

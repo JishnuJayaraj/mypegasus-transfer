@@ -10,7 +10,8 @@ import { activatedParticipant } from "./participants";
 // appointment page's header, the work list's status tags, relative dates and empty states, and
 // the admin pages' data table and side panel, each with axe at 1440, 768, 375 and 320px (D10).
 // Synthetic data only; the suite fails on any CSP violation. Screenshots go to
-// docs/screenshots/6b-2/.
+// docs/screenshots/6b-2/. The kit page (`/ui-kit`) and the navigation are the last test, with
+// their screenshots in docs/screenshots/7b-4/.
 
 const projectId = seedProjectIds.werkNord;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -19,7 +20,7 @@ const widths = [1440, 768, 375, 320] as const;
 const screenshots = fileURLToPath(new URL("../../../docs/screenshots/6b-2/", import.meta.url));
 
 /** A screenshot of the viewport (or the page), after Carbon's transitions have ended. */
-async function shot(page: Page, name: string, fullPage = false) {
+async function shot(page: Page, name: string, fullPage = false, dir = screenshots) {
   await page.evaluate(() =>
     Promise.all(
       document
@@ -28,8 +29,8 @@ async function shot(page: Page, name: string, fullPage = false) {
         .map((animation) => animation.finished.catch(() => undefined)),
     ),
   );
-  mkdirSync(screenshots, { recursive: true });
-  await page.screenshot({ path: `${screenshots}${name}.png`, fullPage });
+  mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: `${dir}${name}.png`, fullPage });
 }
 
 /** The page itself never scrolls sideways; a table may, inside its own container (D10). */
@@ -111,7 +112,7 @@ test("the appointment page and the work list on the kit, at every width", async 
     .getByRole("navigation", { name: "Navigationspfad" })
     .getByRole("link", { name: "Termine" })
     .click();
-  await expect(page).toHaveURL(/tab=appointments/);
+  await expect(page).toHaveURL(/\/appointments$/);
 
   // The work list: three separate track tags (C3) and the deadline with relative and absolute date.
   await page.goto(`/projects/${projectId}?tab=participants`);
@@ -137,7 +138,7 @@ test("the appointment page and the work list on the kit, at every width", async 
   await expectAccessible(page);
   await shot(page, "worklist-no-matches-1280");
   await empty.getByRole("button", { name: "Filter zurücksetzen" }).click();
-  await expect(page).toHaveURL(/\?tab=participants$/);
+  await expect(page).toHaveURL(/\/participants$/);
   await expect(
     list.getByRole("searchbox", { name: "Name oder Personalnummer suchen" }),
   ).toHaveValue("");
@@ -227,4 +228,172 @@ test("the regions and escalations on the kit", async ({ page, baseURL }) => {
     await expectAccessible(page);
     await shot(page, `escalations-${width}`);
   }
+});
+
+const kitShots = fileURLToPath(new URL("../../../docs/screenshots/7b-4/", import.meta.url));
+
+test("the kit page: every component of the second layer in its states, at every width", async ({
+  page,
+  baseURL,
+}) => {
+  await logInAs(page, baseURL!, seedStaffUserIds.projectLead);
+  await page.goto("/ui-kit");
+  // DetailHeader: the one h1, the metadata line, three track tags (C3), five facts, the one
+  // primary action and "Aktionen".
+  const header = page.locator(".tp-detail-header");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("UI-Kit");
+  await expect(header.locator(".tp-status-tag")).toHaveCount(3);
+  await expect(header.locator("dt")).toHaveCount(5);
+  await expect(header.getByRole("button", { name: "Profilingbogen erzeugen" })).toBeVisible();
+  await header.getByRole("button", { name: "Aktionen" }).click();
+  await expect(page.getByRole("menuitem")).toHaveText([
+    "Erinnern",
+    "Zuweisen",
+    "Teilnahme beenden",
+  ]);
+  await page.keyboard.press("Escape");
+
+  // The tiles (a zero is neutral) and their skeleton; the funnel as one row.
+  const tiles = page.getByRole("region", { name: "CountTile" });
+  await expect(tiles.getByRole("link")).toHaveText([
+    /^7\s*Überfällig$/,
+    /^12\s*In den nächsten 14 Tagen$/,
+    /^23\s*Angaben\/Unterlagen fehlen$/,
+    /^0\s*Termine zu klären$/,
+  ]);
+  await expect(tiles.locator(".tp-tile--neutral")).toHaveCount(1);
+  await expect(tiles.locator("[aria-busy=true]")).toHaveCount(1);
+  const funnel = page.getByRole("list", { name: "Verlauf" });
+  await expect(funnel.getByRole("listitem")).toHaveCount(7);
+  await expect(funnel.getByRole("link")).toHaveCount(5);
+
+  // NextSteps: each item with its own action; the empty state says so.
+  const steps = page.getByRole("region", { name: "Als Nächstes", exact: true });
+  await expect(steps.getByRole("listitem")).toHaveCount(3);
+  await expect(steps.getByRole("button")).toHaveText([
+    "Meldung erfassen",
+    "Scan hochladen",
+    "Erinnern",
+  ]);
+  await expect(page.getByRole("region", { name: "Als Nächstes (leer)" })).toContainText(
+    "Keine offenen Punkte.",
+  );
+
+  // SectionCard: open by default, collapsed to its summary, and protected content never open by
+  // default nor in the document before it is opened. The open state is memory only.
+  await expect(page.getByRole("button", { name: "Stammdaten" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  const collapsed = page.getByRole("region", { name: "Welle und Vertragsdaten" });
+  await expect(collapsed).toContainText("W1 · 01.03.2027 – 29.02.2028");
+  const sensitive = page.getByRole("button", { name: "Besonders geschützte Angaben" });
+  await expect(sensitive).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("Synthetischer Inhalt")).toHaveCount(0);
+  await sensitive.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Synthetischer Inhalt")).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Synthetischer Inhalt")).toHaveCount(0);
+
+  // StepList: starts on the current step; another opens by keyboard.
+  const track = page.getByRole("navigation", { name: "Profiling" });
+  await expect(track.getByRole("button", { name: /Profilingbogen erzeugen/ })).toHaveAttribute(
+    "aria-current",
+    "step",
+  );
+  await track.getByRole("button", { name: /Angaben prüfen/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "Angaben prüfen" })).toBeVisible();
+  await track.getByRole("button", { name: /Profilingbogen erzeugen/ }).click();
+
+  // DataTable: sort, filter with its reset, the column chooser, loading and empty.
+  const table = page.getByRole("table", { name: "Dringend", exact: true });
+  await table.getByRole("button", { name: /^Teilnehmende/ }).click();
+  await expect(table.locator("tbody tr td:first-child")).toHaveText([
+    /^Beispiel, Bruno/,
+    /^Muster, Carla/,
+    /^Normalverbraucher, Anna/,
+  ]);
+  const filter = page.getByRole("searchbox", { name: "Name oder Personalnummer filtern" }).first();
+  await filter.fill("BSP-0042");
+  await expect(table.locator("tbody tr")).toHaveCount(1);
+  await filter.fill("kein Treffer");
+  await expect(page.getByText("Kein Eintrag entspricht dem Filter")).toBeVisible();
+  await page.getByRole("button", { name: "Filter zurücksetzen" }).click();
+  await expect(table.locator("tbody tr")).toHaveCount(3);
+  const data = page.getByRole("region", { name: "DataTable" });
+  await data.getByRole("button", { name: "Spalten" }).first().click();
+  await data.getByRole("group", { name: "Angezeigte Spalten" }).getByText("Beratung").click();
+  await expect(table.getByRole("columnheader", { name: /Beratung/ })).toHaveCount(0);
+  await data.getByRole("group", { name: "Angezeigte Spalten" }).getByText("Beratung").click();
+  await data.getByRole("button", { name: "Spalten" }).first().click();
+  await table.getByRole("button", { name: /^Teilnehmende/ }).click();
+  await table.getByRole("button", { name: /^Teilnehmende/ }).click();
+  await expect(data.locator(".tp-table-skeleton")).toHaveCount(1);
+  await expect(data).toContainText("Keine überfälligen Punkte");
+
+  // No dark `secondary` button anywhere; a blocked action has its prerequisite beside it (C1).
+  await expect(page.locator(".cds--btn--secondary")).toHaveCount(0);
+  await expect(page.getByText("Erst eine Region wählen.")).toBeVisible();
+
+  // 1440, 768, 375 and 320px: 768px is a 1536px window at 200 %, 320px a 1280px one at 400 %.
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(header).toBeVisible();
+    await expectNoPageScroll(page);
+    await expectAccessible(page);
+    // The whole page in one viewport: a full-page capture would stitch the fixed header in.
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewportSize({ width, height });
+    await shot(page, `kit-${width}`, false, kitShots);
+  }
+  await expectNothingStored(page);
+});
+
+test("the navigation with the project's sections, at every width", async ({ page, baseURL }) => {
+  await logInAs(page, baseURL!, seedStaffUserIds.projectLead);
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/projects/${projectId}/participants`);
+    await expect(page.getByRole("heading", { name: "Teilnehmende", level: 2 })).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Navigation", exact: true });
+    const menu = page.getByRole("button", { name: "Navigation öffnen oder schließen" });
+    if (width >= 1056) {
+      // Always open from 66rem: no menu button, the entries in the focus order after the header.
+      await expect(menu).toHaveCount(0);
+    } else {
+      await expect(nav).toBeHidden();
+      await menu.click();
+    }
+    await expect(nav.getByRole("link")).toHaveText([
+      "Projekte",
+      "Übersicht",
+      /^Teilnehmende/,
+      "Termine",
+      "Agentur",
+      "Einrichtung",
+      "Team",
+    ]);
+    await expect(nav.locator('[aria-current="page"]')).toHaveText(/^Teilnehmende/);
+    await expectNoPageScroll(page);
+    await expectAccessible(page);
+    await shot(page, `navigation-${width}`, false, kitShots);
+    if (width < 1056) await page.keyboard.press("Escape");
+  }
+  // The old address still opens its section, the anchor included.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`/projects/${projectId}?tab=agentur`);
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/agentur$`));
+  await expect(page.getByRole("heading", { name: "Agentur", level: 2 })).toBeVisible();
+  await page.goto(`/projects/${projectId}?tab=setup#project-import`);
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/setup#project-import$`));
+  // Focus order: the skip link, the product name, the user menu, then the navigation's entries.
+  await page.goto(`/projects/${projectId}/overview`);
+  await expect(page.getByRole("heading", { name: "Übersicht", level: 2 })).toBeVisible();
+  for (const name of [/Zum Inhalt/, "Transferplattform", /Benutzermenü/, "Projekte", "Übersicht"]) {
+    await page.keyboard.press("Tab");
+    await expect(page.locator(":focus")).toHaveAccessibleName(name);
+  }
+  await expectNothingStored(page);
 });

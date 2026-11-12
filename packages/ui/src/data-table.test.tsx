@@ -341,3 +341,56 @@ describe("DataTable", () => {
     expect(screen.queryByText("1 ausgewählt")).not.toBeInTheDocument();
   });
 });
+
+const table = (extra: object = {}) => (
+  <DataTable
+    title="Liste"
+    items={rows}
+    columns={columns}
+    rowLabel={(r) => r.name}
+    emptyState={<p>{"Keine Einträge"}</p>}
+    filter={{
+      label: "Filtern",
+      text: (r) => `${r.name} ${r.code}`,
+      renderNoMatches: (reset) => (
+        <button type="button" onClick={reset}>
+          {"Filter zurücksetzen"}
+        </button>
+      ),
+    }}
+    {...extra}
+  />
+);
+
+describe("DataTable's filter and loading state", () => {
+  it("keeps the rows whose text contains the term, whatever the case, and stores nothing", async () => {
+    renderUi(table());
+    const search = screen.getByRole("searchbox", { name: "Filtern" });
+    await userEvent.type(search, "ÖZD");
+    expect(names()).toEqual(["Özdemir"]);
+    await userEvent.clear(search);
+    expect(names()).toHaveLength(3);
+    expect(localStorage.length + sessionStorage.length).toBe(0);
+  });
+
+  it("says when nothing matches, keeps the filter changeable, and resets it", async () => {
+    renderUi(table());
+    await userEvent.type(screen.getByRole("searchbox", { name: "Filtern" }), "kein Treffer");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+    expect(screen.getByRole("searchbox", { name: "Filtern" })).toHaveValue("");
+    expect(names()).toHaveLength(3);
+  });
+
+  it("shows a skeleton with the shown columns' headers while loading", () => {
+    const { container } = renderUi(table({ loading: true }));
+    expect(container.querySelector("[aria-busy=true]")).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Liste");
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
+      "Name",
+      "Code",
+      "Anzahl",
+    ]);
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+  });
+});

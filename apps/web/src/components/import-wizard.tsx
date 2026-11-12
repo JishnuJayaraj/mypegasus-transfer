@@ -591,7 +591,7 @@ function Report(props: {
       )}
       {undecided && <p>{t("import.report.needDecisions")}</p>}
       <div>
-        <Button kind="secondary" onClick={props.onBack}>
+        <Button kind="tertiary" onClick={props.onBack}>
           {t("import.report.back")}
         </Button>{" "}
         <Button

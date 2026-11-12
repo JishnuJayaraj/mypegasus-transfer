@@ -163,7 +163,7 @@ export function ProjectForm({ onCreated, onCancel }: ProjectFormProps) {
         </Select>
         <p>{t("projectForm.datesOnWaves")}</p>
         <ButtonSet>
-          <Button kind="secondary" onClick={onCancel}>
+          <Button kind="tertiary" onClick={onCancel}>
             {t("projectForm.cancel")}
           </Button>
           <Button type="submit" disabled={create.isPending}>

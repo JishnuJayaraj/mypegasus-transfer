@@ -51,6 +51,11 @@ function BlockHeader({
   );
 }
 
+/** The name of a page's part under the page header, where no tab or card names it. */
+export function SectionHeading({ children }: { children: string }) {
+  return <h2 className="tp-section-title">{children}</h2>;
+}
+
 /** A titled part of a page: a heading, an optional description and actions, then the body. */
 export function Section({
   title,

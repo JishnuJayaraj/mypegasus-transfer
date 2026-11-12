@@ -154,7 +154,7 @@ export function EntryWaveForm({ projectId, wave, onSaved, onCancel }: EntryWaveF
           />
         ))}
         <ButtonSet>
-          <Button kind="secondary" onClick={onCancel}>
+          <Button kind="tertiary" onClick={onCancel}>
             {t("waveForm.cancel")}
           </Button>
           <Button type="submit" disabled={save.isPending}>

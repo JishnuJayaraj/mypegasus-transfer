@@ -34,7 +34,7 @@ type Counts = components["schemas"]["ProjectDashboard"]["counts"];
 const PREFERRED_QUERY = "(min-width: 80rem)";
 
 /** The search of a count's link: the work list with the same filter. */
-const listSearch = (filter: WorklistFilter) => ({ ...filter, tab: "participants" as const });
+const listSearch = (filter: WorklistFilter) => filter;
 
 /** A count as a link to "Teilnehmende" with the same filter (data-protection.md, the dashboard). */
 function CountLink({
@@ -50,7 +50,7 @@ function CountLink({
 }) {
   return (
     <RouterLink
-      to="/projects/$projectId"
+      to="/projects/$projectId/participants"
       params={{ projectId }}
       search={listSearch(filter)}
       className={className}

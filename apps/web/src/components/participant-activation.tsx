@@ -245,11 +245,7 @@ export function ActivationCard({
         )}
         {detail.capabilities.issueActivationCode && status.account !== "activated" && (
           <p>
-            <RouterLink
-              to="/projects/$projectId"
-              params={{ projectId }}
-              search={{ tab: "participants" }}
-            >
+            <RouterLink to="/projects/$projectId/participants" params={{ projectId }}>
               {t("activation.detail.issuePrint")}
             </RouterLink>
           </p>

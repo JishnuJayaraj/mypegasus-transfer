@@ -372,7 +372,7 @@ function BatchSection(props: {
       <div className="tp-bulk-actions">
         {batch.capabilities.exportArtifact && (
           <Button
-            kind="secondary"
+            kind="tertiary"
             size="md"
             disabled={props.busy}
             onClick={() => void props.onExport("kug200b_batch_artifact")}
@@ -382,7 +382,7 @@ function BatchSection(props: {
         )}
         {batch.capabilities.exportScans && (
           <Button
-            kind="secondary"
+            kind="tertiary"
             size="md"
             disabled={props.busy}
             onClick={() => void props.onExport("kug200b_batch_scans")}

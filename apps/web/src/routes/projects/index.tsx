@@ -38,7 +38,7 @@ function ProjectsPage() {
     .map((project) => ({
       id: project.id,
       name: (
-        <RouterLink to="/projects/$projectId" params={{ projectId: project.id }}>
+        <RouterLink to="/projects/$projectId/overview" params={{ projectId: project.id }}>
           {project.name}
         </RouterLink>
       ),

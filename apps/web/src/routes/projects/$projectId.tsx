@@ -1,23 +1,14 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink } from "@tanstack/react-router";
-import { WorklistFilter } from "@transfer/domain";
+import { createFileRoute, createLink, Outlet } from "@tanstack/react-router";
 import {
   Add,
   Button,
-  Card,
-  formatDate,
   InlineNotification,
   Link,
   PageHeader,
   SidePanel,
   Stack,
-  SimpleTable,
   StatusTag,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
   Tag,
   useToast,
 } from "@transfer/ui";
@@ -31,59 +22,18 @@ import {
   useApi,
   worklistQuery,
 } from "../../api";
-import { EntryWaveForm } from "../../components/entry-wave-form";
-import { AgenturSettings } from "../../components/agentur-settings";
-import { AgenturTab } from "../../components/agentur-tab";
-import { ImportSection } from "../../components/import-section";
-import { DsvTemplateCard } from "../../components/dsv-template";
-import { Kug200aHeader } from "../../components/kug200a-header";
 import { ManualParticipationForm } from "../../components/manual-participation-form";
 import { usePanelNavigationGuard } from "../../components/panel-guard";
-import { Participants } from "../../components/participants";
-import { parseSortCode } from "../../components/worklist-state";
-import { ProjectDashboard } from "../../components/project-dashboard";
-import { SettlementDatesCard } from "../../components/settlement-dates";
-import { AppointmentsTab } from "../../components/appointments";
-import { ProjectRegion, RegionText } from "../../components/project-region";
-import { ProjectSetup } from "../../components/project-setup";
-import { ProjectTeam } from "../../components/team";
+import { RegionText } from "../../components/project-region";
 import { RouteError } from "../../components/route-error";
-import { usePageTitle } from "../../page-title";
 
 const RouterLink = createLink(Link);
 
-/** Every tab's search value; "Übersicht" has none. Unknown values are dropped (old links open). */
-const tabs = [undefined, "participants", "appointments", "agentur", "setup", "team"] as const;
-type ProjectTab = Exclude<(typeof tabs)[number], undefined>;
-export type ProjectSearch = WorklistFilter & { tab?: ProjectTab; sort?: string };
-
 /**
- * The tabs a project shows, by how often they are used (the plan of Slice 6b, 6b-4): Übersicht,
- * Teilnehmende, Termine, Agentur (`ta_tg` only, the Kug 200b batches), Einrichtung, Team. The
- * `tab` search value names a tab, never its position, so every existing link keeps working.
+ * The project's layout: its header above the section the route names (ui-patterns.md,
+ * navigation). The sections are routes of their own; the side navigation lists them.
  */
-export function projectTabs(taTg: boolean): (ProjectTab | undefined)[] {
-  return tabs.filter((tab) => tab !== "agentur" || taTg);
-}
-
-/**
- * The tab, the work list's code filters and its sort (data-protection.md, the work list): an
- * unknown tab, key or value is dropped, so a stale link still opens. Never a name or a search term.
- */
-function projectSearch(search: Record<string, unknown>): ProjectSearch {
-  const tab = tabs.find((value) => value !== undefined && value === search.tab);
-  const filter = Object.fromEntries(
-    Object.entries(WorklistFilter.shape).flatMap(([key, schema]) => {
-      const parsed = schema.safeParse(search[key]);
-      return parsed.success && parsed.data !== undefined ? [[key, parsed.data]] : [];
-    }),
-  ) as WorklistFilter;
-  const sort = parseSortCode(search.sort);
-  return { ...filter, ...(tab && { tab }), ...(sort && { sort }) };
-}
-
 export const Route = createFileRoute("/projects/$projectId")({
-  validateSearch: projectSearch,
   loader: async ({ context: { api, queryClient }, params: { projectId } }) => {
     const [project] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
@@ -100,62 +50,14 @@ export const Route = createFileRoute("/projects/$projectId")({
 function ProjectPage() {
   const { t } = useTranslation();
   const { projectId } = Route.useParams();
-  const { tab, sort, ...filter } = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: project } = useSuspenseQuery(projectQuery(useApi(), projectId));
-  const taTg = project.type === "ta_tg";
-  const shownTabs = projectTabs(taTg);
-  // A tab the project doesn't have (Agentur in a `ta_only` project) shows the overview.
-  const selected = Math.max(0, shownTabs.indexOf(tab));
-  const tabLabels = {
-    participants: t("projectDetail.participants"),
-    appointments: t("projectDetail.appointments"),
-    setup: t("projectDetail.setup"),
-    team: t("team.title"),
-    agentur: t("projectDetail.agentur"),
-  } satisfies Record<ProjectTab, string>;
-  const label = (value: ProjectTab | undefined) =>
-    value ? tabLabels[value] : t("projectDetail.overview");
-  usePageTitle(label(shownTabs[selected]), project.name);
   // Manual creation is one import row (process-and-lifecycle.md, import and manual creation):
   // offered with the import's capability, as the page's primary action; the import beside it.
   const { data: config } = useSuspenseQuery(projectConfigQuery(useApi(), projectId));
   const mayImport = config.capabilities.importParticipations;
   const [adding, setAdding] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
-  const panel = (value: ProjectTab | undefined) => {
-    switch (value) {
-      case undefined:
-        return <ProjectDashboard projectId={projectId} taTg={taTg} />;
-      case "participants":
-        return (
-          <Participants
-            projectId={projectId}
-            taTg={taTg}
-            filter={filter}
-            sort={sort}
-            onChange={(next) =>
-              void navigate({
-                search: {
-                  ...next.filter,
-                  tab: "participants",
-                  ...(next.sort && { sort: next.sort }),
-                },
-                replace: true,
-              })
-            }
-          />
-        );
-      case "appointments":
-        return <AppointmentsTab projectId={projectId} taTg={taTg} />;
-      case "agentur":
-        return <AgenturTab projectId={projectId} />;
-      case "setup":
-        return <ProjectSetupTab projectId={projectId} taTg={taTg} />;
-      case "team":
-        return <ProjectTeam projectId={projectId} />;
-    }
-  };
   return (
     <>
       <PageHeader
@@ -197,7 +99,11 @@ function ProjectPage() {
                 {
                   label: t("manual.import"),
                   onClick: () =>
-                    void navigate({ search: { tab: "setup" }, hash: "project-import" }),
+                    void navigate({
+                      to: "/projects/$projectId/setup",
+                      params: { projectId },
+                      hash: "project-import",
+                    }),
                 },
               ]
             : []
@@ -211,7 +117,7 @@ function ProjectPage() {
           onCreated={(id) => {
             setAdding(false);
             setCreated(id);
-            void navigate({ search: { tab: "participants" } });
+            void navigate({ to: "/projects/$projectId/participants", params: { projectId } });
           }}
         />
       )}
@@ -232,94 +138,8 @@ function ProjectPage() {
           </p>
         </Stack>
       )}
-      <Tabs
-        selectedIndex={selected}
-        onChange={({ selectedIndex }) => {
-          const next = shownTabs[selectedIndex];
-          void navigate({ search: next ? { tab: next } : {} });
-        }}
-      >
-        <TabList aria-label={t("projectDetail.tabs")}>
-          {shownTabs.map((value) => (
-            <Tab key={value ?? "overview"}>{label(value)}</Tab>
-          ))}
-        </TabList>
-        {/* Each tab loads its data only when shown; a panel is named by its tab, never by a
-            heading of its own (ui-patterns.md, principle 6). */}
-        <TabPanels>
-          {shownTabs.map((value, index) => (
-            <TabPanel key={value ?? "overview"}>{index === selected && panel(value)}</TabPanel>
-          ))}
-        </TabPanels>
-      </Tabs>
+      <Outlet />
     </>
-  );
-}
-
-/**
- * "Einrichtung" as cards (the plan of Slice 6b, 6b-4): Projekt (status, region change, blockers,
- * activation), Agentur (pins and Agentur-specific settings), Wellen (in `ta_only` only why there
- * are none), Kug 200a-Kopf and DSV-Vorlage (`ta_tg`), Import (`project-import`, the target of "Datei importieren") and Abrechnung (`ta_tg`). An anchor list beside them on
- * wide screens; below 66rem the cards simply follow each other.
- */
-function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean }) {
-  const { t } = useTranslation();
-  const anchors = [
-    { id: "setup-project", label: t("setup.project") },
-    { id: "setup-agentur", label: t("setup.agenturTitle") },
-    { id: "setup-waves", label: t("projectDetail.waves") },
-    ...(taTg
-      ? [
-          { id: "setup-kug200a", label: t("kug200aHeader.title") },
-          { id: "setup-dsv", label: t("dsvTemplate.title") },
-        ]
-      : []),
-    { id: "project-import", label: t("import.title") },
-    ...(taTg ? [{ id: "setup-settlement", label: t("settlement.title") }] : []),
-  ];
-  return (
-    <div className="tp-anchored">
-      <nav className="tp-anchor-list" aria-label={t("setup.onThisPage")}>
-        <p className="tp-anchor-list-title" aria-hidden="true">
-          {t("setup.onThisPage")}
-        </p>
-        <ul>
-          {anchors.map(({ id, label }) => (
-            <li key={id}>
-              <RouterLink
-                to="/projects/$projectId"
-                params={{ projectId }}
-                search={{ tab: "setup" }}
-                hash={id}
-              >
-                {label}
-              </RouterLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="tp-anchored-content">
-        <ProjectSetup
-          projectId={projectId}
-          region={<ProjectRegion projectId={projectId} />}
-          agentur={<AgenturSettings projectId={projectId} />}
-        />
-        {taTg ? (
-          <>
-            <EntryWaves projectId={projectId} />
-            <Kug200aHeader projectId={projectId} />
-            <DsvTemplateCard projectId={projectId} />
-          </>
-        ) : (
-          <Card id="setup-waves" title={t("projectDetail.waves")}>
-            <p>{t("waveForm.errors.not_ta_tg")}</p>
-          </Card>
-        )}
-        <ImportSection projectId={projectId} />
-        {/* Last: it loads after the anchors' targets above it ("Datei importieren"). */}
-        {taTg && <SettlementDatesCard projectId={projectId} />}
-      </div>
-    </div>
   );
 }
 
@@ -366,82 +186,5 @@ function AddParticipant({
         }}
       />
     </SidePanel>
-  );
-}
-
-const columns = [
-  "code",
-  "name",
-  "signingDeadline",
-  "defaultTgStart",
-  "defaultTgEnd",
-  "latestEntryDate",
-  "participations",
-  "actions",
-] as const;
-
-/** The waves (Eintrittswellen) and one form for a new or the chosen wave. */
-function EntryWaves({ projectId }: { projectId: string }) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const showToast = useToast();
-  const api = useApi();
-  const query = entryWavesQuery(api, projectId);
-  const { data: waves } = useSuspenseQuery(query);
-  // "new", a wave's id, or no form.
-  const [editing, setEditing] = useState<string | null>(null);
-
-  const rows = waves.map((wave) => ({
-    id: wave.id,
-    code: wave.code,
-    name: wave.name,
-    signingDeadline: formatDate(wave.signingDeadline),
-    defaultTgStart: formatDate(wave.defaultTgStart),
-    defaultTgEnd: formatDate(wave.defaultTgEnd),
-    latestEntryDate: formatDate(wave.latestEntryDate),
-    participations: String(wave.participations),
-    actions: (
-      <Button kind="ghost" size="sm" onClick={() => setEditing(wave.id)}>
-        {t("projectDetail.edit", { code: wave.code })}
-      </Button>
-    ),
-  }));
-
-  return (
-    <Card id="setup-waves" title={t("projectDetail.waves")}>
-      <SimpleTable
-        title={t("projectDetail.waves")}
-        hideTitle
-        columns={columns.map((key) => ({ key, header: t(`projectDetail.columns.${key}`) }))}
-        rows={rows}
-        emptyState={t("projectDetail.wavesEmpty")}
-        footer={
-          editing === null && (
-            <Button renderIcon={Add} onClick={() => setEditing("new")}>
-              {t("projectDetail.addWave")}
-            </Button>
-          )
-        }
-      />
-      {editing !== null && (
-        <EntryWaveForm
-          key={editing}
-          projectId={projectId}
-          wave={waves.find((wave) => wave.id === editing)}
-          onCancel={() => setEditing(null)}
-          onSaved={async (wave) => {
-            // A wave's latest entry date changes the activation blockers (Q77).
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: query.queryKey }),
-              queryClient.invalidateQueries({
-                queryKey: projectConfigQuery(api, projectId).queryKey,
-              }),
-            ]);
-            showToast({ title: t("projectDetail.waveSaved"), subtitle: wave.code });
-            setEditing(null);
-          }}
-        />
-      )}
-    </Card>
   );
 }

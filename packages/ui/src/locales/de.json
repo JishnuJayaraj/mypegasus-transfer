@@ -41,6 +41,15 @@
     "sortedDescending": "absteigend sortiert",
     "actionsColumn": "Aktionen",
     "moreActions": "Weitere Aktionen",
-    "batchBar": "Aktionen für die Auswahl"
+    "batchBar": "Aktionen für die Auswahl",
+    "filter": "Filtern"
+  },
+  "stepList": {
+    "states": {
+      "done": "Erledigt",
+      "current": "Aktuell",
+      "open": "Offen",
+      "blocked": "Blockiert"
+    }
   }
 }

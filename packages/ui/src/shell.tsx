@@ -22,7 +22,7 @@ import {
   type ReactNode,
 } from "react";
 
-/** Carbon's `lg` breakpoint: from here the side navigation is a rail beside the content. */
+/** Carbon's `lg` breakpoint: from here the side navigation is always open beside the content. */
 export const WIDE_QUERY = "(min-width: 66rem)";
 
 /** Whether a media query matches, following changes (window resize, zoom). */
@@ -80,23 +80,24 @@ interface AppShellProps {
 }
 
 /**
- * Carbon UI shell: a dark header (`g100` zone) and, with `nav`, a side navigation that is a rail
- * from 66rem (icons; expands on hover or focus, the menu button keeps it open) and an overlay
- * below (focus stays inside until Escape, the overlay or a link closes it, and returns to the
+ * Carbon UI shell: a dark header (`g100` zone) and, with `nav`, a side navigation that is always
+ * open beside the content from 66rem (no menu button there) and an overlay below (the menu button
+ * opens it; focus stays inside until Escape, the overlay or a link closes it, and returns to the
  * menu button). The open state is component state only, never stored.
  */
 export function AppShell(props: AppShellProps) {
   const wide = useMediaQuery(WIDE_QUERY);
-  // Opened in which layout: switching between rail and overlay (resize, zoom) starts closed,
-  // since a pinned rail isn't an open overlay.
-  const [openIn, setOpenIn] = useState<"rail" | "overlay" | null>(null);
-  const layout = wide ? "rail" : "overlay";
-  const expanded = openIn === layout;
+  const [open, setOpen] = useState(false);
+  const hasNav = Boolean(props.nav);
+  // The overlay exists only below 66rem; growing past it (resize, zoom) leaves it closed.
+  const overlay = hasNav && !wide && open;
+  const expanded = wide || overlay;
   const menuButton = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navId = useId();
-  const hasNav = Boolean(props.nav);
-  const overlay = hasNav && !wide && expanded;
+
+  // Growing past 66rem (resize, zoom) closes the overlay for good, not until the next shrink.
+  if (wide && open) setOpen(false);
 
   // The overlay takes the focus to its first link.
   useEffect(() => {
@@ -105,17 +106,18 @@ export function AppShell(props: AppShellProps) {
   }, [overlay]);
 
   const close = useCallback((returnFocus: boolean) => {
-    setOpenIn(null);
+    setOpen(false);
     if (returnFocus) menuButton.current?.focus();
   }, []);
 
   function onNavKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (!overlay) return;
     if (event.key === "Escape") {
       event.stopPropagation();
       close(true);
       return;
     }
-    if (!overlay || event.key !== "Tab") return;
+    if (event.key !== "Tab") return;
     // The focus trap: Tab and Shift+Tab cycle through the overlay's links.
     const items = [...(navRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
     const first = items[0];
@@ -131,25 +133,19 @@ export function AppShell(props: AppShellProps) {
   }
 
   return (
-    <div
-      className={[
-        "tp-shell",
-        hasNav ? "tp-shell--nav" : "tp-shell--no-nav",
-        hasNav && wide && expanded ? "tp-shell--nav-pinned" : "",
-      ].join(" ")}
-    >
+    <div className={`tp-shell ${hasNav ? "tp-shell--nav" : "tp-shell--no-nav"}`}>
       <Theme theme="g100">
         <Header aria-label={props.productName}>
           <SkipToContent>{props.skipToContentLabel}</SkipToContent>
-          {hasNav && (
+          {hasNav && !wide && (
             <HeaderMenuButton
               ref={menuButton}
               aria-label={props.menuLabel}
-              aria-expanded={expanded}
+              aria-expanded={overlay}
               aria-controls={navId}
-              isActive={expanded}
+              isActive={overlay}
               isCollapsible
-              onClick={() => setOpenIn(expanded ? null : layout)}
+              onClick={() => setOpen(!overlay)}
             />
           )}
           <HeaderName href="/" prefix="">
@@ -165,7 +161,7 @@ export function AppShell(props: AppShellProps) {
           id={navId}
           aria-label={props.navLabel}
           expanded={expanded}
-          isRail={wide}
+          isFixedNav={wide}
           onOverlayClick={() => close(false)}
           onKeyDown={onNavKeyDown}
           onClick={(event) => {
@@ -183,10 +179,7 @@ export function AppShell(props: AppShellProps) {
   );
 }
 
-/**
- * A group of side navigation links under a label ("Arbeit", "Verwaltung"). In the collapsed rail
- * the label is visually hidden and a divider stands in for it.
- */
+/** A group of side navigation links under a label ("Arbeit", "Verwaltung", a project's name). */
 export function SideNavGroup({ label, children }: { label: string; children: ReactNode }) {
   const id = useId();
   return (
@@ -196,6 +189,24 @@ export function SideNavGroup({ label, children }: { label: string; children: Rea
       </span>
       <ul aria-labelledby={id}>{children}</ul>
     </li>
+  );
+}
+
+/**
+ * A count beside a navigation entry's label. Its text says what is counted ("7 überfällig"), so
+ * the link's name carries it; the caller shows it only with a count the viewer already gets
+ * (ui-patterns.md, navigation).
+ */
+export function NavBadge({ count, label }: { count: number; label: string }) {
+  // `label` is the whole phrase with the count; the visible number alone is decorative.
+  return (
+    <>
+      {" "}
+      <span className="tp-nav-badge">
+        <span aria-hidden="true">{count}</span>
+        <span className="tp-visually-hidden">{label}</span>
+      </span>
+    </>
   );
 }
 

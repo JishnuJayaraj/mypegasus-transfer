@@ -75,7 +75,7 @@ test("follow a count to its rows, search a name and assign a wave", async ({ pag
     .getByRole("row", { name: /Ohne Welle/ })
     .getByRole("link", { name: "5" })
     .click();
-  await expect(page).toHaveURL(/tab=participants/);
+  await expect(page).toHaveURL(/\/participants\?/);
   await expect(page).toHaveURL(/wave=none/);
   const list = page.getByRole("region", { name: "Teilnehmende" });
   await expect(matches(page, 5)).toBeVisible();

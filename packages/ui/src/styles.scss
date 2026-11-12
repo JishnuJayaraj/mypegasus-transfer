@@ -1,4 +1,5 @@
 // Carbon styles, imported per component (spike S3). Only IBM Plex Sans is loaded.
+@use "sass:meta";
 @use "@carbon/react/scss/config" with (
   $use-flexbox-grid: false
 );
@@ -87,22 +88,6 @@ body {
   }
 }
 
-// The offset is the shell's alone: Carbon's sibling rules would offset the content by 3rem at any
-// width and by 16rem whenever the rail expands on hover. (Same specificity, declared later.)
-.tp-shell > .cds--content.tp-content {
-  margin-inline-start: 0;
-}
-
-@media (min-width: 66rem) {
-  .tp-shell--nav > .cds--content.tp-content {
-    margin-inline-start: 3rem;
-  }
-
-  .tp-shell--nav-pinned > .cds--content.tp-content {
-    margin-inline-start: 16rem;
-  }
-}
-
 // Content max-width, centred: 1280px is the preferred layout, wider screens don't stretch lines.
 .tp-content-inner {
   max-inline-size: 99rem;
@@ -118,8 +103,8 @@ body {
   white-space: nowrap;
 }
 
-// "Arbeit" and "Verwaltung": a label over each group of side navigation links. In the collapsed
-// rail the label is hidden visually (it still names the group) and a line separates the groups.
+// "Arbeit", "Verwaltung" and the project's name: a label over each group of side navigation
+// links; a line separates the groups.
 .tp-nav-group {
   padding-block-start: $spacing-05;
 
@@ -135,16 +120,27 @@ body {
   padding-block-end: $spacing-03;
   padding-inline: $spacing-05;
   color: theme.$text-secondary;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.cds--side-nav--rail:not(.cds--side-nav--expanded) .tp-nav-group-label {
-  position: absolute;
-  overflow: hidden;
-  clip-path: inset(50%);
-  inline-size: 1px;
-  block-size: 1px;
-  white-space: nowrap;
+// A count beside a navigation entry (ui-patterns.md, navigation): the number is decorative, the
+// entry's name carries the phrase.
+.tp-nav-badge {
+  @include type.type-style("label-01");
+
+  flex: none;
+  min-inline-size: 1.25rem;
+  padding-inline: $spacing-02;
+  border-radius: 0.625rem;
+  background: theme.$support-error;
+  color: theme.$text-on-color;
+  font-weight: 600;
+  text-align: center;
+}
+
+// A project section's name under the project's header.
+.tp-section-title {
+  margin-block-end: var(--tp-space-4);
 }
 
 // The user menu's panel: who is logged in, "Abmelden" and, in development, the user switcher.
@@ -169,11 +165,6 @@ body {
   color: theme.$text-secondary;
 }
 
-.tp-header-panel .cds--btn {
-  inline-size: 100%;
-  max-inline-size: none;
-}
-
 // Participant portal: mobile-first, one column.
 .tp-portal-content {
   padding-block: $spacing-07;
@@ -183,24 +174,6 @@ body {
   @media (min-width: 42rem) {
     padding-inline: $spacing-07;
   }
-}
-
-// A button never grows past its container (Carbon allows 20rem, wider than a card at 375px) and
-// a button set wraps, instead of pushing the page sideways (D10); a long label wraps inside.
-:where(.tp-content, .tp-portal-content) .cds--btn {
-  max-inline-size: 100%;
-  overflow-wrap: anywhere;
-}
-
-.cds--btn-set {
-  flex-wrap: wrap;
-  row-gap: $spacing-03;
-}
-
-// A Carbon stack's one implicit column may not grow past its container (a wide fieldset would
-// push the page sideways otherwise, D10).
-.cds--stack-vertical {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 // The page header (ui-patterns.md): breadcrumbs, the title with its tags, the actions at the end
@@ -238,39 +211,11 @@ body {
   min-inline-size: 0;
 }
 
-// A header tag (a customer's or type's name) wraps instead of truncating: Carbon turns a
-// truncated tag into a button with a tooltip, a tab stop that does nothing, and at 400% zoom
-// the full text must stay readable (D10).
-.tp-page-header-tags .cds--tag {
-  max-inline-size: 100%;
-  block-size: auto;
-  min-block-size: 1.125rem;
-}
-
-.tp-page-header-tags .cds--tag__label {
-  overflow: visible;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
 .tp-page-header-metadata {
   @include type.type-style("body-compact-01");
 
   color: theme.$text-secondary;
   overflow-wrap: anywhere;
-}
-
-// Carbon's menu button (its styles live in @carbon/styles only): the chevron turns when open.
-.cds--menu-button__container {
-  display: inline-flex;
-}
-
-.cds--menu-button__trigger svg {
-  transition: transform 110ms;
-}
-
-.cds--menu-button__trigger--open svg {
-  transform: rotate(180deg);
 }
 
 // Section and card (ui-patterns.md, principle 8): a header with heading, description and actions.
@@ -300,9 +245,10 @@ body {
 }
 
 .tp-card {
-  padding: $spacing-05;
-  border: 1px solid theme.$border-subtle-01;
-  background: theme.$layer-01;
+  padding: var(--tp-space-4) var(--tp-space-5);
+  border-radius: var(--tp-radius-card);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-elevation);
   min-inline-size: 0;
 
   h2,
@@ -340,14 +286,6 @@ body {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
-}
-
-// Status tags (principle 4): Carbon has no yellow tag, so "warning" is yellow-10 with the warning
-// colour as its border; the icon and the text carry the meaning.
-.tp-status-tag--warning.cds--tag {
-  border: 1px solid theme.$support-warning;
-  background-color: colors.$yellow-10;
-  color: theme.$text-primary;
 }
 
 .tp-status-tag-icon {
@@ -412,11 +350,6 @@ body {
   gap: $spacing-05;
 }
 
-.tp-page-skeleton-block.cds--skeleton__placeholder {
-  inline-size: 100%;
-  block-size: 12rem;
-}
-
 .tp-visually-hidden {
   position: absolute;
   overflow: hidden;
@@ -438,40 +371,6 @@ body {
   @include type.type-style("helper-text-01");
 
   color: theme.$text-secondary;
-}
-
-// The side panel (ui-patterns.md): a Carbon modal at the inline end, full height, 30rem wide;
-// full width below 42rem.
-.tp-side-panel.cds--modal {
-  justify-content: flex-end;
-  align-items: stretch;
-}
-
-.tp-side-panel .cds--modal-container {
-  position: relative;
-  inset: auto;
-  inline-size: 100%;
-  max-inline-size: 100%;
-  block-size: 100%;
-  max-block-size: 100%;
-
-  @media (min-width: 42rem) {
-    inline-size: 30rem;
-  }
-}
-
-// Low viewports (400 % zoom: 320 × 180–256 CSS px): the whole panel scrolls as one, so the footer
-// and the discard question stay reachable instead of being cut off below the body (D10).
-@media (max-height: 30rem) {
-  .tp-side-panel .cds--modal-container {
-    display: block;
-    overflow-y: auto;
-  }
-
-  .tp-side-panel .cds--modal-content {
-    overflow: visible;
-    max-block-size: none;
-  }
 }
 
 .tp-side-panel-confirm {
@@ -507,46 +406,6 @@ body {
     outline: 2px solid theme.$focus;
     outline-offset: -2px;
   }
-
-  .cds--data-table thead th {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 1;
-  }
-}
-
-// The toolbar wraps on narrow screens instead of pushing the page sideways (D10).
-.tp-data-table .cds--table-toolbar {
-  block-size: auto;
-  min-block-size: $spacing-09;
-}
-
-.tp-data-table .cds--toolbar-content {
-  flex-wrap: wrap;
-  block-size: auto;
-
-  // The search takes the room the others leave, on their line while there is room.
-  .cds--toolbar-search-container-persistent {
-    flex: 1 1 14rem;
-    inline-size: auto;
-  }
-}
-
-// The batch bar in its own toolbar: in the flow, wrapping on narrow screens (D10), never wider
-// than the page.
-.tp-data-table .cds--batch-actions {
-  position: relative;
-  flex-wrap: wrap;
-  block-size: auto;
-  min-block-size: $spacing-09;
-  max-inline-size: 100%;
-}
-
-.tp-data-table .cds--batch-actions .cds--action-list {
-  flex-wrap: wrap;
-  block-size: auto;
-  min-inline-size: 0;
-  max-inline-size: 100%;
 }
 
 // A row that opens its object on click; its link stays the keyboard's way.
@@ -646,15 +505,6 @@ body {
   list-style: none;
 }
 
-.tp-filter-tags .cds--tag {
-  margin: 0;
-}
-
-// Compact choices: Carbon keeps room for an icon at a button's end; a quick view has none.
-.tp-quick-views .cds--btn {
-  padding-inline-end: $spacing-05;
-}
-
 .tp-filter-group {
   legend {
     @include type.type-style("heading-compact-01");
@@ -694,25 +544,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: $spacing-02;
-
-  .cds--tag {
-    margin: 0;
-  }
 }
 
 .tp-next-step {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-
-  // A disclosure within the cell: the text colour, underlined, so it keeps its contrast on a
-  // selected or hovered row too (WCAG 1.4.3).
-  .cds--btn--ghost {
-    min-block-size: auto;
-    padding-inline: 0;
-    color: theme.$text-primary;
-    text-decoration: underline;
-  }
 }
 
 // Label/value pairs, such as a participant's data (Slice 2, PR 2h-1).
@@ -772,11 +609,6 @@ body {
   border-inline-start: 4px solid theme.$border-interactive;
   background: theme.$layer-01;
   overflow-wrap: anywhere;
-
-  .cds--btn {
-    inline-size: 100%;
-    max-inline-size: 20rem;
-  }
 }
 
 .tp-appointment-facts {
@@ -808,17 +640,6 @@ body {
   inset-block-start: 3.5rem;
   inset-inline-end: $spacing-05;
   z-index: 9000;
-}
-
-.tp-user-list {
-  .cds--btn {
-    inline-size: 100%;
-    max-inline-size: none;
-  }
-
-  .cds--btn[aria-current="true"] {
-    font-weight: 600;
-  }
 }
 
 .tp-hint {
@@ -964,11 +785,6 @@ body {
   display: inline-flex;
   align-items: center;
   gap: $spacing-04;
-
-  .cds--btn {
-    min-block-size: 0;
-    padding-block: 0;
-  }
 }
 
 .tp-assisted-wizard {
@@ -976,14 +792,11 @@ body {
 }
 
 @media print {
-  .cds--header,
-  .cds--side-nav,
   .tp-print-controls {
     display: none !important;
   }
 
-  .tp-content,
-  .tp-shell > .cds--content.tp-content {
+  .tp-content {
     padding: 0;
     margin: 0;
   }
@@ -1015,10 +828,11 @@ body {
   grid-template-columns: 1fr auto;
   row-gap: $spacing-02;
   block-size: 100%;
-  padding: $spacing-05;
-  border: 1px solid theme.$border-subtle-01;
+  padding: var(--tp-space-4);
   border-inline-start: 4px solid theme.$border-strong-01;
-  background: theme.$layer-01;
+  border-radius: var(--tp-radius-card);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-elevation);
   color: theme.$text-primary;
   text-decoration: none;
 
@@ -1028,7 +842,7 @@ body {
 
   &:focus-visible {
     outline: 2px solid theme.$focus;
-    outline-offset: -2px;
+    outline-offset: 2px;
   }
 }
 
@@ -1086,11 +900,6 @@ body {
   .tp-tile-icon {
     fill: theme.$support-success;
   }
-}
-
-.tp-tile-skeleton.cds--skeleton__placeholder {
-  inline-size: 100%;
-  block-size: 7.5rem;
 }
 
 // "Weitere offene Arbeit": the other counts as one wrapping line of links.
@@ -1410,12 +1219,6 @@ body {
   gap: $spacing-02;
 }
 
-.tp-language-list .cds--btn[aria-pressed="true"] {
-  @include type.type-style("heading-compact-01");
-
-  background: theme.$layer-selected-01;
-}
-
 .tp-header-panel-link {
   @include type.type-style("body-compact-01");
 
@@ -1581,3 +1384,323 @@ body {
     color: theme.$text-secondary;
   }
 }
+
+// ---- The kit's second layer (ui-patterns.md, which pattern) --------------------------------
+
+// DetailHeader: breadcrumbs, then a card with the title, one metadata line, the tags, the
+// actions at the end (below the title on narrow screens) and up to five key facts under a line.
+.tp-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tp-space-2);
+  margin-block-end: var(--tp-space-5);
+}
+
+.tp-detail-header-card {
+  padding: var(--tp-space-4) var(--tp-space-5);
+  border-radius: var(--tp-radius-card);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-elevation);
+}
+
+.tp-detail-header-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--tp-space-4);
+}
+
+.tp-detail-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tp-space-1);
+  min-inline-size: 0;
+
+  h1 {
+    overflow-wrap: anywhere;
+  }
+}
+
+.tp-detail-header-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tp-space-2);
+  margin-block-start: var(--tp-space-1);
+}
+
+.tp-detail-header-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--tp-space-3) var(--tp-space-4);
+  margin-block-start: var(--tp-space-4);
+  padding-block-start: var(--tp-space-3);
+  border-block-start: 1px solid theme.$border-subtle-01;
+
+  dt {
+    @include type.type-style("label-01");
+
+    color: theme.$text-secondary;
+  }
+
+  dd {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+// SectionCard and NextSteps: the header line with the title, the one-line summary and the actions.
+.tp-section-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tp-space-2) var(--tp-space-3);
+
+  .tp-card-actions {
+    margin-inline-start: auto;
+  }
+}
+
+.tp-section-card-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tp-space-2);
+  padding: var(--tp-space-1);
+  margin: calc(-1 * var(--tp-space-1));
+  border: 0;
+  border-radius: var(--tp-radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: theme.$layer-hover-01;
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+  }
+}
+
+.tp-section-card-summary {
+  @include type.type-style("body-compact-01");
+
+  min-inline-size: 0;
+  color: theme.$text-secondary;
+  overflow-wrap: anywhere;
+}
+
+.tp-section-card-body:not([hidden]) {
+  margin-block-start: var(--tp-space-4);
+}
+
+// Facts: label beside or above its value, in two or four columns from 42rem; one column below.
+.tp-fact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tp-space-2) var(--tp-space-5);
+  margin: 0;
+
+  @media (min-width: 42rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  dt {
+    @include type.type-style("body-compact-01");
+
+    color: theme.$text-secondary;
+  }
+
+  dd {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (min-width: 66rem) {
+  .tp-fact-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.tp-fact-grid--beside .tp-fact {
+  display: grid;
+  grid-template-columns: minmax(6rem, 2fr) minmax(0, 3fr);
+  gap: var(--tp-space-3);
+}
+
+// NextSteps: one row per open item, its action at the end (under the text at 400 % zoom).
+.tp-next-steps-list {
+  margin-block-start: var(--tp-space-3);
+}
+
+.tp-next-steps-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tp-space-2) var(--tp-space-3);
+  padding-block: var(--tp-space-3);
+  border-block-start: 1px solid theme.$border-subtle-01;
+}
+
+.tp-next-steps-icon {
+  flex: none;
+  fill: theme.$icon-secondary;
+}
+
+.tp-next-steps-item--danger .tp-next-steps-icon {
+  fill: theme.$support-error;
+}
+
+.tp-next-steps-item--warning .tp-next-steps-icon {
+  fill: theme.$support-caution-major;
+}
+
+.tp-next-steps-item--info .tp-next-steps-icon {
+  fill: theme.$support-info;
+}
+
+.tp-next-steps-item--success .tp-next-steps-icon {
+  fill: theme.$support-success;
+}
+
+.tp-next-steps-text {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.tp-next-steps-detail {
+  @include type.type-style("label-01");
+
+  color: theme.$text-secondary;
+}
+
+// StepList: the steps at the start, the selected step's card beside them from 66rem.
+.tp-step-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tp-space-4);
+  align-items: start;
+
+  @media (min-width: 66rem) {
+    grid-template-columns: 16rem minmax(0, 1fr);
+  }
+}
+
+.tp-step {
+  display: flex;
+  gap: var(--tp-space-2);
+  inline-size: 100%;
+  padding: var(--tp-space-3);
+  border: 0;
+  border-inline-start: 3px solid transparent;
+  border-radius: var(--tp-radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: theme.$layer-hover-01;
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: -2px;
+  }
+
+  &[aria-current="step"] {
+    border-inline-start-color: theme.$border-interactive;
+    background: var(--tp-surface);
+    box-shadow: var(--tp-elevation);
+  }
+}
+
+.tp-step-icon {
+  flex: none;
+  margin-block-start: 0.125rem;
+  fill: theme.$icon-secondary;
+}
+
+.tp-step--done .tp-step-icon {
+  fill: theme.$support-success;
+}
+
+.tp-step--current .tp-step-icon {
+  fill: theme.$support-info;
+}
+
+.tp-step--blocked .tp-step-icon {
+  fill: theme.$support-caution-major;
+}
+
+.tp-step-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.tp-step-title {
+  font-weight: 600;
+}
+
+.tp-step-status {
+  @include type.type-style("label-01");
+
+  color: theme.$text-secondary;
+}
+
+// Funnel: one row of stages, each a count over its label; the row wraps on narrow screens.
+.tp-funnel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--tp-space-1);
+}
+
+.tp-funnel-stage {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  padding: var(--tp-space-3) var(--tp-space-4);
+  border-radius: var(--tp-radius-control);
+  background: colors.$blue-10;
+  color: theme.$text-primary;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.tp-funnel-stage--ended {
+  background: theme.$layer-accent-01;
+}
+
+a.tp-funnel-stage {
+  &:hover .tp-funnel-count {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: 2px;
+  }
+}
+
+.tp-funnel-count {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tp-funnel-label {
+  @include type.type-style("body-compact-01");
+}
+
+// The product theme: its tokens and every override of a Carbon class (ui-patterns.md, theme),
+// after the kit's own rules so an override of equal weight wins.
+@include meta.load-css("theme");

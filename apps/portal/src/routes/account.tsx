@@ -50,7 +50,7 @@ function Account() {
       </Card>
       <Card title={t("account.session")} description={t("account.sessionText")}>
         <div>
-          <Button kind="secondary" renderIcon={Logout} onClick={() => void logout()}>
+          <Button kind="tertiary" renderIcon={Logout} onClick={() => void logout()}>
             {t("account.logout")}
           </Button>
         </div>
