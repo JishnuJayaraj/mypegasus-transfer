@@ -19,6 +19,7 @@ import {
   sha256,
   sourcesFolder,
 } from "./function-sources";
+import { generatedSources } from "./generated-sources";
 import { migrationsFolder, runMigrations } from "./migrate";
 import { seed } from "./seed";
 import { activateAsOwner, informedParticipation, testDatabaseUrls } from "./testing";
@@ -142,6 +143,15 @@ const recorded = () =>
 
 const content = (file: string) => readFileSync(join(sourcesFolder, file), "utf8");
 
+/**
+ * The source that holds a trigger: its table's file, or a generated file of one trigger for many
+ * tables (ADR-0002, generated lists).
+ */
+const triggerSource = (t: { table: string; name: string }) =>
+  [`triggers/${t.table}.sql`, ...generatedSources.filter((file) => file.startsWith("triggers/"))]
+    .filter((file) => manifest.sources.includes(file))
+    .find((file) => content(file).includes(`CREATE OR REPLACE TRIGGER ${t.name} `));
+
 /** Functions and triggers no source defines (the allowlist excepted), and sources defining nothing. */
 function withoutSource(db: Awaited<ReturnType<typeof definitions>>) {
   const files = new Map(manifest.sources.map((file) => [file.split("/").at(-1)!, file]));
@@ -154,13 +164,9 @@ function withoutSource(db: Awaited<ReturnType<typeof definitions>>) {
     else orphans.push(f.signature);
   }
   for (const t of db.triggers) {
-    const file = `triggers/${t.table}.sql`;
-    if (
-      manifest.sources.includes(file) &&
-      content(file).includes(`CREATE OR REPLACE TRIGGER ${t.name} `)
-    ) {
-      defined.add(file);
-    } else orphans.push(`${t.table}.${t.name}`);
+    const file = triggerSource(t);
+    if (file) defined.add(file);
+    else orphans.push(`${t.table}.${t.name}`);
   }
   return { orphans, idle: manifest.sources.filter((file) => !defined.has(file)) };
 }
@@ -172,7 +178,9 @@ function withoutSource(db: Awaited<ReturnType<typeof definitions>>) {
 function extracted<T extends { name: string; table?: string }>(rows: T[]): T[] {
   const files = new Map(manifest.sources.map((file) => [file.split("/").at(-1)!, file]));
   return rows.filter((row) => {
-    const file = row.table ? `triggers/${row.table}.sql` : files.get(`${row.name}.sql`);
+    const file = row.table
+      ? triggerSource({ table: row.table, name: row.name })
+      : files.get(`${row.name}.sql`);
     return file !== undefined && baseline[file] === sha256(readFileSync(join(sourcesFolder, file)));
   });
 }

@@ -72,6 +72,14 @@ by `pnpm db:migrate`; the diff of that file is the change. Write a migration onl
 source can't express: tables, types, data, a dropped function or signature (ADR-0002, function
 sources).
 
+Three sources are generated and say so in their header (ADR-0002, generated lists). A new audit
+event type is added to the domain's audit model (`reservedEventTypes` when only its own function
+writes it), a new participant table to the data catalog: its entry, its place by hand in the
+erasure order (`erasureParticipationTables`) and its dependencies. `pnpm generate` then writes
+the lists; the functions themselves are not edited for them. A change to `record_audit_event` or
+`retention_erase_participation` is an edit of its template in `packages/db/sql/templates/`,
+followed by `pnpm generate`.
+
 The fast tier while working is `pnpm verify:changed`: typecheck, lint and, without coverage, the
 tests related to the files changed against `origin/main`. A change to a migration, a function or trigger source, `setup.sql`,
 `packages/db/src/schema.ts`, the db testing helpers or a Vitest config runs the db and api

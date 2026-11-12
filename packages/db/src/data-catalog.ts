@@ -70,35 +70,50 @@ export const retentionPrerequisites: RetentionPrerequisites = {
   maintenance_rules_complete: false,
 };
 
-/** Inventory of participation-reference tables (data-protection.md, retention and deletion). */
+/**
+ * Inventory of participation-reference tables (data-protection.md, retention and deletion), **in
+ * the erasure order**: `retention_erase_participation` deletes in this order, so a table stands
+ * before every table it references, except across a deferred edge
+ * (`erasureDeferredForeignKeys`). A new table is placed here by hand. `audit_event` is never
+ * deleted: the erasure pseudonymises it last. The function's list is generated from this one
+ * (ADR-0002, generated lists).
+ */
 export const erasureParticipationTables = [
+  "asu_registration",
+  "ba_reporting_task",
+  "document_link",
+  "dsv_contract",
+  "dsv_scan_signature",
+  "entry_clarification_step",
+  "kug200b_batch_member",
+  "kug200b_withdrawal",
+  "participant_account",
+  "participant_reminder",
+  "participant_session",
+  "privacy_notice_delivery",
+  "profiling_exception_request",
+  "signed_declaration",
+  "tg_entry_reconciliation_step",
   "activation_code",
   "agentur_submission",
   "appointment_booking",
-  "assisted_mode",
-  "asu_record",
-  "asu_registration",
-  "audit_event",
-  "ba_reporting_task",
+  "entry_clarification",
+  "evidence_correction",
+  "participant_channel",
+  "participation_dsv_amendment",
+  "profiling_exception_evidence_record",
+  "tg_entry_reconciliation",
   "consent_record",
   "document",
-  "document_link",
-  "dsv_contract",
-  "dsv_customer_notice",
   "dsv_offer",
-  "dsv_scan_signature",
-  "entry_clarification",
-  "entry_clarification_step",
-  "evidence_correction",
   "form_generation",
-  "kug200b_batch_member",
+  "assisted_mode",
+  "asu_record",
+  "dsv_customer_notice",
   "kug200b_decline",
-  "kug200b_withdrawal",
   "legal_hold",
   "one_time_code_challenge",
-  "participant_account",
   "participant_assignment",
-  "participant_channel",
   "participant_details",
   "participant_health_data",
   "participant_identifier_data",
@@ -107,19 +122,33 @@ export const erasureParticipationTables = [
   "participant_profiling",
   "participant_profiling_assessment",
   "participant_profiling_health_assessment",
-  "participant_reminder",
   "participant_residence_social_data",
-  "participant_session",
-  "participation_dsv_amendment",
-  "privacy_notice_delivery",
-  "profiling_exception_evidence_record",
-  "profiling_exception_request",
   "profiling_session",
   "self_service_notice_acknowledgement",
-  "signed_declaration",
-  "tg_entry_reconciliation",
-  "tg_entry_reconciliation_step",
+  "audit_event",
 ] as const;
+
+/**
+ * Tables naming a participation that stay writable in the evidence-only phase and while an
+ * erasure is pending (data-protection.md, retention and deletion): the audit trail, append-only
+ * by its own trigger, and the holds themselves. Every other table of the inventory, and
+ * `participation`, carries the evidence-only trigger, generated from here (ADR-0002, generated
+ * lists).
+ */
+export const evidenceOnlyExemptTables: readonly string[] = ["audit_event", "legal_hold"];
+
+/** The tables carrying the evidence-only trigger `refuse_in_evidence_set_phase`. */
+export const evidenceOnlyTables = (
+  participationTables: readonly string[] = erasureParticipationTables,
+): string[] =>
+  ["participation", ...participationTables]
+    .filter((name) => !evidenceOnlyExemptTables.includes(name))
+    .toSorted();
+
+/** The tables `retention_erase_participation` deletes from, in its order. */
+export const erasureDeletionTables = (
+  participationTables: readonly string[] = erasureParticipationTables,
+): string[] => participationTables.filter((name) => name !== "audit_event");
 
 /** Foreign-key cycle edges that the erasure transaction must defer. */
 export const erasureDeferredForeignKeys: readonly string[] = [

@@ -1,4 +1,3 @@
 CREATE OR REPLACE TRIGGER participation_early_exit_task AFTER UPDATE OF status ON public.participation FOR EACH ROW WHEN (((old.status IS DISTINCT FROM new.status) AND (new.status = 'exited'::public.main_status))) EXECUTE FUNCTION public.create_early_exit_task();
-CREATE OR REPLACE TRIGGER participation_evidence_set_phase BEFORE INSERT OR DELETE OR UPDATE ON public.participation FOR EACH ROW EXECUTE FUNCTION public.refuse_in_evidence_set_phase();
 CREATE OR REPLACE TRIGGER participation_terminal_cancel_bookings AFTER UPDATE OF status ON public.participation FOR EACH ROW EXECUTE FUNCTION public.cancel_bookings_at_terminal_status();
 CREATE OR REPLACE TRIGGER participation_terminal_revoke_codes AFTER UPDATE OF status ON public.participation FOR EACH ROW EXECUTE FUNCTION public.revoke_codes_at_terminal_status();
