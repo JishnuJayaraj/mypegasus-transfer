@@ -23,11 +23,15 @@ describe("DetailHeader", () => {
     renderUi(
       <DetailHeader
         title="Beispiel, Erika"
-        breadcrumbs={[<a href="/projects">Projekte</a>]}
+        breadcrumbs={[
+          <a key="projects" href="/projects">
+            {"Projekte"}
+          </a>,
+        ]}
         metadata="Personalnummer BSP-0001"
-        tags={<span>Status: Informiert</span>}
+        tags={<span>{"Status: Informiert"}</span>}
         facts={facts}
-        primaryAction={<button type="button">Profilingbogen erzeugen</button>}
+        primaryAction={<button type="button">{"Profilingbogen erzeugen"}</button>}
         menuActions={[
           { label: "Löschen", onClick: () => {}, danger: true },
           { label: "Erinnern", onClick: () => {} },
@@ -63,7 +67,7 @@ describe("SectionCard", () => {
   it("collapses to its title and summary, opens on its heading's button, stores nothing", async () => {
     renderUi(
       <SectionCard title="Welle und Vertragsdaten" summary="W1 · 01.03.2027 – 29.02.2028">
-        <p>Inhalt</p>
+        <p>{"Inhalt"}</p>
       </SectionCard>,
     );
     const card = screen.getByRole("region", { name: "Welle und Vertragsdaten" });
@@ -87,7 +91,7 @@ describe("SectionCard", () => {
   it("starts open with defaultOpen, as an h3 on request", () => {
     renderUi(
       <SectionCard title="Stammdaten" level={3} defaultOpen>
-        <p>Inhalt</p>
+        <p>{"Inhalt"}</p>
       </SectionCard>,
     );
     expect(screen.getByRole("heading", { level: 3, name: "Stammdaten" })).toBeInTheDocument();
@@ -97,7 +101,7 @@ describe("SectionCard", () => {
   it("never starts open with protected content, and renders it only once opened", async () => {
     renderUi(
       <SectionCard title="Gesundheit" defaultOpen protectedContent>
-        <p>besonders geschützt</p>
+        <p>{"besonders geschützt"}</p>
       </SectionCard>,
     );
     expect(screen.queryByText("besonders geschützt")).not.toBeInTheDocument();
@@ -136,7 +140,7 @@ describe("NextSteps", () => {
         title="Als Nächstes"
         summary="2 von 6 offenen Punkten"
         emptyText="Nichts offen."
-        more={<a href="#all">Alle 6 anzeigen</a>}
+        more={<a href="#all">{"Alle 6 anzeigen"}</a>}
         items={[
           {
             id: "asu",
@@ -144,7 +148,7 @@ describe("NextSteps", () => {
             toneLabel: "Überfällig",
             title: "Arbeitsuchendmeldung fehlt",
             detail: "seit 2 Tagen überfällig · 05.02.2027",
-            action: <button type="button">Meldung erfassen</button>,
+            action: <button type="button">{"Meldung erfassen"}</button>,
           },
           { id: "dsv", tone: "warning", toneLabel: "Bald fällig", title: "DSV zurückerwartet" },
         ]}
@@ -170,15 +174,20 @@ describe("NextSteps", () => {
 
 describe("StepList", () => {
   const steps = [
-    { id: "data", title: "Angaben prüfen", state: "done" as const, children: <p>geprüft</p> },
+    { id: "data", title: "Angaben prüfen", state: "done" as const, children: <p>{"geprüft"}</p> },
     {
       id: "form",
       title: "Bogen erzeugen",
       state: "current" as const,
       status: "bereit",
-      children: <button type="button">Profilingbogen erzeugen</button>,
+      children: <button type="button">{"Profilingbogen erzeugen"}</button>,
     },
-    { id: "sign", title: "Unterschrift", state: "blocked" as const, status: "wartet auf den Bogen" },
+    {
+      id: "sign",
+      title: "Unterschrift",
+      state: "blocked" as const,
+      status: "wartet auf den Bogen",
+    },
     { id: "send", title: "An die Agentur", state: "open" as const },
   ];
 

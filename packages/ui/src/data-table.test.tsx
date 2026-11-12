@@ -342,27 +342,27 @@ describe("DataTable", () => {
   });
 });
 
-describe("DataTable's filter and loading state", () => {
-  const table = (extra: object = {}) => (
-    <DataTable
-      title="Liste"
-      items={rows}
-      columns={columns}
-      rowLabel={(r) => r.name}
-      emptyState={<p>Keine Einträge</p>}
-      filter={{
-        label: "Filtern",
-        text: (r) => `${r.name} ${r.code}`,
-        noMatches: (reset) => (
-          <button type="button" onClick={reset}>
-            Filter zurücksetzen
-          </button>
-        ),
-      }}
-      {...extra}
-    />
-  );
+const table = (extra: object = {}) => (
+  <DataTable
+    title="Liste"
+    items={rows}
+    columns={columns}
+    rowLabel={(r) => r.name}
+    emptyState={<p>{"Keine Einträge"}</p>}
+    filter={{
+      label: "Filtern",
+      text: (r) => `${r.name} ${r.code}`,
+      renderNoMatches: (reset) => (
+        <button type="button" onClick={reset}>
+          {"Filter zurücksetzen"}
+        </button>
+      ),
+    }}
+    {...extra}
+  />
+);
 
+describe("DataTable's filter and loading state", () => {
   it("keeps the rows whose text contains the term, whatever the case, and stores nothing", async () => {
     renderUi(table());
     const search = screen.getByRole("searchbox", { name: "Filtern" });

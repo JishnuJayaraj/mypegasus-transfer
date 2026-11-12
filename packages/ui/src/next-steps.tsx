@@ -55,7 +55,10 @@ export function NextSteps({
               <li key={item.id} className={`tp-next-steps-item tp-next-steps-item--${item.tone}`}>
                 <Icon size={16} aria-hidden="true" className="tp-next-steps-icon" />
                 <div className="tp-next-steps-text">
-                  <span className="tp-visually-hidden">{item.toneLabel}: </span>
+                  <span className="tp-visually-hidden">
+                    {item.toneLabel}
+                    {": "}
+                  </span>
                   <span className="tp-next-steps-title">{item.title}</span>
                   {item.detail && <span className="tp-next-steps-detail">{item.detail}</span>}
                 </div>

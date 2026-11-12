@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { SectionHeading } from "@transfer/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { projectQuery, useApi } from "../api";
@@ -65,7 +66,7 @@ export function ProjectSectionPage({
   usePageTitle(label, project.name);
   return (
     <>
-      <h2 className="tp-section-title">{label}</h2>
+      <SectionHeading>{label}</SectionHeading>
       {children(project.type === "ta_tg")}
     </>
   );

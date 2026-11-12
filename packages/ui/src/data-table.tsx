@@ -106,12 +106,12 @@ interface DataTableProps<T extends { id: string }> {
   /**
    * A text filter over the loaded rows: a row stays when `text` contains the term (ignoring
    * case). The term is component state only, never stored (ui-patterns.md, principle 9).
-   * `noMatches` replaces the table when no row stays (an EmptyState with its reset).
+   * `renderNoMatches` replaces the table when no row stays (an EmptyState with its reset).
    */
   filter?: {
     label: string;
     text: (item: T) => string;
-    noMatches: (reset: () => void) => ReactNode;
+    renderNoMatches: (reset: () => void) => ReactNode;
   };
   /** The rows are still loading: a skeleton with the real column headers. */
   loading?: boolean;
@@ -239,7 +239,9 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
                 placeholder={filter.label}
                 autoComplete="off"
                 value={term}
-                onChange={(event) => setTerm(typeof event === "string" ? event : event.target.value)}
+                onChange={(event) =>
+                  setTerm(typeof event === "string" ? event : event.target.value)
+                }
               />
             )}
             {props.columnChooser && !empty && (
@@ -296,7 +298,7 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
         </TableToolbar>
       )}
       {empty && props.emptyState}
-      {noMatches && filter?.noMatches(() => setTerm(""))}
+      {noMatches && filter?.renderNoMatches(() => setTerm(""))}
       {props.columnChooser && choosing && !empty && (
         <fieldset id={`${id}-columns`} className="tp-column-chooser">
           <legend>{t("dataTable.columnsLegend")}</legend>

@@ -38,6 +38,17 @@ export function CountTile({ count, label, tone, renderLink }: CountTileProps) {
   });
 }
 
+/** The row of tiles: one column at 400 % zoom, as many as fit beside each other above. */
+export function CountTiles({ children }: { children: ReactNode[] }) {
+  return (
+    <ul className="tp-count-tiles">
+      {children.map((tile, index) => (
+        <li key={index}>{tile}</li>
+      ))}
+    </ul>
+  );
+}
+
 /** Tiles still loading: their places, with a hidden status saying what loads. */
 export function TilesSkeleton({ count = 4, label }: { count?: number; label?: string }) {
   const { t } = useTranslation(UI_NAMESPACE);

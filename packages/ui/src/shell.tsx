@@ -96,9 +96,8 @@ export function AppShell(props: AppShellProps) {
   const navRef = useRef<HTMLElement>(null);
   const navId = useId();
 
-  useEffect(() => {
-    if (wide) setOpen(false);
-  }, [wide]);
+  // Growing past 66rem (resize, zoom) closes the overlay for good, not until the next shrink.
+  if (wide && open) setOpen(false);
 
   // The overlay takes the focus to its first link.
   useEffect(() => {
@@ -134,9 +133,7 @@ export function AppShell(props: AppShellProps) {
   }
 
   return (
-    <div
-      className={`tp-shell ${hasNav ? "tp-shell--nav" : "tp-shell--no-nav"}`}
-    >
+    <div className={`tp-shell ${hasNav ? "tp-shell--nav" : "tp-shell--no-nav"}`}>
       <Theme theme="g100">
         <Header aria-label={props.productName}>
           <SkipToContent>{props.skipToContentLabel}</SkipToContent>

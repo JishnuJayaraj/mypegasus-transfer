@@ -464,11 +464,7 @@ export function Participants({
         onClose={() => setFiltersOpen(false)}
         footer={
           <>
-            <Button
-              kind="tertiary"
-              disabled={activeFilters === 0}
-              onClick={() => changeFilter({})}
-            >
+            <Button kind="tertiary" disabled={activeFilters === 0} onClick={() => changeFilter({})}>
               {t("worklist.filters.reset")}
             </Button>
             <Button kind="primary" onClick={() => setFiltersOpen(false)}>

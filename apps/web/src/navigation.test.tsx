@@ -162,21 +162,21 @@ describe("the project's routes", () => {
   });
 });
 
+const dashboard = (rows: object[]) => ({
+  scope: "project",
+  generatedAt: "2026-10-22T08:42:00.000Z",
+  counts: projectFunnel(rows as never, { type: "ta_tg", waves: [] }),
+});
+const participants = async () =>
+  within(await screen.findByRole("navigation", { name: "Navigation", hidden: true })).findByRole(
+    "link",
+    { name: /^Teilnehmende/, hidden: true },
+  );
+
 describe("the navigation's badge", () => {
   const overdue = worklistItem({
     deadlines: [{ kind: "privacy_notice", date: "2026-10-01", state: "overdue" }],
   });
-  const dashboard = (rows: object[]) => ({
-    scope: "project",
-    generatedAt: "2026-10-22T08:42:00.000Z",
-    counts: projectFunnel(rows as never, { type: "ta_tg", waves: [] }),
-  });
-  const participants = async () =>
-    within(await screen.findByRole("navigation", { name: "Navigation", hidden: true })).findByRole(
-      "link",
-      { name: /^Teilnehmende/, hidden: true },
-    );
-
   it("shows the overdue count of the dashboard the viewer gets", async () => {
     const rows = [overdue];
     const count = dashboard(rows).counts.tiles.find((t) => t.key === "deadline_overdue")!.count;
