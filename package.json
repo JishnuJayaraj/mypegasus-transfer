@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -b",
-    "lint": "oxlint --deny-warnings --ignore-pattern 'apps/portal/lint-fixtures/**' && oxfmt --check && node scripts/check-tsconfig.mjs && node scripts/check-template-immutability.mjs",
+    "lint": "oxlint --deny-warnings --ignore-pattern 'apps/portal/lint-fixtures/**' && oxfmt --check && node scripts/check-tsconfig.mjs && node scripts/check-template-immutability.mjs && node scripts/check-docs.mjs && node --test scripts/docs-checks.test.mjs",
     "format": "oxfmt",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
