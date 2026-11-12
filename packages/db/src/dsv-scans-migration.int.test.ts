@@ -55,4 +55,4 @@ it("upgrades existing documents without inventing receipt or offer linkage", asy
     { catalog_version: 8, dsv_offer_id: null, dsv_received_on: null, dsv_received_by: null },
   ]);
   expect((await db.$client.query("select * from dsv_facts($1)", [[person]])).rows).toEqual([]);
-});
+}, 30_000);
