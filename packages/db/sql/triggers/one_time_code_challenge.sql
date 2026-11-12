@@ -1,1 +1,0 @@
-CREATE OR REPLACE TRIGGER one_time_code_challenge_evidence_set_phase BEFORE INSERT OR DELETE OR UPDATE ON public.one_time_code_challenge FOR EACH ROW EXECUTE FUNCTION public.refuse_in_evidence_set_phase();

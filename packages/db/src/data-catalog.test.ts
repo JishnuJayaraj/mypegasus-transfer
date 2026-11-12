@@ -20,6 +20,7 @@ import {
   retentionPrerequisites,
   retainedDependencies,
   erasureParticipationTables,
+  erasureDeletionTables,
   erasureDeferredForeignKeys,
   erasureRetainedDependencies,
   type CatalogEntry,
@@ -43,7 +44,7 @@ it("keeps the erasure function's record keys aligned with the domain classificat
 
 it("keeps the erasure function's tables and held-class roots aligned with the catalog", () => {
   const source = readFileSync(
-    new URL("../migrations/0112_erasure_functions.sql", import.meta.url),
+    new URL("../sql/functions/retention/retention_erase_participation.sql", import.meta.url),
     "utf8",
   );
   const names = (pattern: RegExp) =>
@@ -118,13 +119,16 @@ it("identifies the foreign-key cycles the erasure order must break", () => {
 });
 
 it("deletes FK children before parents except for explicitly deferred edges", () => {
+  // The order is stated by hand in the catalog; the function's list is generated from it
+  // (ADR-0002, generated lists).
   const source = readFileSync(
-    new URL("../migrations/0112_erasure_functions.sql", import.meta.url),
+    new URL("../sql/functions/retention/retention_erase_participation.sql", import.meta.url),
     "utf8",
   );
   const list = source.match(/v_tables constant text\[\] := ARRAY\[([\s\S]*?)\];/)?.[1];
   expect(list).toBeDefined();
   const order = [...list!.matchAll(/'([^']+)'/g)].map((match) => match[1]!);
+  expect(order).toEqual(erasureDeletionTables());
   order.push("participation");
   const violations: string[] = [];
   for (const table of tables) {

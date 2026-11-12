@@ -1,2 +1,1 @@
-CREATE OR REPLACE TRIGGER profiling_exception_evidence_record_evidence_set_phase BEFORE INSERT OR DELETE OR UPDATE ON public.profiling_exception_evidence_record FOR EACH ROW EXECUTE FUNCTION public.refuse_in_evidence_set_phase();
 CREATE OR REPLACE TRIGGER profiling_exception_evidence_record_immutable BEFORE DELETE OR UPDATE ON public.profiling_exception_evidence_record FOR EACH ROW EXECUTE FUNCTION public.profiling_exception_evidence_record_immutable();
