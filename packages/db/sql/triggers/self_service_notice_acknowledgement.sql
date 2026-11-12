@@ -1,0 +1,2 @@
+CREATE OR REPLACE TRIGGER self_service_notice_acknowledgement_evidence_set_phase BEFORE INSERT OR DELETE OR UPDATE ON public.self_service_notice_acknowledgement FOR EACH ROW EXECUTE FUNCTION public.refuse_in_evidence_set_phase();
+CREATE OR REPLACE TRIGGER self_service_notice_acknowledgement_immutable BEFORE DELETE OR UPDATE ON public.self_service_notice_acknowledgement FOR EACH ROW EXECUTE FUNCTION public.keep_notice_acknowledgement_immutable();

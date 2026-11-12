@@ -1,0 +1,1 @@
+CREATE OR REPLACE TRIGGER tg_entry_reconciliation_step_evidence_set_phase BEFORE INSERT OR DELETE OR UPDATE ON public.tg_entry_reconciliation_step FOR EACH ROW EXECUTE FUNCTION public.refuse_in_evidence_set_phase();

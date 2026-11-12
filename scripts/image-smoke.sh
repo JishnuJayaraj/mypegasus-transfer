@@ -3,8 +3,8 @@
 # the CI `image` job.
 #   scripts/image-smoke.sh <image>
 # Needs a PostgreSQL with the dev roles (`pnpm db:setup`) on the host, reachable through
-# DATABASE_URL and DATABASE_MIGRATION_URL, and psql. Runs the migration (twice: installing the
-# pgboss schema and its grants is idempotent), starts the server with pg-boss as the runtime role
+# DATABASE_URL and DATABASE_MIGRATION_URL, and psql. Runs the migration (twice: applying the
+# function sources and installing the pgboss schema and its grants are idempotent), starts the server with pg-boss as the runtime role
 # and checks /api/v1/health/ready, / and /portal/, and the template catalog from the bundle's
 # config (AC-12) as a synthetic PL that exists only during the run. Synthetic setup only.
 set -euo pipefail
@@ -35,11 +35,16 @@ trap cleanup EXIT
 uid="$(docker run --rm "$image" id -u)"
 [ "$uid" != "0" ] || fail "the image runs as root"
 
-# Migrations are a separate command (a Job on the cluster); they also install pg-boss's schema.
+# Migrations are a separate command (a Job on the cluster); they also apply the function sources
+# in dist/sql (ADR-0002, function sources) and install pg-boss's schema.
 for run in first second; do
   docker run --rm --network host -e DATABASE_MIGRATION_URL "$image" node dist/migrate.js ||
     fail "node dist/migrate.js failed ($run run)"
 done
+sources="$(psql --no-psqlrc -v ON_ERROR_STOP=1 -At "$DATABASE_MIGRATION_URL" \
+  -c 'select count(*) from function_source')" || fail "function_source is missing"
+[ "$sources" -gt 0 ] || fail "the image applied no function source"
+echo "ok  $sources function sources applied"
 
 # The server. NODE_ENV=development and AUTH_MODE=dev because the image refuses to start in
 # production with the dev auth stub, and OIDC needs an identity provider (the API tests run OIDC

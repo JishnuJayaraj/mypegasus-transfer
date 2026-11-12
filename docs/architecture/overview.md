@@ -55,9 +55,10 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 - `packages/domain`: entities, lifecycle vocabulary and state machine, date helpers, field
   catalog, Zod schemas (incl. the audit event model), completeness rules. No I/O, no system time.
   Base defaults live in `packages/domain/config/base-defaults.json`.
-- `packages/db`: Drizzle schema, migrations (the SECURITY DEFINER status functions and grants
-  are hand-written), seed, data catalog. `pnpm db:migrate` also creates pg-boss's `pgboss` schema
-  and its `transfer_app` grants. The seed is synthetic only: idempotent by fixed UUIDs, fictional
+- `packages/db`: Drizzle schema, migrations (tables, types, grants, data), the function and
+  trigger sources (`sql/functions/<area>/<name>.sql`, `sql/triggers/<table>.sql`, applied by
+  `pnpm db:migrate` when their hash changed; ADR-0002, function sources), seed, data catalog.
+  `pnpm db:migrate` also creates pg-boss's `pgboss` schema and its `transfer_app` grants. The seed is synthetic only: idempotent by fixed UUIDs, fictional
   names, `example.org` emails; `db:seed` and `db:reset` refuse `NODE_ENV=production`. It holds
   two fictional regions (Nord with Werk Nord and Verwaltung, Süd with Lager Süd), the admin's
   global org role, the regional roles for Nord and the PL's `may_create_projects`. After the

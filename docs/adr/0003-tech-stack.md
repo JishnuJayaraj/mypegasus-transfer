@@ -116,7 +116,8 @@ allow one only with a reason (`pnpm.onlyBuiltDependencies`).
   everything the bundle imports at runtime (including `drizzle-orm` and `pg` for
   `@transfer/db`) must be a dependency of `@transfer/api`. Shared chunks sit next to the
   entries, because modules resolve `.env` and the SPA directories relative to
-  `import.meta.url`. The migrations are copied to `dist/migrations`.
+  `import.meta.url`. The migrations are copied to `dist/migrations`, the function and trigger
+  sources to `dist/sql` (ADR-0002, function sources).
 - **Image:** `pnpm deploy` needs `--legacy` (pnpm 10 otherwise requires
   `inject-workspace-packages`; the API has no workspace packages in production). `package.json`
   must be copied before `pnpm fetch`, or corepack picks a default pnpm instead of the
@@ -211,7 +212,7 @@ Approved by the owner as a test-infrastructure change, without a slice plan.
   (roles, files on disk, ports); none needed a change.
 - **Two tiers.** `pnpm verify:changed` (`scripts/verify-changed.mjs`) is the fast check while
   working: typecheck, lint and Vitest without coverage on the tests related to the changes against
-  `origin/main` (`--changed`), and the full `db` and `api` projects when a migration, `setup.sql`,
+  `origin/main` (`--changed`), and the full `db` and `api` projects when a migration, a function source, `setup.sql`,
   the Drizzle schema, the db testing helpers or a Vitest config changed. `pnpm verify`, `pnpm build`
   and `pnpm test:e2e` stay the gate before a push (agent-workflow.md). Every domain module is
   exported through the `@transfer/domain` barrel, so a change to one reaches most api tests too

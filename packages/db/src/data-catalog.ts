@@ -651,6 +651,12 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   },
   // Job names, run dates and instants only (ADR-0011).
   job_run: { retentionClass: "reference_data", dataClass: "internal", holdsParticipantData: false },
+  // File names and content hashes of the function sources (ADR-0002, function sources).
+  function_source: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
   // Template versions as released (regional-variation.md, "Template versions"): no personal data,
   // global, never deleted.
   config_template_version: {
