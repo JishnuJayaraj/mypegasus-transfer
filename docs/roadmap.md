@@ -138,8 +138,10 @@ navigation and keep their layout): "Selbstauskunft", "Unterlagen", "Termine", "N
 portal's layouts; also the split of the large API route files.
 **The walkthrough** (one Projektleiter, one Berater; findings in
 [`decisions/2026-11-13-walkthrough-7b.md`](decisions/2026-11-13-walkthrough-7b.md)) found both
-users dissatisfied with the product as a whole. The larger findings are Q261–Q266 and the owner
-places them before Slice 8 builds on these screens.
+users dissatisfied with the product as a whole. The larger findings are Q261–Q266, all open. Q261 reopens the visual direction (Q254): a shadcn/ui
+prototype is to be tested with Berater and PLs, and no new Slice 8 screen is built on the
+assumption that the current Carbon layout is final. Q262: participants are at different stages
+at once; the Slice 8 plan is reconciled with it before calculations are built.
 
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of
