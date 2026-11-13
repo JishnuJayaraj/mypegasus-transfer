@@ -1,5 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink, Outlet } from "@tanstack/react-router";
+import { createFileRoute, createLink, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Add,
   Button,
@@ -56,6 +56,10 @@ function ProjectPage() {
   // offered with the import's capability, as the page's primary action; the import beside it.
   const { data: config } = useSuspenseQuery(projectConfigQuery(useApi(), projectId));
   const mayImport = config.capabilities.importParticipations;
+  // "Einrichtung" carries its own one primary action (the next setup step or activation).
+  const onSetup =
+    useRouterState({ select: (state) => state.location.pathname }) ===
+    `/projects/${projectId}/setup`;
   const [adding, setAdding] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
   return (
@@ -81,7 +85,8 @@ function ProjectPage() {
         }
         metadata={<RegionText projectId={projectId} />}
         primaryAction={
-          mayImport && (
+          mayImport &&
+          !onSetup && (
             <Button
               renderIcon={Add}
               onClick={() => {

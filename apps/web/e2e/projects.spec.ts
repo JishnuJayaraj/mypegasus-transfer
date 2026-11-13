@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { seedStaffUserIds } from "@transfer/db";
-import { expect, expectAccessible, openCard, openSection, test } from "./helpers";
+import { expect, expectAccessible, openCard, openSection, openSetupStep, test } from "./helpers";
 
 /** A synthetic import fixture (fixtures/imports/README.md). */
 const fixture = (name: string) =>
@@ -76,6 +76,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   // Slice 5: the project opens on "Übersicht"; setup lives in "Einrichtung".
   await firstRow.getByRole("link", { name: "E2E Projekt Ost" }).click();
   await openSection(page, "Einrichtung");
+  await openSetupStep(page, "Eintrittswellen");
   await expect(page.getByText("Es gibt noch keine Eintrittswellen.")).toBeVisible();
   await page.getByRole("button", { name: "Welle anlegen" }).click();
   await page.getByLabel("Kürzel").fill("W1");
@@ -97,10 +98,11 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   // Without a Project Agentur the project is blocked; the PL pins the
   // sample Agentur from the catalog (the latest version is preselected; the PL takes version 1
   // here and migrates it later) and the blocker clears.
-  // Listed with the blockers and again at the activation it blocks.
+  // Named once, in the setup header beside the disabled activation (each fact is shown once).
   await expect(
     page.getByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
-  ).toHaveCount(2);
+  ).toHaveCount(1);
+  await openSetupStep(page, "Agentur");
   await expect(page.getByRole("button", { name: "Aktivieren" })).toBeDisabled();
   await expect(page.getByLabel("Version")).toHaveValue("3");
   await page.getByLabel("Version").selectOption("1");
@@ -117,6 +119,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   // With the Project Agentur pinned and W1's latest entry date nothing
   // blocks, so the PL activates the project; activation is one-way, and the Project Agentur is
   // fixed from then on (process-and-lifecycle.md).
+  await openSetupStep(page, "Projekt");
   await expect(page.getByText("Status: Entwurf.", { exact: false })).toBeVisible();
   await expect(page.getByText(/Die Aktivierung ist endgültig/)).toBeVisible();
   await page.getByRole("button", { name: "Aktivieren" }).click();
@@ -130,6 +133,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
 
   // The PL imports the sample CSV, confirms the suggested mapping, sees
   // the report and the participants; a second file updates them instead of duplicating.
+  await openSetupStep(page, "Import");
   const importSection = page.getByRole("region", { name: "Import" });
   await importSection
     .getByLabel("Datei auswählen")
@@ -233,8 +237,10 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(participants.getByRole("row")).toHaveCount(15);
   await expectAccessible(page);
   await openSection(page, "Einrichtung");
+  await openSetupStep(page, "Agentur");
 
-  // The Agentur-specific settings, inside the card "Agentur" (the plan of Slice 6b, 6b-4).
+  // The Agentur-specific settings, under "Erweitert" (ui-patterns.md, setup pages).
+  await openCard(page, "Erweitert");
   const configuration = page.getByRole("region", { name: "Konfiguration" });
 
   // A project-specific exception to the Project Agentur's
@@ -336,7 +342,9 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   ).toBeVisible();
   await openSection(page, "Einrichtung");
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
+  await openSetupStep(page, "Agentur");
   await expect(page.getByRole("button", { name: "Als weitere Agentur pinnen" })).toHaveCount(0);
+  await openCard(page, "Erweitert");
   // … and sees the Agentur-scoped settings without the actions to change them.
   await expect(page.getByRole("row", { name: /beispielstadt-ost/ })).toBeVisible();
   await expect(
@@ -354,6 +362,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
     .toBe(seedStaffUserIds.regionalOperationsManager);
   await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
   await openSection(page, "Einrichtung");
+  await openCard(page, "Erweitert");
   await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
     "Andere berechtigte Person",
   );

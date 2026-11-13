@@ -2,17 +2,18 @@ import type { Page } from "@playwright/test";
 import { seedRegionIds } from "@transfer/db";
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openCard, test } from "./helpers";
 import { worklistParticipations } from "./participants";
 
 // The project page, its dashboard and the projects list (docs/architecture/ui-patterns.md; UX
 // foundation plan, 6b-4): the page header with breadcrumb, tags and region; the sections by
-// frequency; "Einrichtung" as cards with an anchor list; the dashboard's three layers. Each width
+// frequency; "Einrichtung" as a step list; the dashboard's three layers. Each width
 // passes axe without a horizontal page scroll (D10). The test brings its own project (created
 // through the staff API) and participations (owner fixtures). Synthetic data only; the suite fails
-// on any CSP violation. Screenshots go to docs/screenshots/6b-4/.
+// on any CSP violation. Screenshots go to docs/screenshots/6b-4/ (the overview) and 7b-7/ (the setup).
 
 const screenshots = fileURLToPath(new URL("../../../docs/screenshots/6b-4/", import.meta.url));
+const setupScreenshots = fileURLToPath(new URL("../../../docs/screenshots/7b-7/", import.meta.url));
 // 320px is a 1280px window at 400 % zoom (WCAG 1.4.10).
 const widths = [1440, 768, 375, 320] as const;
 // A 1280×720 window at 200 % and 400 % zoom, in CSS pixels (D10's manual check, emulated).
@@ -54,7 +55,7 @@ async function projectWithParticipants(page: Page, baseURL: string, count: numbe
 }
 
 /** A screenshot after Carbon's transitions have ended. */
-async function shot(page: Page, name: string, fullPage = true) {
+async function shot(page: Page, name: string, fullPage = true, folder = screenshots) {
   await page.evaluate(() =>
     Promise.all(
       document
@@ -63,8 +64,8 @@ async function shot(page: Page, name: string, fullPage = true) {
         .map((animation) => animation.finished.catch(() => undefined)),
     ),
   );
-  mkdirSync(screenshots, { recursive: true });
-  await page.screenshot({ path: `${screenshots}${name}.png`, fullPage });
+  mkdirSync(folder, { recursive: true });
+  await page.screenshot({ path: `${folder}${name}.png`, fullPage });
 }
 
 /** No horizontal page scroll (D10); a failure names the elements that stick out. */
@@ -94,7 +95,7 @@ async function expectNoPageScroll(page: Page) {
   );
 }
 
-test("the project page: header, sections, the dashboard's three layers and Einrichtung as cards", async ({
+test("the project page: header, sections, the dashboard's three layers and Einrichtung as a step list", async ({
   page,
   baseURL,
 }) => {
@@ -155,38 +156,40 @@ test("the project page: header, sections, the dashboard's three layers and Einri
   await expectAccessible(page);
   await shot(page, "project-overview-all-320");
 
-  // "Datei importieren" opens "Einrichtung" at the Import card.
+  // "Datei importieren" opens "Einrichtung" at the Import step.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Aktionen" }).click();
   await page.getByRole("menuitem", { name: "Datei importieren" }).click();
   await expect(page).toHaveURL(/\/setup#project-import$/);
   await expect(page.getByRole("region", { name: "Import" })).toBeInViewport();
 
-  // "Einrichtung": cards with an anchor list on wide screens; the region is changed here.
+  // "Einrichtung": a step list with each step's state; the selected step is open beside it. The
+  // region is changed in the step "Projekt"; the rarely used settings sit under "Erweitert".
   await page.goto(`/projects/${projectId}?tab=setup`);
-  const anchors = page.getByRole("navigation", { name: "Auf dieser Seite" });
-  await expect(anchors.getByRole("link")).toHaveText([
+  const steps = page.getByRole("navigation", { name: "Schritte der Einrichtung" });
+  await expect(steps.locator(".tp-step-title")).toHaveText([
     "Projekt",
     "Agentur",
     "Eintrittswellen",
-    "Kopf der Kug 200a",
-    "DSV-Vorlage",
     "Import",
+    "DSV-Vorlage",
     "Abrechnung",
   ]);
-  const projectCard = page.getByRole("region", { name: "Projekt" });
-  await expect(projectCard.getByLabel("Region (Niederlassung)")).toBeVisible();
+  await steps.getByRole("button", { name: /^Projekt/ }).click();
+  const projectStep = page.getByRole("region", { name: "Projekt" });
+  await expect(projectStep.getByLabel("Region (Niederlassung)")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Einrichtung" })).toHaveCount(1);
-  await anchors.getByRole("link", { name: "Kopf der Kug 200a" }).click();
-  await expect(page.getByRole("region", { name: "Kopf der Kug 200a" })).toBeInViewport();
+  await openCard(page, "Erweitert");
+  await expect(page.getByRole("heading", { name: "Kopf der Kug 200a" })).toBeVisible();
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`/projects/${projectId}?tab=setup`);
-    await expect(projectCard).toBeVisible();
-    await expect(anchors).toBeVisible({ visible: width >= 1056 });
+    await steps.getByRole("button", { name: /^Projekt/ }).click();
+    await expect(projectStep).toBeVisible();
+    await expect(steps).toBeVisible();
     await expectNoPageScroll(page);
     await expectAccessible(page);
-    await shot(page, `project-setup-${width}`, width === 1440);
+    await shot(page, `project-setup-${width}`, width === 1440, setupScreenshots);
   }
 
   // D10, emulated: 200 % and 400 % zoom of a 1280×720 window, the overview and the setup.

@@ -246,22 +246,16 @@ describe("the project page", () => {
 
   it("opens a section by its old tab address", async () => {
     setup([], ["project_lead"], "?tab=setup");
-    expect(await screen.findByRole("region", { name: "Projekt" })).toBeInTheDocument();
+    // The old tab address leads to "Einrichtung", which opens on the first step that needs work.
+    expect(await screen.findByRole("region", { name: "Agentur" })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Einrichtung" })).toHaveLength(1);
-    // The anchor list names every card; the import keeps its id for "Datei importieren".
-    const anchors = within(screen.getByRole("navigation", { name: "Auf dieser Seite" }));
-    expect(anchors.getAllByRole("link").map((link) => link.textContent)).toEqual([
-      "Projekt",
-      "Agentur",
-      "Eintrittswellen",
-      "Kopf der Kug 200a",
-      "DSV-Vorlage",
-      "Import",
-      "Abrechnung",
-    ]);
-    expect(anchors.getByRole("link", { name: "Import" }).getAttribute("href")).toMatch(
-      /\/setup#project-import$/,
+    const steps = within(
+      await screen.findByRole("navigation", { name: "Schritte der Einrichtung" }),
     );
-    expect(document.getElementById("project-import")).toHaveAccessibleName("Import");
+    expect(
+      steps
+        .getAllByRole("button")
+        .map((button) => button.querySelector(".tp-step-title")?.textContent),
+    ).toEqual(["Projekt", "Agentur", "Eintrittswellen", "Import", "DSV-Vorlage", "Abrechnung"]);
   });
 });

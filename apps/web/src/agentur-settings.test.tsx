@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
+  openCard,
   problem,
   project,
   renderApp,
@@ -58,8 +59,12 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = base
   return calls;
 }
 
-const section = async () =>
-  within((await screen.findByRole("heading", { name: "Konfiguration" })).closest("section")!);
+const section = async () => {
+  await openCard("Erweitert");
+  return within(
+    (await screen.findByRole("heading", { name: "Konfiguration" })).closest("section")!,
+  );
+};
 
 async function fillForm(options: { date?: string } = {}) {
   const form = await section();

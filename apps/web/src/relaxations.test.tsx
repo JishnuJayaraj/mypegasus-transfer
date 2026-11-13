@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
+  openCard,
   problem,
   project,
   renderApp,
@@ -62,10 +63,12 @@ function setup(config: object, routes: Parameters<typeof mockApi>[0] = {}, me: o
   renderApp(`/projects/${project.id}?tab=setup`, api);
   return calls;
 }
-const section = async () =>
-  within(
+const section = async () => {
+  await openCard("Erweitert");
+  return within(
     (await screen.findByRole("heading", { name: "Lockerungen von Regeln" })).closest("section")!,
   );
+};
 
 describe("Konfiguration: rule relaxations", () => {
   it("lets the PL request one for a relaxable rule with a controlled reason code", async () => {

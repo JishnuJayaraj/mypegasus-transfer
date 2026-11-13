@@ -7,6 +7,7 @@ import {
   json,
   mockApi,
   openSection,
+  openSetupStep,
   problem,
   project,
   regions,
@@ -203,6 +204,7 @@ describe("the project's region (Q126)", () => {
     expect(await screen.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
     expect(screen.queryByLabelText("Region (Niederlassung)")).toBeNull();
     await openSection("Einrichtung");
+    await openSetupStep("Projekt");
     const card = within(await screen.findByRole("region", { name: "Projekt" }));
     await userEvent.selectOptions(
       await card.findByLabelText("Region (Niederlassung)"),
@@ -226,6 +228,7 @@ describe("the project's region (Q126)", () => {
     expect(await screen.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Region ändern" })).toBeNull();
     await openSection("Einrichtung");
+    await openSetupStep("Projekt");
     await screen.findByRole("region", { name: "Projekt" });
     expect(screen.queryByLabelText("Region (Niederlassung)")).toBeNull();
   });

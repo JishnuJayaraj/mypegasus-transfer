@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ApiProblemError } from "@transfer/api-client";
-import { Button, Card, Form, InlineNotification, Stack, TextInput } from "@transfer/ui";
+import { Button, Form, InlineNotification, Stack, TextInput } from "@transfer/ui";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { projectConfigQuery, projectQuery, useApi } from "../api";
@@ -74,53 +74,49 @@ export function Kug200aHeader({ projectId }: { projectId: string }) {
 
   const editable = config.capabilities.editKug200aHeader;
   return (
-    <Card id="setup-kug200a" title={t("kug200aHeader.title")}>
-      <Stack gap={5}>
-        <p>{t("kug200aHeader.intro")}</p>
-        {editable ? (
-          <Form className="tp-form" onSubmit={submit} noValidate>
-            <Stack gap={5}>
-              {outcome && (
-                <InlineNotification
-                  kind={
-                    outcome === "saved" ? "success" : outcome === "unchanged" ? "info" : "error"
-                  }
-                  title={t(`kug200aHeader.${outcome}`)}
-                  onClose={() => setOutcome(undefined)}
-                />
-              )}
-              {keys.map((key) => (
-                <TextInput
-                  key={key}
-                  id={`kug200a-${key}`}
-                  labelText={t(`kug200aHeader.fields.${key}`)}
-                  helperText={t(`kug200aHeader.help.${key}`)}
-                  value={shown(key)}
-                  onChange={(event) => edit(key, event.target.value)}
-                  {...(invalid[key] && {
-                    invalid: true,
-                    invalidText: t(`kug200aHeader.errors.${invalid[key]}`, {
-                      defaultValue: t(`kug200aHeader.errors.${key}`),
-                    }),
-                  })}
-                />
-              ))}
-              <Button type="submit" kind="tertiary" disabled={save.isPending}>
-                {t("kug200aHeader.save")}
-              </Button>
-            </Stack>
-          </Form>
-        ) : (
-          <dl className="tp-facts">
+    <Stack gap={5}>
+      <p>{t("kug200aHeader.intro")}</p>
+      {editable ? (
+        <Form className="tp-form" onSubmit={submit} noValidate>
+          <Stack gap={5}>
+            {outcome && (
+              <InlineNotification
+                kind={outcome === "saved" ? "success" : outcome === "unchanged" ? "info" : "error"}
+                title={t(`kug200aHeader.${outcome}`)}
+                onClose={() => setOutcome(undefined)}
+              />
+            )}
             {keys.map((key) => (
-              <div key={key}>
-                <dt>{t(`kug200aHeader.fields.${key}`)}</dt>
-                <dd>{project[key] ?? t("kug200aHeader.unset")}</dd>
-              </div>
+              <TextInput
+                key={key}
+                id={`kug200a-${key}`}
+                labelText={t(`kug200aHeader.fields.${key}`)}
+                helperText={t(`kug200aHeader.help.${key}`)}
+                value={shown(key)}
+                onChange={(event) => edit(key, event.target.value)}
+                {...(invalid[key] && {
+                  invalid: true,
+                  invalidText: t(`kug200aHeader.errors.${invalid[key]}`, {
+                    defaultValue: t(`kug200aHeader.errors.${key}`),
+                  }),
+                })}
+              />
             ))}
-          </dl>
-        )}
-      </Stack>
-    </Card>
+            <Button type="submit" kind="tertiary" disabled={save.isPending}>
+              {t("kug200aHeader.save")}
+            </Button>
+          </Stack>
+        </Form>
+      ) : (
+        <dl className="tp-facts">
+          {keys.map((key) => (
+            <div key={key}>
+              <dt>{t(`kug200aHeader.fields.${key}`)}</dt>
+              <dd>{project[key] ?? t("kug200aHeader.unset")}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </Stack>
   );
 }

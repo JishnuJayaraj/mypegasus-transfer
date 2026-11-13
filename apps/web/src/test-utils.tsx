@@ -288,3 +288,11 @@ export async function openCard(name: string) {
   const toggle = await screen.findByRole("button", { name });
   if (toggle.getAttribute("aria-expanded") === "false") await userEvent.click(toggle);
 }
+
+/** Opens a step of "Einrichtung" (ui-patterns.md, the step list in use) by its title. */
+export async function openSetupStep(name: string) {
+  const nav = await screen.findByRole("navigation", { name: "Schritte der Einrichtung" });
+  await userEvent.click(
+    within(nav).getByText(name, { selector: ".tp-step-title" }).closest("button")!,
+  );
+}

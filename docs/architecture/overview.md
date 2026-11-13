@@ -254,10 +254,10 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   primary action is "Teilnehmende hinzufügen" (the manual creation in a side panel, with the
   import's capability), and "Datei importieren" is in its "Aktionen" (it opens "Einrichtung" at
   `#project-import`).
-- **"Einrichtung"** (PR 6b-4) is cards with an in-page anchor list from 66rem: "Projekt" (status,
-  the region's change form for those with `capabilities.setProjectRegion`, the blockers and the
-  activation), "Agentur" (the Project Agentur, the pins, their migration and the Agentur-specific
-  settings), "Eintrittswellen", "Kopf der Kug 200a" (`ta_tg`) and "Import" (`project-import`).
+- **"Einrichtung"** is a step list ("Projekt", "Agentur", "Eintrittswellen", "Import", and in
+  `ta_tg` "DSV-Vorlage" and "Abrechnung"), with the activation blockers and the one primary action
+  in the page header and the rarely used settings under "Erweitert" (`ui-patterns.md`, setup
+  pages).
 - One snapshot per project (`worklistQuery`, `GET /projects/{id}/worklist`) feeds the work list;
   its query key is the prefix of every participant query of the project, so a change to a
   participation refreshes the list and the dashboard alike. The domain's `WorklistFilter`,

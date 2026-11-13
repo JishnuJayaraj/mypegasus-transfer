@@ -9,7 +9,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, call, pl, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openCard, test } from "./helpers";
 
 // A Kug 200b batch's official artifact (ba-forms.md, the Kug 200a as built; data-protection.md,
 // exports; Q197, Q203 (6), Q205): the PL records the Kug 200a's header on "Einrichtung", builds a
@@ -173,6 +173,7 @@ test("slice 6-5a-2: a batch's Kug 200a and scans, with the checklist before prin
 
   // 1. "Einrichtung": the header the Kug 200a prints; the employer's numbers stay open for now.
   await page.goto(`/projects/${projectId}?tab=setup`);
+  await openCard(page, "Erweitert");
   const header = page.getByRole("region", { name: "Kopf der Kug 200a" });
   await header.getByLabel("T-Kug-Nummer").fill("TK-123");
   await header.getByRole("button", { name: "Angaben übernehmen" }).click();

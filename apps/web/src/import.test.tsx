@@ -5,6 +5,7 @@ import {
   json,
   mockApi,
   openSection,
+  openSetupStep,
   problem,
   project,
   renderApp,
@@ -67,7 +68,11 @@ const issue = (row: number, code: string, severity = "error", target: string | n
 });
 
 const wavesPage = { items: [], nextCursor: null };
-function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = unpinnedConfig) {
+async function setup(
+  routes: Parameters<typeof mockApi>[0] = {},
+  config: object = unpinnedConfig,
+  open = true,
+) {
   const { api, calls } = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
@@ -79,30 +84,33 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = unpi
     ...routes,
   });
   renderApp(`/projects/${project.id}?tab=setup`, api);
+  if (open) await openSetupStep("Import");
   return calls;
 }
 
 const upload = async () =>
   userEvent.upload(await screen.findByLabelText("Datei auswählen"), file());
-const bodyOf = (calls: ReturnType<typeof setup>, key: string, index = -1) =>
+const bodyOf = (calls: Awaited<ReturnType<typeof setup>>, key: string, index = -1) =>
   calls.filter((c) => c.key === key).at(index)?.body as Record<string, unknown>;
 
 describe("the import wizard", () => {
   it("is offered only with the server's capability", async () => {
-    const calls = setup(
+    const calls = await setup(
       {},
       {
         ...unpinnedConfig,
         capabilities: { ...unpinnedConfig.capabilities, importParticipations: false },
       },
+      false,
     );
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    const nav = within(await screen.findByRole("navigation", { name: "Schritte der Einrichtung" }));
+    expect(nav.queryByText("Import", { selector: ".tp-step-title" })).toBeNull();
     expect(screen.queryByLabelText("Datei auswählen")).toBeNull();
     expect(calls.some((c) => c.key.includes("/imports"))).toBe(false);
   });
 
   it("uploads, suggests a mapping, checks it and imports with the token and the decisions", async () => {
-    const calls = setup({
+    const calls = await setup({
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json((body as { mapping?: unknown }).mapping ? withReport([]) : first),
       [`POST ${path}/imports`]: () =>
@@ -139,7 +147,7 @@ describe("the import wizard", () => {
   });
 
   it("sends the whole-import country and the header row the PL chose", async () => {
-    const calls = setup({
+    const calls = await setup({
       [`POST ${path}/imports/preview`]: () => json(first),
     });
     await upload();
@@ -155,7 +163,7 @@ describe("the import wizard", () => {
   });
 
   it("shows what the mapping lacks, with a message per code", async () => {
-    setup({
+    await setup({
       [`POST ${path}/imports/preview`]: () =>
         json({
           ...first,
@@ -175,7 +183,7 @@ describe("the import wizard", () => {
   });
 
   it("blocks a file with errors and lists them by row", async () => {
-    setup({
+    await setup({
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json(
           (body as { mapping?: unknown }).mapping
@@ -205,7 +213,7 @@ describe("the import wizard", () => {
   });
 
   it("needs a decision for every possible duplicate and the warnings confirmed", async () => {
-    const calls = setup({
+    const calls = await setup({
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json(
           (body as { mapping?: unknown }).mapping
@@ -247,7 +255,7 @@ describe("the import wizard", () => {
   });
 
   it("shows updates with the old and the new value and the values an empty cell kept", async () => {
-    setup({
+    await setup({
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json(
           (body as { mapping?: unknown }).mapping
@@ -281,7 +289,7 @@ describe("the import wizard", () => {
 
   it("keeps a refusal visible after the wizard went away, and reads the state again", async () => {
     let config: object = unpinnedConfig;
-    const calls = setup({
+    const calls = await setup({
       [`GET ${path}/config`]: () => json(config),
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json((body as { mapping?: unknown }).mapping ? withReport([]) : first),
@@ -309,7 +317,7 @@ describe("the import wizard", () => {
 
   it("replaces a stale preview by a new one to check", async () => {
     let previews = 0;
-    const calls = setup({
+    const calls = await setup({
       [`POST ${path}/imports/preview`]: ({ body }) => {
         if (!(body as { mapping?: unknown }).mapping) return json(first);
         previews += 1;
@@ -329,7 +337,7 @@ describe("the import wizard", () => {
   });
 
   it("shows a refusal of the file by its code", async () => {
-    setup({
+    await setup({
       [`POST ${path}/imports/preview`]: () =>
         problem(422, "domain-error", {
           errors: [{ pointer: "/file", code: "too_many_rows", detail: "x" }],
@@ -345,7 +353,7 @@ describe("the import wizard", () => {
   });
 
   it("asks to try again shortly when the API is busy with other imports (R43)", async () => {
-    setup({
+    await setup({
       [`POST ${path}/imports/preview`]: () =>
         problem(503, "service-unavailable", {
           errors: [{ pointer: "", code: "import_busy", detail: "x" }],
@@ -356,7 +364,7 @@ describe("the import wizard", () => {
   });
 
   it("warns about a data-like header row and says the mapping wasn't saved (R44)", async () => {
-    setup({
+    await setup({
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json(
           (body as { mapping?: unknown }).mapping

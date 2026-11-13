@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
+  openSetupStep,
   problem,
   project,
   renderApp,
@@ -75,7 +76,7 @@ const preview = {
   ],
 };
 
-function setup(routes: Parameters<typeof mockApi>[0] = {}, initial: object = before) {
+async function setup(routes: Parameters<typeof mockApi>[0] = {}, initial: object = before) {
   const { api, calls } = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
@@ -87,6 +88,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, initial: object = bef
     ...routes,
   });
   renderApp(`/projects/${project.id}?tab=setup`, api);
+  await openSetupStep("Agentur");
   return calls;
 }
 const action = "Agentur Nord (Beispiel) migrieren";
@@ -106,7 +108,7 @@ const decide = async (setting: RegExp, choice: string) =>
 
 describe("template migration with review", () => {
   it("shows what the new version changes and asks keep or remove for every scoped key", async () => {
-    setup();
+    await setup();
     await openPreview();
     for (const text of [
       "Einstellung Vorlauf in Tagen: bisher 10, neu 14",
@@ -129,7 +131,7 @@ describe("template migration with review", () => {
 
   it("confirms with the decisions and shows the result after rereading the configuration", async () => {
     let current: object = before;
-    const calls = setup({
+    const calls = await setup({
       [`GET ${path}/config`]: () => json(current),
       [`POST ${path}/config/pins/${nord}/migration`]: () => {
         current = after;
@@ -164,7 +166,7 @@ describe("template migration with review", () => {
   });
 
   it("names override issues and doesn't offer the confirm (AC-16)", async () => {
-    setup({
+    await setup({
       [`POST ${path}/config/pins/${nord}/migration-preview`]: () =>
         json({ ...preview, overrideIssues: ["rule_redefined"], review: [] }),
     });
@@ -184,7 +186,7 @@ describe("template migration with review", () => {
   // once the reread configuration offers no newer version; everything shown is reread.
   it("keeps the refusal after a concurrent migration and rereads the project and configuration", async () => {
     let current: object = before;
-    const calls = setup({
+    const calls = await setup({
       [`GET ${path}/config`]: () => json(current),
       [`POST ${path}/config/pins/${nord}/migration`]: () => {
         current = after;
@@ -215,7 +217,7 @@ describe("template migration with review", () => {
   // belongs to another target than the one shown.
   it("locks the target while its preview loads", async () => {
     let answer!: (response: Response) => void;
-    const calls = setup(
+    const calls = await setup(
       {
         [`POST ${path}/config/pins/${nord}/migration-preview`]: () =>
           new Promise<Response>((resolve) => (answer = resolve)),
@@ -249,7 +251,7 @@ describe("template migration with review", () => {
     ],
     ["a pin without a newer version", config(2, [])],
   ])("isn't offered to %s", async (_label, initial) => {
-    setup({}, initial);
+    await setup({}, initial);
     expect(await screen.findByRole("region", { name: "Agentur" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: action })).toBeNull();
     const pins = screen.getByRole("table", { name: "Gepinnte Vorlagen" });
