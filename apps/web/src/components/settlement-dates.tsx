@@ -3,7 +3,6 @@ import { ApiProblemError } from "@transfer/api-client";
 import {
   ActionButton,
   Button,
-  Card,
   DateField,
   InlineNotification,
   Loading,
@@ -25,7 +24,7 @@ const fields = ["kugFinalSettlementDate", "measure110SettlementDate"] as const;
  * unknown. Back office sets them against the dates read; nothing is preset, a date may be
  * cleared. TG entry is never shown as proof of Transfer-KuG.
  */
-export function SettlementDatesCard({ projectId }: { projectId: string }) {
+export function SettlementDatesStep({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
   const api = useApi();
   const cache = useQueryClient();
@@ -43,20 +42,8 @@ export function SettlementDatesCard({ projectId }: { projectId: string }) {
   const dirty = open && fields.some((f) => values[f] !== "");
   const navigation = usePanelNavigationGuard(dirty);
 
-  if (query.isPending) {
-    return (
-      <Card id="setup-settlement" title={t("settlement.title")}>
-        <Loading label={t("settlement.loading")} />
-      </Card>
-    );
-  }
-  if (query.isError) {
-    return (
-      <Card id="setup-settlement" title={t("settlement.title")}>
-        <p>{t("settlement.failed")}</p>
-      </Card>
-    );
-  }
+  if (query.isPending) return <Loading label={t("settlement.loading")} />;
+  if (query.isError) return <p>{t("settlement.failed")}</p>;
   const view = query.data;
   const parsed = fields.map((f) => [f, parseDisplayDate(values[f])] as const);
   const invalid = parsed.some(([, p]) => !p.ok);
@@ -105,7 +92,7 @@ export function SettlementDatesCard({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card id="setup-settlement" title={t("settlement.title")}>
+    <>
       <Stack gap={4}>
         <dl className="tp-facts">
           {fields.map((f) => (
@@ -170,6 +157,6 @@ export function SettlementDatesCard({ projectId }: { projectId: string }) {
           </Stack>
         )}
       </SidePanel>
-    </Card>
+    </>
   );
 }

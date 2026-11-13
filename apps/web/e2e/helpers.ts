@@ -141,3 +141,11 @@ export async function openStep(page: Page, title: string) {
     .getByRole("button", { name: title })
     .click();
 }
+
+/** Opens a step of "Einrichtung" (ui-patterns.md, the step list in use) by its title. */
+export async function openSetupStep(page: Page, title: string) {
+  await page
+    .getByRole("navigation", { name: "Schritte der Einrichtung" })
+    .getByRole("button", { name: new RegExp(`^${title}`) })
+    .click();
+}

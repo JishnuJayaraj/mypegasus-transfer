@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
-import { Button, Stack, useToast } from "@transfer/ui";
+import { Button, useToast } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { projectConfigQuery, projectQuery, useApi } from "../api";
 
@@ -34,27 +34,23 @@ export function useSubmissionText(config: ProjectConfig) {
 }
 
 /**
- * Activates the draft project (Slice 2 plan 5.5, 5.13). Shown only with the server's
- * `capabilities.activateProject` (round 26): the PL, while draft. It names the activation
- * blockers it would hit and is disabled while there are any; the API's 403 and 422 stay the
- * enforcement. Its outcome goes to the parent, which outlives it: once the project is active
- * (here or by a concurrent request, `project_not_draft`) the capability is gone and this
- * unmounts (round 29).
+ * The page's one primary action once nothing blocks activation: it activates the draft project
+ * (Slice 2 plan 5.5, 5.13), shown only with the server's `capabilities.activateProject` (round
+ * 26): the PL, while draft. The API's 403 and 422 stay the enforcement. Its outcome goes to the
+ * setup header, which outlives this button and shows the refusal, the warnings and the blockers.
  */
-export function ProjectActivation(props: {
+export function ProjectActivationAction(props: {
   projectId: string;
-  config: ProjectConfig;
   /** Receives the warnings of the activation. */
   onActivated: (warnings: Blocker[]) => void;
   /** Receives the refusal as a message. */
   onRefused: (message: string) => void;
 }) {
-  const { projectId, config, onActivated, onRefused } = props;
+  const { projectId, onActivated, onRefused } = props;
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const blocked = config.activationBlockers.length > 0;
 
   // The project, the project list and the configuration, after a success or any refusal: a
   // refusal may mean that the blockers changed or that the project is active already.
@@ -94,25 +90,8 @@ export function ProjectActivation(props: {
   });
 
   return (
-    <Stack gap={5} className="tp-form">
-      <h3>{t("setup.activate.title")}</h3>
-      {blocked ? (
-        <>
-          <p>{t("setup.activate.blocked")}</p>
-          <ul className="tp-list">
-            {config.activationBlockers.map((code) => (
-              <li key={code}>{t(`setup.activation.${code}`)}</li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p>{t("setup.activate.hint")}</p>
-      )}
-      <div>
-        <Button disabled={blocked || activate.isPending} onClick={() => activate.mutate()}>
-          {t("setup.activate.action")}
-        </Button>
-      </div>
-    </Stack>
+    <Button disabled={activate.isPending} onClick={() => activate.mutate()}>
+      {t("setup.activate.action")}
+    </Button>
   );
 }

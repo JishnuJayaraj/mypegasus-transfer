@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   json,
   mockApi,
-  openSection,
+  openCard,
   problem,
   project,
   renderApp,
@@ -29,7 +29,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config = unpinnedConf
 }
 
 const openHeaderCard = async () => {
-  await openSection("Einrichtung");
+  await openCard("Erweitert");
   return within(
     (await screen.findByRole("heading", { name: "Kopf der Kug 200a" })).closest("section")!,
   );

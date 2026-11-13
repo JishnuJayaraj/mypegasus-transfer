@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { type components } from "@transfer/api-client";
-import { Button, Card, InlineNotification, Stack, useToast } from "@transfer/ui";
+import { Button, InlineNotification, Stack, useToast } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, worklistQuery, projectConfigQuery, projectQuery, useApi } from "../api";
@@ -9,18 +9,26 @@ import { ImportWizard } from "./import-wizard";
 type Result = components["schemas"]["ImportResult"];
 
 /**
- * The Import card of "Einrichtung" (its id `project-import` is the target of the page's "Datei
- * importieren"). The wizard appears only with the server's `capabilities.importParticipations`;
- * the API's 403 stays the enforcement. This component outlives the wizard, so a refusal stays
- * visible after the wizard went away, and every refusal reads the configuration, the project and the participations again.
+ * The Import step of "Einrichtung" (the setup wraps it in the anchor `project-import`, the target
+ * of the page's "Datei importieren"). The wizard appears only with the server's
+ * `capabilities.importParticipations`; the API's 403 stays the enforcement. This component outlives
+ * the wizard, so a refusal stays visible after the wizard went away, and every refusal reads the
+ * configuration, the project and the participations again.
  */
-export function ImportSection({ projectId }: { projectId: string }) {
+export function ImportSection({
+  projectId,
+  refusal,
+  onRefusal,
+}: {
+  projectId: string;
+  refusal?: string;
+  onRefusal: (message: string | undefined) => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
   const showToast = useToast();
   const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
-  const [refusal, setRefusal] = useState<string | null>(null);
   const [done, setDone] = useState<Result | null>(null);
   // A new key starts a fresh wizard.
   const [round, setRound] = useState(0);
@@ -35,56 +43,54 @@ export function ImportSection({ projectId }: { projectId: string }) {
 
   const refused = (codes: string[]) => {
     const code = codes[0] ?? "failed";
-    setRefusal(t(`import.issues.${code as "failed"}`, { defaultValue: t("import.issues.failed") }));
+    onRefusal(t(`import.issues.${code as "failed"}`, { defaultValue: t("import.issues.failed") }));
     void refresh();
   };
 
   return (
-    <Card id="project-import" title={t("import.title")}>
-      <Stack gap={5}>
-        {refusal && (
+    <Stack gap={5}>
+      {refusal && (
+        <InlineNotification
+          kind="error"
+          title={t("import.refused")}
+          subtitle={refusal}
+          onClose={() => onRefusal(undefined)}
+        />
+      )}
+      {done ? (
+        <>
           <InlineNotification
-            kind="error"
-            title={t("import.refused")}
-            subtitle={refusal}
-            onClose={() => setRefusal(null)}
+            kind="success"
+            title={t("import.done.title")}
+            subtitle={t("import.done.text", { ...done })}
+            hideCloseButton
           />
-        )}
-        {done ? (
-          <>
-            <InlineNotification
-              kind="success"
-              title={t("import.done.title")}
-              subtitle={t("import.done.text", { ...done })}
-              hideCloseButton
-            />
-            {!done.mappingSaved && <p>{t("import.done.mappingNotSaved")}</p>}
-            <Button
-              kind="tertiary"
-              onClick={() => {
-                setDone(null);
-                setRound(round + 1);
-              }}
-            >
-              {t("import.done.again")}
-            </Button>
-          </>
-        ) : (
-          config.capabilities.importParticipations && (
-            <ImportWizard
-              key={round}
-              projectId={projectId}
-              onRefused={refused}
-              onDone={(result) => {
-                setRefusal(null);
-                setDone(result);
-                showToast({ title: t("import.done.toast") });
-                void refresh();
-              }}
-            />
-          )
-        )}
-      </Stack>
-    </Card>
+          {!done.mappingSaved && <p>{t("import.done.mappingNotSaved")}</p>}
+          <Button
+            kind="tertiary"
+            onClick={() => {
+              setDone(null);
+              setRound(round + 1);
+            }}
+          >
+            {t("import.done.again")}
+          </Button>
+        </>
+      ) : (
+        config.capabilities.importParticipations && (
+          <ImportWizard
+            key={round}
+            projectId={projectId}
+            onRefused={refused}
+            onDone={(result) => {
+              onRefusal(undefined);
+              setDone(result);
+              showToast({ title: t("import.done.toast") });
+              void refresh();
+            }}
+          />
+        )
+      )}
+    </Stack>
   );
 }

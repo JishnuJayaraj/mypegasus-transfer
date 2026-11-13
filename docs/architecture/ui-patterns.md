@@ -212,10 +212,17 @@ week's appointments; a region that needs them waits for a load the page doesn't 
 
 ### Setup pages
 
-A section of settings ("Einrichtung") is cards, one per topic, each with an `id`; from 66rem an
-in-page anchor list ("Auf dieser Seite") sits beside them and is hidden below, where the cards
-simply follow each other. An admin control (the region's change) is in its card only for those
-who may use it; everyone else reads the value where it is shown (the page header's metadata).
+"Einrichtung" is a step list (`StepList`, `apps/web/src/routes/projects/$projectId/setup.tsx`):
+"Projekt", "Agentur", "Eintrittswellen", "Import", "DSV-Vorlage" and "Abrechnung" (the last
+three in `ta_tg` only), each with its state and one status line from what the page loads. The
+selected step is open beside the list (below it under 66rem); the others stay mounted, so a draft
+survives a look at another step. The page header names what blocks activation, each blocker with
+the step that resolves it, and offers one primary action: activation once nothing blocks it, else
+the next blocked step. Rarely used settings (the Kug 200a header, the Agentur-scoped settings and
+the rule relaxations) sit under "Erweitert", a `SectionCard` that starts collapsed. An old anchor
+(`#setup-dsv`, `#project-import`, …) selects its step, and `#setup-kug200a` opens "Erweitert". The
+region's change form is in the step "Projekt" for those who may use it; everyone else reads the
+region in the page header's metadata.
 
 ### The participant page
 

@@ -1,14 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError } from "@transfer/api-client";
-import {
-  ActionButton,
-  Card,
-  InlineNotification,
-  Loading,
-  Select,
-  SelectItem,
-  Stack,
-} from "@transfer/ui";
+import { ActionButton, InlineNotification, Loading, Select, SelectItem, Stack } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { projectDsvTemplateQuery, useApi } from "../api";
@@ -19,7 +11,7 @@ import { projectDsvTemplateQuery, useApi } from "../api";
  * the first generation. A version not approved for live use is a synthetic sample, said so next
  * to it. Back office reads it; others are told who may.
  */
-export function DsvTemplateCard({ projectId }: { projectId: string }) {
+export function DsvTemplateStep({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
@@ -111,9 +103,5 @@ export function DsvTemplateCard({ projectId }: { projectId: string }) {
     );
   };
 
-  return (
-    <Card id="setup-dsv" title={t("dsvTemplate.title")}>
-      {body()}
-    </Card>
-  );
+  return body();
 }

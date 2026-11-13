@@ -123,7 +123,7 @@ test("slice 7-1: the PL pins the DSV template, generates the DSV with the wave's
   await expect(template.getByText(/Noch keine Vorlage festgelegt|Festgelegt: v1/)).toBeVisible();
   if (await template.getByRole("button", { name: "Festlegen" }).isVisible()) {
     if (await template.getByText("Noch keine Vorlage festgelegt").isVisible()) {
-      await template.getByLabel("Vorlage").selectOption("v1");
+      await template.getByLabel("Vorlage", { exact: true }).selectOption("v1");
       await template.getByRole("button", { name: "Festlegen" }).click();
       await expect(template.getByText("Die DSV-Vorlage ist festgelegt.")).toBeVisible();
     }

@@ -5,6 +5,7 @@ import {
   json,
   mockApi,
   openSection,
+  openSetupStep,
   problem,
   project,
   renderApp,
@@ -99,6 +100,7 @@ describe("wave form (AC-8)", () => {
         return json(created, 201);
       },
     });
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "Welle anlegen" }));
     expect(screen.getByText(/Keine personenbezogenen Daten/)).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Kürzel"), "W3");
@@ -126,6 +128,7 @@ describe("wave form (AC-8)", () => {
     const calls = setup({
       [`PATCH ${path}/entry-waves/${w1.id}`]: () => json({ ...w1, defaultTgEnd: null }),
     });
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
     const end = screen.getByLabelText("TG-Ende (Standard)");
     expect(end).toHaveValue("29.02.2092");
@@ -141,6 +144,7 @@ describe("wave form (AC-8)", () => {
 
   it("sends nothing for an edit without changes and says so", async () => {
     const calls = setup();
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(await screen.findByText("Es wurde nichts geändert.")).toBeInTheDocument();
@@ -157,6 +161,7 @@ describe("wave form (AC-8)", () => {
           ],
         }),
     });
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
     const latest = screen.getByLabelText("Letztmöglicher Eintritt");
     await userEvent.clear(latest);
@@ -184,6 +189,7 @@ describe("wave form (AC-8)", () => {
           ],
         }),
     });
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
     await userEvent.type(screen.getByLabelText("Kürzel"), "x");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -207,6 +213,7 @@ describe("wave form (AC-8)", () => {
 
   it("refuses an impossible date without asking the API", async () => {
     const calls = setup();
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "Welle anlegen" }));
     await userEvent.type(screen.getByLabelText("Unterschriftsfrist"), "31.02.2091");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -216,6 +223,7 @@ describe("wave form (AC-8)", () => {
 
   it("says so when the user may not edit waves (403)", async () => {
     setup({ [`POST ${path}/entry-waves`]: () => problem(403, "forbidden") });
+    await openSetupStep("Eintrittswellen");
     await userEvent.click(await screen.findByRole("button", { name: "Welle anlegen" }));
     await userEvent.type(screen.getByLabelText("Kürzel"), "W3");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));

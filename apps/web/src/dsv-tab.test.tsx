@@ -5,6 +5,7 @@ import { documentNavigation } from "./components/documents-tab";
 import {
   json,
   mockApi,
+  openSetupStep,
   problem,
   project,
   renderApp,
@@ -319,6 +320,7 @@ function setupProject(first: object, routes: Parameters<typeof mockApi>[0] = {})
 describe("the project's DSV-Vorlage", () => {
   it("lets the PL pin a version, said to be a sample", async () => {
     const { calls } = setupProject(template());
+    await openSetupStep("DSV-Vorlage");
     const section = await card("DSV-Vorlage");
     expect(await section.findByText(/Noch keine Vorlage festgelegt/)).toBeVisible();
     expect(section.getByRole("button", { name: "Festlegen" })).toBeDisabled();
@@ -337,6 +339,7 @@ describe("the project's DSV-Vorlage", () => {
 
   it("shows a fixed pin without the form, and who may see it", async () => {
     setupProject(template({ version: "v1", fixed: true, capabilities: { pin: false } }));
+    await openSetupStep("DSV-Vorlage");
     const section = await card("DSV-Vorlage");
     expect(await section.findByText(/Seit dem ersten erzeugten DSV unveränderlich/)).toBeVisible();
     expect(section.queryByRole("button", { name: "Festlegen" })).toBeNull();
@@ -346,6 +349,7 @@ describe("the project's DSV-Vorlage", () => {
     setupProject(template(), {
       [`GET ${projectPath}/dsv-template`]: () => problem(403, "forbidden"),
     });
+    await openSetupStep("DSV-Vorlage");
     const section = await card("DSV-Vorlage");
     expect(
       await section.findByText("Die DSV-Vorlage sehen die Projektleitung und das Back Office."),
