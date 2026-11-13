@@ -14,16 +14,21 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
+import { berlinDate, berlinTime } from "@transfer/domain";
 import {
+  Button,
+  DetailHeader,
+  formatDate,
   InlineNotification,
   Link,
-  PageHeader,
+  RelativeDate,
   StatusTag,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
+  type Fact,
   type MenuAction,
 } from "@transfer/ui";
 import { useState, type ReactNode } from "react";
@@ -44,13 +49,14 @@ import { DsvTab } from "../../components/dsv-tab";
 import { HistoryTab } from "../../components/history";
 import { BulkInvite } from "../../components/invitations";
 import type { StepTarget } from "../../components/open-steps";
-import { activationPanels } from "../../components/participant-activation";
+import { activationPanels, useActivationText } from "../../components/participant-activation";
+import { placeShown, primaryStep } from "../../components/participant-next-step";
 import {
   ParticipantOverview,
   type ItemState,
   type OverviewPanel,
 } from "../../components/participant-overview";
-import { berlinToday } from "../../components/participant-timeline";
+import { berlinToday, useTargetName } from "../../components/participant-timeline";
 import { AppointmentsTab } from "../../components/participation-appointments";
 import { ProfilingTab } from "../../components/profiling-tab";
 import { RecoveryPrint, type RecoveryPrinted } from "../../components/recovery";
@@ -137,11 +143,12 @@ function ParticipationError(props: ErrorComponentProps) {
 }
 
 /**
- * One participant (process-and-lifecycle.md; data-protection.md, access matrix), as the plan of
- * Slice 6b (6b-5) lays it out: the page header with the breadcrumb back to the work list as it was
- * left (ui-patterns.md, C6), the three tracks as separate tags (C3) and the actions the
- * capabilities allow under "Aktionen"; one "Handlungsbedarf" with the hints; the overview and the
- * tabs. The API sends only what the viewer may read: an absent field isn't shown, a field without
+ * One participant (process-and-lifecycle.md; data-protection.md, access matrix; ui-patterns.md,
+ * the participant page): the header with the breadcrumb back to the work list as it was left
+ * (C6), one metadata line, the three tracks as separate tags (C3), up to five key facts, the
+ * actions the capabilities allow under "Aktionen" and the one primary action, the participation's
+ * next step where the viewer may take it (principle 3); one "Handlungsbedarf" with the hints; the
+ * overview and the tabs. The API sends only what the viewer may read: an absent field isn't shown, a field without
  * a value shows a dash. The document title names the page, never the person (data-protection.md,
  * page titles).
  */
@@ -173,6 +180,8 @@ function ParticipationPage() {
   const [printed, setPrinted] = useState<RecoveryPrinted | null>(null);
   const fromList = useRouterState({ select: (state) => state.location.state.worklistSearch });
   const withdrawnOnCorrection = useCorrectionRequest({ participationId, projectId });
+  const targetName = useTargetName();
+  const activationText = useActivationText();
   // The loader refuses a participant of another project; the cache can't change that later.
   if (detail.projectId !== projectId) {
     return <InlineNotification kind="error" title={t("participant.notFound")} hideCloseButton />;
@@ -203,14 +212,8 @@ function ParticipationPage() {
   const current = shown.includes(tab) ? tab : undefined;
 
   /** Whether the viewer has a tab or card an item links to. */
-  const available = (target: StepTarget) =>
-    "tab" in target
-      ? shown.includes(target.tab)
-      : target.anchor === "participant-dates"
-        ? taTg
-        : target.anchor === "participant-ba"
-          ? taTg && detail.baReportingTasks !== undefined
-          : true;
+  const viewer = { detail, taTg, hasTab: (key: Search["tab"]) => shown.includes(key) };
+  const available = (target: StepTarget) => placeShown(target, viewer);
   const location = (target: StepTarget) => ({
     to: "/projects/$projectId/participations/$participationId" as const,
     params: { projectId, participationId },
@@ -299,6 +302,51 @@ function ParticipationPage() {
     .filter(Boolean)
     .join(" · ");
 
+  // The one primary action (ui-patterns.md, principle 3): the next step, where the viewer may
+  // take it; it opens the tab or card that resolves it.
+  const primary = primaryStep(item, viewer);
+  // Up to five key facts, each from what the page already holds; one the viewer may not read
+  // (absent in the detail) isn't shown.
+  const { dates } = detail;
+  const appointment = item?.appointments.next;
+  const offer = item?.deadlines.find((deadline) => deadline.kind === "offer_deadline");
+  const facts: Fact[] = [
+    ...(taTg && dates.effectiveTgStart !== undefined
+      ? [
+          {
+            label: t("participant.fields.tgStart"),
+            value: formatDate(dates.effectiveTgStart) || "–",
+          },
+        ]
+      : []),
+    // The DSV's offer deadline while the work list's row carries it (the DSV is open).
+    ...(offer
+      ? [
+          {
+            label: t("worklist.deadlineKinds.offer_deadline"),
+            value: <RelativeDate date={offer.date} today={today} kind="deadline" />,
+          },
+        ]
+      : []),
+    {
+      label: t("participant.header.consultants"),
+      value:
+        detail.assignments.map((a) => a.displayName).join(", ") ||
+        t("participant.header.noConsultant"),
+    },
+    ...(item
+      ? [
+          {
+            label: t("participant.overview.nextAppointment"),
+            value: appointment
+              ? `${formatDate(berlinDate(appointment.startsAt))}, ${berlinTime(appointment.startsAt)}`
+              : "–",
+          },
+        ]
+      : []),
+    { label: t("participant.header.portal"), value: activationText(detail.activationStatus) },
+  ];
+
   /** A tab's content; each but the overview is loaded only while it is shown. */
   function panelOf(key: (typeof tabs)[number]): ReactNode {
     if (key !== current) return null;
@@ -356,7 +404,7 @@ function ParticipationPage() {
 
   return (
     <>
-      <PageHeader
+      <DetailHeader
         title={name || t("participant.title")}
         breadcrumbs={[
           // Ancestors, never the current page: each active only on exactly its own URL.
@@ -383,6 +431,14 @@ function ParticipationPage() {
         ]}
         tags={<TrackTags detail={detail} taTg={taTg} />}
         metadata={metadata}
+        facts={facts}
+        primaryAction={
+          primary && (
+            <Button onClick={() => open(primary.target)}>
+              {t("participant.header.nextStep", { place: targetName(primary.target) })}
+            </Button>
+          )
+        }
         menuActions={menuActions}
       />
       {detail.hints.length > 0 && (

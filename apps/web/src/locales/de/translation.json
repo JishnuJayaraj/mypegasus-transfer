@@ -965,7 +965,10 @@
         }
       },
       "superseded": "Durch Korrektur ersetzt",
-      "replacement": "Ersetzt eine korrigierte Meldung"
+      "replacement": "Ersetzt eine korrigierte Meldung",
+      "summaryOpen_one": "{{count}} offene Meldung",
+      "summaryOpen_other": "{{count}} offene Meldungen",
+      "summaryNone": "Keine offenen Meldungen"
     },
     "assignments": {
       "title": "Zuständige Beratung",
@@ -1110,7 +1113,11 @@
     "header": {
       "personnelNumber": "Personalnummer {{number}}",
       "wave": "Welle {{wave}}",
-      "noWave": "keine"
+      "noWave": "keine",
+      "nextStep": "Nächster Schritt: {{place}}",
+      "portal": "Portal",
+      "consultants": "Beratung",
+      "noConsultant": "Nicht zugewiesen"
     },
     "actions": {
       "send": "Aktivierungscode persönlich senden",
@@ -1188,7 +1195,7 @@
     },
     "overview": {
       "stand": "Stand",
-      "open": "Offen",
+      "open": "Als Nächstes",
       "responsibility": "Termine & Zuständigkeit",
       "masterData": "Stammdaten",
       "tracks": {
@@ -1212,7 +1219,18 @@
       "noAppointment": "Kein Termin gebucht.",
       "allAppointments": "Alle Termine",
       "all": "Alle {{count}} anzeigen",
-      "fewer": "Weniger anzeigen"
+      "fewer": "Weniger anzeigen",
+      "openSummary": "{{shown}} von {{count}} offenen Punkten",
+      "tiers": {
+        "1": "Überfällig",
+        "2": "Offen",
+        "3": "Anstehend",
+        "4": "Angabe oder Unterlage fehlt"
+      },
+      "deadlines": "Fristen",
+      "noDeadlines": "Keine offenen Fristen.",
+      "masterDataSummary": "Person und Kontakt",
+      "noWave": "Keine Welle"
     },
     "timeline": {
       "title": "Zeitstrahl",
@@ -2955,6 +2973,34 @@
         "wrong_person": "Unterlage einer anderen Person",
         "wrong_file": "Falsche Datei"
       }
+    },
+    "steps": {
+      "label": "Schritte des Profilings",
+      "sessions_one": "{{count}} Termin erfasst",
+      "sessions_other": "{{count}} Termine erfasst",
+      "noSessions": "noch kein Termin erfasst",
+      "missing_one": "{{count}} Angabe fehlt",
+      "missing_other": "{{count}} Angaben fehlen",
+      "complete": "keine Angabe fehlt",
+      "assessment_one": "{{count}} Merkmal erfasst",
+      "assessment_other": "{{count}} Merkmale erfasst",
+      "noAssessment": "noch nichts erfasst",
+      "declarationsRecorded": "erfasst",
+      "declarationsOpen": "noch offen",
+      "formGenerated": "erzeugt am {{date}}",
+      "noForm": "noch nicht erzeugt",
+      "signed": "unterschrieben am {{date}}",
+      "scans_one": "{{count}} Scan hochgeladen",
+      "scans_other": "{{count}} Scans hochgeladen",
+      "waitsForForm": "wartet auf den Bogen",
+      "noScan": "noch kein Scan",
+      "submitted": "übermittelt am {{date}}",
+      "submissionOpen": "noch nicht übermittelt",
+      "submissionWaits": "wartet auf den unterschriebenen Bogen",
+      "missingElsewhere_one": "{{count}} Pflichtangabe fehlt noch. Sie steht unter „{{step}}“.",
+      "missingElsewhere_other": "{{count}} Pflichtangaben fehlen noch. Sie stehen unter „{{step}}“.",
+      "showMissing": "Zu „{{step}}“",
+      "exceptionNone": "Keine Ausnahme beantragt"
     }
   },
   "asu": {

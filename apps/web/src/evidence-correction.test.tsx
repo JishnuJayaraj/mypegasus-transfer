@@ -9,6 +9,7 @@ import {
   renderApp,
   staffUsers,
   unpinnedConfig,
+  openCard,
 } from "./test-utils";
 
 // data-protection.md, evidence corrections (D29; readings Q209): "Korrektur beantragen" on a
@@ -119,6 +120,7 @@ describe("Korrektur beantragen (D29)", () => {
         json({ correctionId: "00000000-0000-4000-e000-000000000001" }, 201),
     });
     const tasks = await section();
+    await openCard("BA-Meldungen");
     await userEvent.click(
       within(tasks).getByRole("button", {
         name: "Korrektur beantragen: Meldung: Geplantes Ende geändert zum 31.01.2092",
@@ -166,6 +168,7 @@ describe("Korrektur beantragen (D29)", () => {
       ],
     }));
     const tasks = await section();
+    await openCard("BA-Meldungen");
     expect(
       within(tasks).getByText("Nicht erforderlich · Durch Korrektur ersetzt"),
     ).toBeInTheDocument();
@@ -191,6 +194,7 @@ describe("Korrektur beantragen (D29)", () => {
         }),
     });
     const tasks = await section();
+    await openCard("BA-Meldungen");
     await userEvent.click(within(tasks).getByRole("button", { name: "Gemeldet am …" }));
     // Meanwhile: the task was closed elsewhere and a correction replaced it.
     shown = {

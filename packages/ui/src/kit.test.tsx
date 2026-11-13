@@ -6,7 +6,9 @@ import { Facts } from "./facts";
 import { Funnel } from "./funnel";
 import { NextSteps } from "./next-steps";
 import { SectionCard } from "./section-card";
+import { Split } from "./layout";
 import { StepList } from "./step-list";
+import { TrackBar } from "./track-bar";
 import { renderUi } from "./test-utils";
 
 // The kit's second layer (ui-patterns.md, which pattern). Synthetic values only.
@@ -172,6 +174,26 @@ describe("NextSteps", () => {
   });
 });
 
+describe("SectionCard, held by its caller", () => {
+  it("is as open as the caller says and reports a toggle", async () => {
+    const toggles: boolean[] = [];
+    const { rerender } = renderUi(
+      <SectionCard title="Welle" open={false} onToggle={(open) => toggles.push(open)}>
+        <p>{"Inhalt"}</p>
+      </SectionCard>,
+    );
+    expect(screen.queryByText("Inhalt")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Welle" }));
+    expect(toggles).toEqual([true]);
+    rerender(
+      <SectionCard title="Welle" open onToggle={() => {}}>
+        <p>{"Inhalt"}</p>
+      </SectionCard>,
+    );
+    expect(screen.getByText("Inhalt")).toBeInTheDocument();
+  });
+});
+
 describe("StepList", () => {
   const steps = [
     { id: "data", title: "Angaben prüfen", state: "done" as const, children: <p>{"geprüft"}</p> },
@@ -222,9 +244,80 @@ describe("StepList", () => {
     expect(localStorage.length + sessionStorage.length).toBe(0);
   });
 
+  it("keeps an unselected step's input when asked to, hidden from everyone", async () => {
+    const withInput = [{ ...steps[0]!, children: <input aria-label="Notiz" /> }, steps[1]!];
+    renderUi(<StepList label="Profiling" steps={withInput} keepMounted />);
+    expect(screen.queryByRole("textbox", { name: "Notiz" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Angaben prüfen/ }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Notiz" }), "Entwurf");
+    await userEvent.click(screen.getByRole("button", { name: /Bogen erzeugen/ }));
+    expect(screen.queryByRole("textbox", { name: "Notiz" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Angaben prüfen/ }));
+    expect(screen.getByRole("textbox", { name: "Notiz" })).toHaveValue("Entwurf");
+  });
+
+  it("shows the step its caller selects and reports a choice", async () => {
+    const chosen: string[] = [];
+    renderUi(
+      <StepList
+        label="Profiling"
+        steps={steps}
+        selected="data"
+        onSelect={(id) => chosen.push(id)}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Angaben prüfen" })).toHaveTextContent("geprüft");
+    await userEvent.click(screen.getByRole("button", { name: /An die Agentur/ }));
+    expect(chosen).toEqual(["send"]);
+  });
+
   it("starts on the first step when none is current", () => {
     renderUi(<StepList label="Einrichtung" steps={[steps[0]!, steps[3]!]} level={2} />);
     expect(screen.getByRole("heading", { level: 2, name: "Angaben prüfen" })).toBeInTheDocument();
+  });
+});
+
+describe("TrackBar", () => {
+  it("is one named track: its steps with the current one, done ones said so, and its tag", () => {
+    renderUi(
+      <TrackBar
+        title="Profiling"
+        steps={["Offen", "Angenommen", "In Arbeit", "Abgeschlossen"]}
+        current={2}
+        tag={<span>{"In Arbeit (Tag)"}</span>}
+      >
+        {"Schritt 3 von 4"}
+      </TrackBar>,
+    );
+    const track = within(screen.getByRole("region", { name: "Profiling" }));
+    const list = track.getByRole("list", { name: "Schritte: Profiling" });
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Offen (erledigt)", "Angenommen (erledigt)", "In Arbeit", "Abgeschlossen"]);
+    expect(within(list).getByText("In Arbeit").closest("li")).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    expect(track.getByText("In Arbeit (Tag)")).toBeInTheDocument();
+    expect(track.getByText("Schritt 3 von 4")).toBeInTheDocument();
+  });
+
+  it("has no bar for a status off the path", () => {
+    renderUi(
+      <TrackBar title="Status" steps={["Importiert"]} current={-1} tag={<span>{"Tag"}</span>} />,
+    );
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+});
+
+describe("Split", () => {
+  it("puts the side column after the main one in the document", () => {
+    renderUi(<Split side={<p>{"Seite"}</p>}>{<p>{"Haupt"}</p>}</Split>);
+    expect(screen.getByText("Haupt").compareDocumentPosition(screen.getByText("Seite"))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 });
 

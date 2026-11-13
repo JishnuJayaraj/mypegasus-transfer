@@ -15,6 +15,7 @@ import {
   RadioButtonGroup,
   Select,
   SelectItem,
+  SectionCard,
   Stack,
   TextInput,
 } from "@transfer/ui";
@@ -181,9 +182,16 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
   const shown = current !== null || exception.evidenceDocuments.length > 0 || capabilities.request;
   if (!shown && !capabilities.addEvidence) return null;
   return (
-    <section className="tp-section" aria-labelledby="profiling-exception">
+    <SectionCard
+      title={t("profiling.exception.title")}
+      summary={
+        current
+          ? t(`profiling.exception.statuses.${current.status}`)
+          : t("profiling.steps.exceptionNone")
+      }
+      defaultOpen={current !== null || exception.evidenceDocuments.length > 0}
+    >
       <Stack gap={5}>
-        <h2 id="profiling-exception">{t("profiling.exception.title")}</h2>
         <p>{t("profiling.exception.intro")}</p>
         {message && (
           <InlineNotification
@@ -288,7 +296,7 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
         onQuarantine={(documentId, reason) => void quarantine(documentId, reason)}
         onDelete={(documentId, reason) => void remove(documentId, reason)}
       />
-    </section>
+    </SectionCard>
   );
 }
 

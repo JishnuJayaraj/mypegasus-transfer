@@ -1030,65 +1030,6 @@ body {
   list-style: none;
 }
 
-// One track of the participant's "Stand" (ui-patterns.md, C3): its own tag, step list and dates.
-.tp-track {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-03;
-
-  h3 {
-    margin: 0;
-  }
-}
-
-.tp-track-step {
-  @include type.type-style("label-01");
-
-  color: theme.$text-secondary;
-}
-
-.tp-track-steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    @include type.type-style("body-compact-01");
-
-    padding-block: $spacing-01;
-    padding-inline-start: $spacing-04;
-    border-inline-start: 2px solid theme.$border-subtle-01;
-    color: theme.$text-secondary;
-  }
-
-  .tp-track-done {
-    border-inline-start-color: theme.$support-success;
-    color: theme.$text-primary;
-  }
-
-  .tp-track-current {
-    border-inline-start: 4px solid theme.$interactive;
-    color: theme.$text-primary;
-    font-weight: 600;
-  }
-}
-
-// "Offen": the open items in C2's order, each with its link and a blocked action's prerequisite.
-.tp-open-items {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-02;
-    padding-block: $spacing-03;
-    border-block-end: 1px solid theme.$border-subtle-01;
-    overflow-wrap: anywhere;
-  }
-}
-
 // The participant timeline (the plan of Slice 6b, D12): inline SVG styled here, never by an inline
 // <style> (CSP). Hidden below 30rem, where the list below says the same (400 % zoom, D10).
 .tp-timeline-graphic {
@@ -1704,3 +1645,79 @@ a.tp-funnel-stage {
 // The product theme: its tokens and every override of a Carbon class (ui-patterns.md, theme),
 // after the kit's own rules so an override of equal weight wins.
 @include meta.load-css("theme");
+
+// TrackBar: one track's name, its path as a segmented bar and its tag in one row; the detail
+// under the bar. The row wraps on narrow screens (the tag below the bar at 400 % zoom).
+.tp-track-bar {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, auto) minmax(6rem, 1fr) auto;
+  align-items: center;
+  gap: var(--tp-space-2) var(--tp-space-4);
+  padding-block: var(--tp-space-3);
+  border-block-start: 1px solid theme.$border-subtle-01;
+
+  h3 {
+    @include type.type-style("body-compact-01");
+
+    margin: 0;
+    color: theme.$text-secondary;
+    font-weight: 400;
+  }
+
+  ol {
+    display: flex;
+    gap: var(--tp-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    flex: 1;
+    block-size: 0.375rem;
+    border-radius: var(--tp-radius-control);
+    background: theme.$border-subtle-01;
+  }
+
+  .tp-track-bar-done {
+    background: theme.$support-success;
+  }
+
+  .tp-track-bar-current {
+    background: theme.$interactive;
+  }
+
+  @media (max-width: 41.99rem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    ol {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+}
+
+.tp-track-bar-detail {
+  grid-column: 1 / -1;
+  color: theme.$text-secondary;
+}
+
+// Split: the main column and the side column, side by side from 66rem.
+.tp-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tp-space-5);
+  align-items: start;
+
+  @media (min-width: 66rem) {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  }
+}
+
+.tp-split-main,
+.tp-split-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tp-space-5);
+  min-inline-size: 0;
+}

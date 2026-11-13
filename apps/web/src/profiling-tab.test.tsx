@@ -274,6 +274,18 @@ function setup(options: {
   return mock;
 }
 
+/** Opens a step of the tab's step list (ui-patterns.md, the step list in use). */
+async function openStep(name: string) {
+  const list = await screen.findByRole("navigation", { name: "Schritte des Profilings" });
+  await userEvent.click(within(list).getByRole("button", { name: new RegExp(`^${name}`) }));
+}
+
+/** A step's panel, opened: the region named by the step. */
+async function stepRegion(name: string, step = name) {
+  await openStep(step.replace(/[()]/g, "\\$&"));
+  return screen.findByRole("region", { name });
+}
+
 const callTo = (calls: { key: string; body: unknown }[], key: string) =>
   calls.filter((call) => call.key === key);
 
@@ -282,6 +294,7 @@ describe("the tab 'Profiling'", () => {
     const { calls } = setup({ profiler: false });
     expect(await screen.findByRole("heading", { name: "Profiling-Status" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Profiling begonnen" })).toBeVisible();
+    await openStep("Termine des Profilings");
     const sessions = screen.getByRole("table", { name: "Termine des Profilings" });
     expect(within(sessions).getByText("20.10.2026")).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Handlungsbedarf (Abschnitt C)" })).toBeNull();
@@ -289,6 +302,7 @@ describe("the tab 'Profiling'", () => {
     expect(
       screen.queryByRole("heading", { name: "Erklärungen gegenüber der BA (vorgesehen)" }),
     ).toBeNull();
+    await openStep("Angaben aus der Selbstauskunft");
     expect(
       await screen.findByRole("button", { name: "Im assistierten Modus ergänzen" }),
     ).toBeVisible();
@@ -327,6 +341,7 @@ describe("the tab 'Profiling'", () => {
   it("writes the sessions whole and shows a refusal at its row", async () => {
     const user = userEvent.setup();
     const { calls } = setup({ profiler: true });
+    await openStep("Termine des Profilings");
     await user.click(await screen.findByRole("button", { name: "Termin hinzufügen" }));
     const row = screen.getByRole("group", { name: "Termin 2" });
     await user.type(within(row).getByLabelText("Datum"), "15.01.2099");
@@ -348,6 +363,7 @@ describe("the tab 'Profiling'", () => {
   it("says so and reloads when the record changed meanwhile (409)", async () => {
     const user = userEvent.setup();
     const { calls } = setup({ profiler: true });
+    await openStep("Termine des Profilings");
     await user.click(await screen.findByRole("button", { name: "Termin 1 entfernen" }));
     await user.click(screen.getByRole("button", { name: "Termine speichern" }));
     expect(await screen.findByText(/inzwischen geändert/)).toBeVisible();
@@ -357,11 +373,7 @@ describe("the tab 'Profiling'", () => {
   it("loads section C only on 'Anzeigen', the health line with its rating only", async () => {
     const user = userEvent.setup();
     const { calls } = setup({ profiler: true });
-    const section = within(
-      (await screen.findByRole("heading", { name: "Handlungsbedarf (Abschnitt C)" })).closest(
-        "section",
-      )!,
-    );
+    const section = within(await stepRegion("Handlungsbedarf (Abschnitt C)"));
     expect(section.getByText("2 von 16 Angaben erfasst")).toBeVisible();
     expect(screen.queryByDisplayValue(SECRET)).toBeNull();
     await user.click(section.getByRole("button", { name: /Anzeigen/ }));
@@ -388,12 +400,13 @@ describe("the tab 'Profiling'", () => {
     const user = userEvent.setup();
     const { calls } = setup({ profiler: true });
     const unemployment = within(
-      (await screen.findByRole("heading", { name: "Arbeitslos seit / bis" })).closest("section")!,
+      await stepRegion("Arbeitslos seit / bis", "Angaben aus der Selbstauskunft"),
     );
     expect(unemployment.getByText("angegeben")).toBeVisible();
     await user.click(unemployment.getByRole("button", { name: /Anzeigen/ }));
     expect(await unemployment.findByDisplayValue("01.11.2025")).toBeVisible();
 
+    await openStep("Erklärungen gegenüber der BA");
     await user.selectOptions(
       screen.getByLabelText("Veröffentlichung in der Jobbörse (Feld 50)"),
       "anonymous_callme",
@@ -414,6 +427,8 @@ describe("the tab 'Profiling'", () => {
     const { calls } = setup({ profiler: true });
     const jobboerse = await screen.findByLabelText("Veröffentlichung in der Jobbörse (Feld 50)");
     await user.selectOptions(jobboerse, "full");
+    // Another step: the draft stays in its own (the step list keeps every step mounted).
+    await openStep("Termine des Profilings");
     await user.click(screen.getByRole("button", { name: "Termine speichern" }));
     await waitFor(() =>
       expect(callTo(calls, `PUT ${detailPath}/profiling/sessions`)).toHaveLength(1),
@@ -421,6 +436,7 @@ describe("the tab 'Profiling'", () => {
     // The session save answered with revision 3 and unchanged declarations: the draft stays.
     await waitFor(() => expect(jobboerse).toHaveValue("full"));
     expect(screen.queryByText(/an anderer Stelle gespeichert/)).toBeNull();
+    await openStep("Erklärungen gegenüber der BA");
     await user.click(screen.getByRole("button", { name: "Erklärungen speichern" }));
     await waitFor(() =>
       expect(callTo(calls, `PUT ${detailPath}/profiling/declarations`)[0]?.body).toEqual({
@@ -451,7 +467,10 @@ describe("the tab 'Profiling'", () => {
     });
     const jobboerse = await screen.findByLabelText("Veröffentlichung in der Jobbörse (Feld 50)");
     await user.selectOptions(jobboerse, "full");
+    // Another step: the draft stays in its own (the step list keeps every step mounted).
+    await openStep("Termine des Profilings");
     await user.click(screen.getByRole("button", { name: "Termine speichern" }));
+    await openStep("Erklärungen gegenüber der BA");
     expect(await screen.findByText(/an anderer Stelle gespeichert/)).toBeVisible();
     expect(jobboerse).toHaveValue("full");
     // A save goes with the draft's own revision: refused, the draft stays.
@@ -476,11 +495,7 @@ describe("the tab 'Profiling'", () => {
           refuse ? problem(409, "conflict") : written(view(true), [], 2),
       },
     });
-    const section = within(
-      (await screen.findByRole("heading", { name: "Handlungsbedarf (Abschnitt C)" })).closest(
-        "section",
-      )!,
-    );
+    const section = within(await stepRegion("Handlungsbedarf (Abschnitt C)"));
     await user.click(section.getByRole("button", { name: /Anzeigen/ }));
     const text = await section.findByDisplayValue(SECRET);
     await user.click(section.getByRole("button", { name: "Einschätzung speichern" }));
@@ -502,18 +517,17 @@ describe("the tab 'Profiling'", () => {
     setup({ profiler: true, closed: true });
     expect(await screen.findByText(/Die Teilnahme ist beendet/)).toBeVisible();
     expect(screen.queryByText(/erst geändert werden, wenn die Person informiert ist/)).toBeNull();
+    await openStep("Termine des Profilings");
     expect(screen.getByRole("table", { name: "Termine des Profilings" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Termine speichern" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Erklärungen speichern" })).toBeNull();
     expect(screen.getByLabelText("Veröffentlichung in der Jobbörse (Feld 50)")).toBeDisabled();
-    const section = within(
-      screen.getByRole("heading", { name: "Handlungsbedarf (Abschnitt C)" }).closest("section")!,
-    );
+    const section = within(await stepRegion("Handlungsbedarf (Abschnitt C)"));
     await user.click(section.getByRole("button", { name: /Anzeigen/ }));
     expect(await section.findByDisplayValue(SECRET)).toHaveAttribute("readonly");
     expect(section.queryByRole("button", { name: "Einschätzung speichern" })).toBeNull();
     const unemployment = within(
-      screen.getByRole("heading", { name: "Arbeitslos seit / bis" }).closest("section")!,
+      await stepRegion("Arbeitslos seit / bis", "Angaben aus der Selbstauskunft"),
     );
     await user.click(unemployment.getByRole("button", { name: /Anzeigen/ }));
     expect(await unemployment.findByText("01.11.2025")).toBeVisible();
@@ -530,7 +544,7 @@ describe("the tab 'Profiling'", () => {
       },
     });
     const unemployment = within(
-      (await screen.findByRole("heading", { name: "Arbeitslos seit / bis" })).closest("section")!,
+      await stepRegion("Arbeitslos seit / bis", "Angaben aus der Selbstauskunft"),
     );
     await user.click(unemployment.getByRole("button", { name: /Anzeigen/ }));
     await user.type(await unemployment.findByLabelText("Arbeitslos bis"), "01.10.2025");
@@ -548,6 +562,112 @@ describe("the tab 'Profiling'", () => {
         period: null,
       }),
     );
+  });
+});
+
+describe("the tab 'Profiling' as a step list (ui-patterns.md, the step list in use)", () => {
+  const missingRoutes: Routes = {
+    [`GET ${detailPath}/self-service`]: () =>
+      json({
+        ...selfService,
+        // One field two steps wait for, and one only the profiling step waits for.
+        missing: [
+          { step: "data_collection", key: "birthDate" },
+          { step: "profiling", key: "birthDate" },
+          { step: "profiling", key: "mobile" },
+        ],
+      }),
+    [`GET ${detailPath}/forms/tl407/readiness`]: () =>
+      json({
+        view: "project_lead",
+        ready: false,
+        missing: [
+          { key: "birthDate", label: "8 Geburtsdatum" },
+          { key: "profilingSessions", label: "2 Termine des Profilings" },
+        ],
+      }),
+  };
+
+  it("shows the track's steps only, each with its state and one line of status", async () => {
+    setup({ profiler: true, tl407: true });
+    const list = await screen.findByRole("navigation", { name: "Schritte des Profilings" });
+    await waitFor(() =>
+      expect(
+        within(list)
+          .getAllByRole("button")
+          .map((step) => step.textContent),
+      ).toEqual([
+        "Profiling-StatusErledigt: Angenommen",
+        "Termine des ProfilingsErledigt: 1 Termin erfasst",
+        "Angaben aus der SelbstauskunftErledigt: keine Angabe fehlt",
+        "Handlungsbedarf (Abschnitt C)Erledigt: 2 Merkmale erfasst",
+        "Erklärungen gegenüber der BA (vorgesehen)Aktuell: noch offen",
+        "Profilingbogen (TL 407)Offen: noch nicht erzeugt",
+        "Unterschriebene BögenBlockiert: wartet auf den Bogen",
+        "Übermittlung an die AgenturBlockiert: wartet auf den unterschriebenen Bogen",
+      ]),
+    );
+    // The current step is open, with its action; one step at a time.
+    const current = within(list).getByRole("button", { name: /^Erklärungen/ });
+    expect(current).toHaveAttribute("aria-current", "step");
+    expect(screen.getByRole("button", { name: "Erklärungen speichern" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Termine speichern" })).toBeNull();
+  });
+
+  it("lists each missing field once: under the self-service step, named by the step that waits", async () => {
+    const user = userEvent.setup();
+    setup({ profiler: false, tl407: true, routes: missingRoutes });
+    const form = await stepRegion("Profilingbogen (TL 407)");
+    // The form's step counts what the self-service step lists and names that step; only what
+    // is listed nowhere else is listed here.
+    expect(
+      await within(form).findByText(
+        "1 Pflichtangabe fehlt noch. Sie steht unter „Angaben aus der Selbstauskunft“.",
+      ),
+    ).toBeVisible();
+    expect(within(form).getByText("2 Termine des Profilings")).toBeVisible();
+    expect(screen.queryByText("8 Geburtsdatum")).toBeNull();
+    // Once in the whole tab, hidden steps included.
+    expect(screen.getAllByText(/Geburtsdatum/)).toHaveLength(1);
+    expect(screen.getAllByText(/Mobil/)).toHaveLength(1);
+    await user.click(
+      within(form).getByRole("button", { name: "Zu „Angaben aus der Selbstauskunft“" }),
+    );
+    const check = await screen.findByRole("region", { name: "Angaben aus der Selbstauskunft" });
+    const missing = within(check).getByRole("region", { name: "Fehlende Angaben" });
+    expect(within(missing).getAllByRole("listitem")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: /^Angaben aus der Selbstauskunft/ }),
+    ).toHaveTextContent("2 Angaben fehlen");
+  });
+
+  it("keeps the profiler's check to what the self-service step doesn't list", async () => {
+    const user = userEvent.setup();
+    setup({
+      profiler: true,
+      tl407: true,
+      routes: {
+        ...missingRoutes,
+        [`GET ${detailPath}/forms/tl407/readiness`]: () =>
+          json({
+            view: "profiler",
+            formVersion: "08-2025",
+            ready: false,
+            sourceToken: "b".repeat(64),
+            errors: [
+              { code: "required_missing", key: "birthDate", label: "8 Geburtsdatum" },
+              { code: "character_unsupported", key: "lastName", label: "7 Nachname" },
+            ],
+            warnings: [],
+            overflow: [],
+          }),
+      },
+    });
+    const form = await stepRegion("Profilingbogen (TL 407)");
+    await user.click(within(form).getByRole("button", { name: "Prüfen" }));
+    expect(await within(form).findByText("7 Nachname:")).toBeVisible();
+    expect(within(form).getByText(/1 Pflichtangabe fehlt noch/)).toBeVisible();
+    expect(screen.queryByText(/8 Geburtsdatum/)).toBeNull();
   });
 });
 
@@ -591,7 +711,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
         [generatePath]: () => json({ documentId, formVersion: "08-2025", anlage: true }, 201),
       },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Profilingbogen (TL 407)");
     expect(within(section).getByText("Noch kein Bogen erzeugt.")).toBeVisible();
     // Each check reads the protected answers (logged): never without "Prüfen".
     expect(callTo(calls, readinessPath)).toEqual([]);
@@ -629,7 +749,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
           }),
       },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Profilingbogen (TL 407)");
     await user.click(within(section).getByRole("button", { name: "Prüfen" }));
     expect(
       await within(section).findByText("Enthält Zeichen, die der Bogen nicht drucken kann."),
@@ -651,7 +771,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
         [generatePath]: () => problem(409, "conflict"),
       },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Profilingbogen (TL 407)");
     await user.click(within(section).getByRole("button", { name: "Prüfen" }));
     await user.click(await within(section).findByRole("button", { name: "Erzeugen" }));
     expect(
@@ -679,7 +799,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
           json({ url: "/api/v1/document-content/abc", expiresAt: "2026-10-22T09:31:00Z" }, 201),
       },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Profilingbogen (TL 407)");
     expect(await within(section).findByText("8 Geburtsdatum")).toBeVisible();
     expect(within(section).queryByRole("button", { name: "Prüfen" })).toBeNull();
     expect(within(section).queryByRole("button", { name: /erzeugen/i })).toBeNull();
@@ -701,7 +821,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
       ],
       routes: { [readinessPath]: () => json({ ...profilerReadiness, warnings: [] }) },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Profilingbogen (TL 407)");
     expect(within(section).getByText(/nicht mehr gültig: bitte neu erzeugen/)).toBeVisible();
     expect(within(section).getByText("ersetzt")).toBeVisible();
     await user.click(within(section).getByRole("button", { name: "Prüfen" }));
@@ -720,7 +840,7 @@ describe("the signed TL 407 (data-protection.md, signed scans)", () => {
       tl407Forms: [generatedForm()],
       routes: { [`POST ${detailPath}/documents`]: () => json({}, 201) },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Unterschriebene Bögen");
     expect(
       within(section).getByText("Noch kein unterschriebener Bogen hochgeladen."),
     ).toBeVisible();
@@ -748,7 +868,7 @@ describe("the signed TL 407 (data-protection.md, signed scans)", () => {
       tl407Scans: [scanOf()],
       routes: { [`POST ${scanPath}/review`]: () => json({}) },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Unterschriebene Bögen");
     const scans = within(section).getByRole("table", { name: "Unterschriebene Bögen" });
     expect(within(scans).getByText("Außerhalb der Anwendung ausgefüllt")).toBeVisible();
     await user.click(within(scans).getByRole("button", { name: /^Prüfen:/ }));
@@ -799,7 +919,7 @@ describe("the signed TL 407 (data-protection.md, signed scans)", () => {
       done: "allowed",
       routes: { [`POST ${scanPath}/quarantine`]: () => json({}) },
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Unterschriebene Bögen");
     expect(
       within(section).getByText("Teilnehmer·in 20.10.2026, Profiler 21.10.2026"),
     ).toBeVisible();
@@ -870,7 +990,7 @@ describe("the signed TL 407 (data-protection.md, signed scans)", () => {
         }),
       ],
     });
-    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const section = await stepRegion("Unterschriebene Bögen");
     expect(
       await within(section).findByText("unter Quarantäne: Verdacht: irrtümlich angenommen"),
     ).toBeVisible();
@@ -924,7 +1044,7 @@ describe("Übermittlung an die Agentur", () => {
         [`POST ${detailPath}/tl407-submissions`]: () => json({ submissionId }, 201),
       },
     });
-    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    const section = await stepRegion("Übermittlung an die Agentur");
     expect(
       within(section).getByText(/TL 407 08\/2025 an beispielstadt-nord, Weg: E-Mail/),
     ).toBeVisible();
@@ -949,7 +1069,7 @@ describe("Übermittlung an die Agentur", () => {
       profiler: false,
       submission: { attempts: [], next: next("submission_settings_missing") },
     });
-    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    const section = await stepRegion("Übermittlung an die Agentur");
     expect(within(section).getByText(/Einstellungen der Agentur fehlen/)).toBeVisible();
     expect(within(section).queryByRole("button", { name: submissionActions })).toBeNull();
   });
@@ -968,7 +1088,7 @@ describe("Übermittlung an die Agentur", () => {
           }),
       },
     });
-    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    const section = await stepRegion("Übermittlung an die Agentur");
     await user.click(within(section).getByRole("button", { name: "Agentur-Ablehnung eintragen" }));
     const dialog = await screen.findByRole("dialog", { name: "Von der Agentur abgelehnt" });
     await user.type(within(dialog).getByLabelText("Abgelehnt am"), "23.10.2026");
@@ -1002,7 +1122,7 @@ describe("Übermittlung an die Agentur", () => {
         next: null,
       },
     });
-    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    const section = await stepRegion("Übermittlung an die Agentur");
     expect(within(section).getByText("am 23.10.2026 (veraltete Formularversion)")).toBeVisible();
     expect(within(section).getByText(/Formularverantwortlichen informieren/)).toBeVisible();
     expect(within(section).queryByRole("button", { name: submissionActions })).toBeNull();
@@ -1031,7 +1151,7 @@ describe("Übermittlung an die Agentur", () => {
           new Response(null, { status: 204 }),
       },
     });
-    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    const section = await stepRegion("Übermittlung an die Agentur");
     await user.click(
       within(section).getByRole("button", { name: "Original liegt der Agentur vor" }),
     );
@@ -1060,7 +1180,7 @@ describe("Übermittlung an die Agentur", () => {
         next: null,
       },
     });
-    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    const section = await stepRegion("Übermittlung an die Agentur");
     expect(within(section).getByText("12.10.2026 (liegt der Agentur vor)")).toBeVisible();
   });
 });

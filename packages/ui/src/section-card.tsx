@@ -14,6 +14,12 @@ interface SectionCardProps {
    * collapsed whatever `defaultOpen` says, and its content is not rendered until it is opened.
    */
   protectedContent?: boolean;
+  /**
+   * The open state held by the caller, with `onToggle`: for a card an in-page link opens. The
+   * caller keeps it in component state only, and never opens protected content by default.
+   */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
   /** Actions for this card only, at the end of its header. */
   actions?: ReactNode;
   /** The card's own id, for an in-page link to it. */
@@ -32,11 +38,18 @@ export function SectionCard({
   summary,
   defaultOpen = false,
   protectedContent = false,
+  open: controlled,
+  onToggle,
   actions,
   id: anchor,
   children,
 }: SectionCardProps) {
-  const [open, setOpen] = useState(defaultOpen && !protectedContent);
+  const [own, setOwn] = useState(defaultOpen && !protectedContent);
+  const open = controlled ?? own;
+  const setOpen = (next: boolean) => {
+    setOwn(next);
+    onToggle?.(next);
+  };
   const id = useId();
   const Heading = level === 2 ? "h2" : "h3";
   const Chevron = open ? ChevronDown : ChevronRight;

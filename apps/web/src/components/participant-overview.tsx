@@ -1,32 +1,40 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
 import type { components } from "@transfer/api-client";
 import { berlinDate, berlinTime, openSteps, type OpenStep } from "@transfer/domain";
 import {
   ActionButton,
   Button,
+  ButtonSet,
   Card,
+  Facts,
   formatDate,
   formatTimestamp,
-  Grid,
   InlineNotification,
-  Loading,
+  Link,
+  NextSteps,
   RelativeDate,
+  Section,
+  SectionCard,
   Select,
   SelectItem,
   SidePanel,
   SimpleTable,
+  Split,
   Stack,
   StatusTag,
-  Tag,
+  TrackBar,
   useToast,
+  type Fact,
+  type StatusTone,
 } from "@transfer/ui";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationQuery, useApi, worklistQuery } from "../api";
 import type de from "../locales/de/translation.json";
 import { BaReportingTasks } from "./ba-reporting-tasks";
 import { EntryWaveChoice } from "./entry-wave-choice";
-import { StepLabel, stepTarget, type StepTarget } from "./open-steps";
+import { stepTarget, useStepText, type OverviewAnchor, type StepTarget } from "./open-steps";
 import { usePanelNavigationGuard } from "./panel-guard";
 import {
   ActivationCard,
@@ -41,11 +49,11 @@ import { PlacementAgenturFacts, PlacementAgenturForm } from "./placement-agentur
 import type { RecoveryPrinted } from "./recovery";
 import { useConsultants } from "./team";
 
-// The participant's overview (the plan of Slice 6b, 6b-5): three columns that separate concerns —
-// "Stand" (the three tracks, each its own summary, ui-patterns.md C3), "Offen" (the open items in
-// the work list's order, C2) and "Termine & Zuständigkeit" — then the timeline (D12, stage 1),
-// "Stammdaten" and the cards whose edit forms open in a side panel (C4). Only the fixed lifecycle
-// core is shown; nothing regional is hard-coded (ADR-0004).
+// The participant's overview (ui-patterns.md, the participant page): a main column with "Als
+// Nächstes" (the open items in the work list's order, C2), "Stand" (the three tracks, each its own
+// bar, C3), the timeline and one collapsible card per topic, whose edit forms open in a side
+// panel (C4); a side column with the appointments, the responsibility and the deadlines. Only the
+// fixed lifecycle core is shown; nothing regional is hard-coded (ADR-0004).
 
 type Detail = components["schemas"]["ParticipationDetail"];
 type Item = components["schemas"]["WorklistItem"];
@@ -78,34 +86,65 @@ export interface OverviewProps {
   onPrinted: (printed: RecoveryPrinted) => void;
 }
 
+/** One collapsible card's open state, held by the overview. */
+export interface CardState {
+  open: boolean;
+  onToggle: (open: boolean) => void;
+}
+
 export function ParticipantOverview(props: OverviewProps) {
   const { detail, projectId, taTg, row, today, onPanel } = props;
   const item = row.state === "loaded" ? row.item : undefined;
+  // Which cards are open: component state only. A card an item or the address points to is open.
+  const hash = useRouterState({ select: (state) => state.location.hash });
+  const [cards, setCards] = useState<Partial<Record<OverviewAnchor | "master", boolean>>>({});
+  const card = (id: OverviewAnchor | "master", byDefault = false): CardState => ({
+    open: cards[id] ?? (hash === id || byDefault),
+    onToggle: (open) => setCards((current) => ({ ...current, [id]: open })),
+  });
+  const onOpen = (target: StepTarget) => {
+    if ("anchor" in target) setCards((current) => ({ ...current, [target.anchor]: true }));
+    props.onOpen(target);
+  };
+  const links = { ...props, onOpen };
   return (
-    <Stack gap={6}>
-      <Grid columns={3} collapse="wide">
+    <>
+      <Split
+        side={
+          <>
+            <Responsibility
+              detail={detail}
+              row={row}
+              onPanel={onPanel}
+              href={props.href}
+              onOpen={onOpen}
+            />
+            <Deadlines row={row} today={today} />
+          </>
+        }
+      >
+        <OpenItems {...links} />
         <TrackSummaries detail={detail} taTg={taTg} item={item} today={today} />
-        <OpenItems {...props} />
-        <Responsibility
-          detail={detail}
-          row={row}
-          onPanel={onPanel}
+        <ParticipantTimeline
+          timeline={timeline(detail, item, today)}
           href={props.href}
-          onOpen={props.onOpen}
+          onOpen={onOpen}
+          available={props.available}
         />
-      </Grid>
-      <ParticipantTimeline
-        timeline={timeline(detail, item, today)}
-        href={props.href}
-        onOpen={props.onOpen}
-        available={props.available}
-      />
-      <MasterData detail={detail} />
-      <ActivationCard detail={detail} projectId={projectId} onOpen={onPanel} />
-      {taTg && <WaveAndDates detail={detail} onPanel={onPanel} />}
-      {taTg && <BaReportingTasks detail={detail} />}
+        <MasterData detail={detail} card={card("master", true)} />
+        <ActivationCard
+          detail={detail}
+          projectId={projectId}
+          onOpen={onPanel}
+          card={card("participant-activation")}
+        />
+        {taTg && (
+          <WaveAndDates detail={detail} onPanel={onPanel} card={card("participant-dates")} />
+        )}
+        {taTg && <BaReportingTasks detail={detail} card={card("participant-ba")} />}
+      </Split>
       <EditPanels {...props} />
-    </Stack>
+    </>
   );
 }
 
@@ -126,7 +165,7 @@ const paths = {
 
 /**
  * "Stand": the main status, the profiling track and the DSV track (`ta_tg`) as three separate
- * summaries, each with its tag, its own short step list and its key date — never one sequence
+ * bars, each with its tag, its place on its own path and its key date — never one sequence
  * across the tracks (ui-patterns.md, C3).
  */
 function TrackSummaries({
@@ -145,97 +184,80 @@ function TrackSummaries({
   const deadline = (...kinds: string[]) => item?.deadlines.find((d) => kinds.includes(d.kind));
   const profilingDeadline = deadline("tl407_submission", "profiling_exception");
   const offerDeadline = deadline("offer_deadline");
+  const relative = (date: string) => <RelativeDate date={date} today={today} kind="deadline" />;
   const fact = (key: FieldKey, value: ReactNode): [string, ReactNode] => [
     t(`participant.fields.${key}`),
     value,
   ];
   return (
     <Card id="participant-stand" title={t("participant.overview.stand")}>
-      <Stack gap={6}>
+      <Track
+        title={t("participant.overview.tracks.main")}
+        tag={<StatusTag family="main" code={detail.status} />}
+        path={paths.main(taTg)}
+        current={detail.status}
+        label={(code) => t(`participants.statuses.${code as Detail["status"]}`)}
+        facts={[
+          fact("tgEntryDate", dates.tgEntryDate && formatDate(dates.tgEntryDate)),
+          fact("exitDate", dates.exitDate && formatDate(dates.exitDate)),
+          fact("withdrawnOn", dates.withdrawnOn && formatDate(dates.withdrawnOn)),
+          ...(taTg && !dates.tgEntryDate && dates.effectiveTgStart
+            ? [fact("tgStart", relative(dates.effectiveTgStart))]
+            : []),
+        ]}
+      />
+      <Track
+        title={t("participant.overview.tracks.profiling")}
+        tag={<StatusTag family="profiling" code={detail.profilingStatus} />}
+        path={paths.profiling}
+        current={detail.profilingStatus}
+        label={(code) => t(`participants.profilingStatuses.${code as Detail["profilingStatus"]}`)}
+        facts={[
+          [
+            t("participant.overview.profilingDoneOn"),
+            dates.profilingDoneOn && formatDate(dates.profilingDoneOn),
+          ],
+          ...(profilingDeadline && !dates.profilingDoneOn
+            ? [
+                [
+                  t(`worklist.deadlineKinds.${profilingDeadline.kind}`),
+                  relative(profilingDeadline.date),
+                ] as [string, ReactNode],
+              ]
+            : []),
+        ]}
+      />
+      {taTg && (
         <Track
-          track="main"
-          title={t("participant.overview.tracks.main")}
-          tag={<StatusTag family="main" code={detail.status} />}
-          path={paths.main(taTg)}
-          current={detail.status}
-          label={(code) => t(`participants.statuses.${code as Detail["status"]}`)}
-          facts={[
-            fact("tgEntryDate", dates.tgEntryDate && formatDate(dates.tgEntryDate)),
-            fact("exitDate", dates.exitDate && formatDate(dates.exitDate)),
-            fact("withdrawnOn", dates.withdrawnOn && formatDate(dates.withdrawnOn)),
-            ...(taTg && !dates.tgEntryDate && dates.effectiveTgStart
+          title={t("participant.overview.tracks.dsv")}
+          tag={<StatusTag family="dsv" code={detail.dsvStatus} />}
+          path={paths.dsv}
+          current={detail.dsvStatus}
+          label={(code) => t(`participants.dsvStatuses.${code as Detail["dsvStatus"]}`)}
+          facts={
+            // The key date while the DSV is open: the offer deadline, else the wave's.
+            detail.dsvStatus === "dsv_offered" || detail.dsvStatus === "not_offered"
               ? [
                   fact(
-                    "tgStart",
-                    <RelativeDate date={dates.effectiveTgStart} today={today} kind="deadline" />,
+                    "offerDeadline",
+                    offerDeadline
+                      ? relative(offerDeadline.date)
+                      : dates.offerDeadline && formatDate(dates.offerDeadline),
                   ),
+                  ...(detail.entryWave?.signingDeadline && !dates.offerDeadline
+                    ? [fact("signingDeadline", formatDate(detail.entryWave.signingDeadline))]
+                    : []),
                 ]
-              : []),
-          ]}
+              : []
+          }
         />
-        <Track
-          track="profiling"
-          title={t("participant.overview.tracks.profiling")}
-          tag={<StatusTag family="profiling" code={detail.profilingStatus} />}
-          path={paths.profiling}
-          current={detail.profilingStatus}
-          label={(code) => t(`participants.profilingStatuses.${code as Detail["profilingStatus"]}`)}
-          facts={[
-            [
-              t("participant.overview.profilingDoneOn"),
-              dates.profilingDoneOn && formatDate(dates.profilingDoneOn),
-            ],
-            ...(profilingDeadline && !dates.profilingDoneOn
-              ? [
-                  [
-                    t(`worklist.deadlineKinds.${profilingDeadline.kind}`),
-                    <RelativeDate
-                      key="deadline"
-                      date={profilingDeadline.date}
-                      today={today}
-                      kind="deadline"
-                    />,
-                  ] as [string, ReactNode],
-                ]
-              : []),
-          ]}
-        />
-        {taTg && (
-          <Track
-            track="dsv"
-            title={t("participant.overview.tracks.dsv")}
-            tag={<StatusTag family="dsv" code={detail.dsvStatus} />}
-            path={paths.dsv}
-            current={detail.dsvStatus}
-            label={(code) => t(`participants.dsvStatuses.${code as Detail["dsvStatus"]}`)}
-            facts={
-              // The key date while the DSV is open: the offer deadline, else the wave's.
-              detail.dsvStatus === "dsv_offered" || detail.dsvStatus === "not_offered"
-                ? [
-                    fact(
-                      "offerDeadline",
-                      offerDeadline ? (
-                        <RelativeDate date={offerDeadline.date} today={today} kind="deadline" />
-                      ) : (
-                        dates.offerDeadline && formatDate(dates.offerDeadline)
-                      ),
-                    ),
-                    ...(detail.entryWave?.signingDeadline && !dates.offerDeadline
-                      ? [fact("signingDeadline", formatDate(detail.entryWave.signingDeadline))]
-                      : []),
-                  ]
-                : []
-            }
-          />
-        )}
-      </Stack>
+      )}
     </Card>
   );
 }
 
-/** One track: its tag, where it stands on its own path, and its dates. */
+/** One track: its bar on its own path, its tag, and under them its step and its dates. */
 function Track({
-  track,
   title,
   tag,
   path,
@@ -243,7 +265,6 @@ function Track({
   label,
   facts,
 }: {
-  track: "main" | "profiling" | "dsv";
   title: string;
   tag: ReactNode;
   path: readonly string[];
@@ -256,59 +277,42 @@ function Track({
   const index = path.indexOf(current);
   const shown = facts.filter(([, value]) => value !== null && value !== undefined && value !== "");
   return (
-    <section className="tp-track" aria-label={title} data-track={track}>
-      <h3>{title}</h3>
-      <div>{tag}</div>
-      <p className="tp-track-step">
-        {index >= 0
-          ? t("participant.overview.step", { n: index + 1, total: path.length })
-          : t("participant.overview.offPath")}
-      </p>
-      {index >= 0 && (
-        <ol
-          className="tp-track-steps"
-          aria-label={t("participant.overview.steps", { track: title })}
-        >
-          {path.map((code, i) => (
-            <li
-              key={code}
-              className={i < index ? "tp-track-done" : i === index ? "tp-track-current" : undefined}
-              aria-current={i === index ? "step" : undefined}
-            >
-              {label(code)}
-              {i < index && (
-                <span className="tp-visually-hidden">{` (${t("participant.overview.done")})`}</span>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-      {shown.length > 0 && (
-        <dl className="tp-facts">
-          {shown.map(([name, value]) => (
-            <div key={name}>
-              <dt>{name}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </section>
+    <TrackBar title={title} steps={path.map(label)} current={index} tag={tag}>
+      {index >= 0
+        ? t("participant.overview.step", { n: index + 1, total: path.length })
+        : t("participant.overview.offPath")}
+      {shown.map(([name, value]) => (
+        <Fragment key={name}>
+          {" · "}
+          {name}
+          {": "}
+          {value}
+        </Fragment>
+      ))}
+    </TrackBar>
   );
 }
 
-/**
- * "Offen": the participation's open items in the work list's order (C2: `openSteps`), each with
- * a link to the tab or card that resolves it, and the prerequisite as text where the action
- * there is blocked (C1).
- */
-/** "Offen" shows this many items, the rest behind "Alle anzeigen". */
-const openShown = 5;
+/** "Als Nächstes" shows this many items, the rest behind "Alle n anzeigen". */
+const openShown = 3;
+const tierTone: Record<OpenStep["tier"], StatusTone> = {
+  1: "danger",
+  2: "warning",
+  3: "info",
+  4: "neutral",
+};
 
+/**
+ * "Als Nächstes": the participation's open items in the work list's order (C2: `openSteps`),
+ * each with its own action, the link to the tab or card that resolves it, and the prerequisite
+ * as text where the action there is blocked (C1).
+ */
 function OpenItems({ detail, taTg, row, today, href, onOpen, available }: OverviewProps) {
   const { t } = useTranslation();
   const [all, setAll] = useState(false);
   const targetName = useTargetName();
+  const text = useStepText();
+  const title = t("participant.overview.open");
   const blocked = (step: OpenStep, target: StepTarget): string | null => {
     if (!("anchor" in target) || target.anchor !== "participant-dates") return null;
     // The wave's choice or the contractual dates: their refusal code as the prerequisite;
@@ -325,94 +329,79 @@ function OpenItems({ detail, taTg, row, today, href, onOpen, available }: Overvi
       ? t(`participant.dates.refusals.${refusal}`)
       : null;
   };
-  let body: ReactNode;
-  switch (row.state) {
-    case "loading":
-      body = <Loading label={t("participant.overview.openLoading")} />;
-      break;
-    case "unavailable":
-      body = <p>{t("participant.overview.openUnavailable")}</p>;
-      break;
-    case "failed":
-      body = (
-        <Stack gap={3}>
-          <p role="alert">{t("participant.overview.openFailed")}</p>
-          <div>
+  if (row.state !== "loaded") {
+    return (
+      <NextSteps
+        title={title}
+        items={[]}
+        emptyText={t(
+          row.state === "loading"
+            ? "participant.overview.openLoading"
+            : row.state === "failed"
+              ? "participant.overview.openFailed"
+              : "participant.overview.openUnavailable",
+        )}
+        more={
+          row.state === "failed" && (
             <Button kind="tertiary" size="sm" onClick={row.retry}>
               {t("participant.overview.retry")}
             </Button>
-          </div>
-        </Stack>
-      );
-      break;
-    case "loaded": {
-      const steps = openSteps(row.item);
-      const shownSteps = all ? steps : steps.slice(0, openShown);
-      body =
-        steps.length === 0 ? (
-          <p>{t("participant.overview.nothingOpen")}</p>
-        ) : (
-          <Stack gap={3}>
-            <ol className="tp-open-items" id="participant-open-list">
-              {shownSteps.map((step, index) => {
-                const target = stepTarget(step);
-                // A card of `ta_tg` only, or a tab the viewer hasn't: the item is text only.
-                const linked =
-                  available(target) &&
-                  (taTg || !("anchor" in target) || target.anchor !== "participant-dates");
-                const reason = blocked(step, target);
-                return (
-                  <li key={`${step.source}-${step.kind}-${index}`}>
-                    <span>
-                      {step.tier === 1 && (
-                        <>
-                          <Tag type="red" size="sm">
-                            {t("worklist.overdueTag")}
-                          </Tag>{" "}
-                        </>
-                      )}
-                      <StepLabel step={step} today={today} />
-                    </span>
-                    {linked && (
-                      <a
-                        className="tp-open-item-link"
-                        href={href(target)}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          onOpen(target);
-                        }}
-                      >
-                        {t("participant.overview.goTo", { place: targetName(target) })}
-                      </a>
-                    )}
-                    {reason && <span className="tp-action-reason">{reason}</span>}
-                  </li>
-                );
-              })}
-            </ol>
-            {steps.length > openShown && (
-              <div>
-                <Button
-                  kind="ghost"
-                  size="sm"
-                  aria-expanded={all}
-                  aria-controls="participant-open-list"
-                  onClick={() => setAll(!all)}
-                >
-                  {all
-                    ? t("participant.overview.fewer")
-                    : t("participant.overview.all", { count: steps.length })}
-                </Button>
-              </div>
-            )}
-          </Stack>
-        );
-    }
+          )
+        }
+      />
+    );
   }
+  const steps = openSteps(row.item);
+  const shown = all ? steps : steps.slice(0, openShown);
   return (
-    <Card id="participant-open" title={t("participant.overview.open")}>
-      {body}
-    </Card>
+    <NextSteps
+      title={title}
+      emptyText={t("participant.overview.nothingOpen")}
+      summary={
+        steps.length > shown.length &&
+        t("participant.overview.openSummary", { shown: shown.length, count: steps.length })
+      }
+      more={
+        steps.length > openShown && (
+          <Button kind="ghost" size="sm" aria-expanded={all} onClick={() => setAll(!all)}>
+            {all
+              ? t("participant.overview.fewer")
+              : t("participant.overview.all", { count: steps.length })}
+          </Button>
+        )
+      }
+      items={shown.map((step, index) => {
+        const target = stepTarget(step);
+        const reason = blocked(step, target);
+        const { title: name, detail: when } = text(step, today);
+        return {
+          id: `${step.source}-${step.kind}-${index}`,
+          tone: tierTone[step.tier],
+          toneLabel: t(`participant.overview.tiers.${step.tier}`),
+          title: name,
+          detail: (when || reason) && (
+            <>
+              {when}
+              {when && reason && " · "}
+              {reason}
+            </>
+          ),
+          // A card of `ta_tg` only, or a tab the viewer hasn't: the item is text only.
+          action: available(target) &&
+            (taTg || !("anchor" in target) || target.anchor !== "participant-dates") && (
+              <Link
+                href={href(target)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onOpen(target);
+                }}
+              >
+                {t("participant.overview.goTo", { place: targetName(target) })}
+              </Link>
+            ),
+        };
+      })}
+    />
   );
 }
 
@@ -435,8 +424,7 @@ function Responsibility({
   return (
     <Card id="participant-responsibility" title={t("participant.overview.responsibility")}>
       <Stack gap={6}>
-        <section aria-label={t("participant.overview.nextAppointment")}>
-          <h3>{t("participant.overview.nextAppointment")}</h3>
+        <Section title={t("participant.overview.nextAppointment")} level={3}>
           <p>
             {row.state !== "loaded"
               ? null
@@ -447,7 +435,7 @@ function Responsibility({
                     time: berlinTime(next.startsAt),
                   })
                 : t("participant.overview.noAppointment")}{" "}
-            <a
+            <Link
               href={href({ tab: "appointments" })}
               onClick={(event) => {
                 event.preventDefault();
@@ -455,44 +443,64 @@ function Responsibility({
               }}
             >
               {t("participant.overview.allAppointments")}
-            </a>
+            </Link>
           </p>
-        </section>
-        <section aria-label={t("participant.assignments.title")}>
-          <h3>{t("participant.assignments.title")}</h3>
-          {detail.assignments.length === 0 ? (
-            <p>{t("participant.assignments.empty")}</p>
-          ) : (
-            <ul className="tp-plain-list">
-              {detail.assignments.map((a) => (
-                <li key={a.staffUserId}>{a.displayName}</li>
-              ))}
-            </ul>
-          )}
-          {detail.capabilities.assignParticipations && (
-            <div className="tp-button-row">
-              <Button kind="tertiary" size="sm" onClick={() => onPanel("assign")}>
-                {t("participant.assignments.edit")}
-              </Button>
-            </div>
-          )}
-        </section>
-        <section aria-label={t("participant.placementAgentur.title")}>
-          <h3>{t("participant.placementAgentur.title")}</h3>
-          <PlacementAgenturFacts detail={detail} />
-          {detail.capabilities.setPlacementAgentur && (
-            <div className="tp-button-row">
-              <Button kind="tertiary" size="sm" onClick={() => onPanel("agentur")}>
-                {t(
-                  detail.placementAgenturKey
-                    ? "participant.placementAgentur.change"
-                    : "participant.placementAgentur.choose",
-                )}
-              </Button>
-            </div>
-          )}
-        </section>
+        </Section>
+        <Section title={t("participant.assignments.title")} level={3}>
+          <Stack gap={3}>
+            <p>
+              {detail.assignments.length === 0
+                ? t("participant.assignments.empty")
+                : detail.assignments.map((a) => a.displayName).join(", ")}
+            </p>
+            {detail.capabilities.assignParticipations && (
+              <div>
+                <Button kind="tertiary" size="sm" onClick={() => onPanel("assign")}>
+                  {t("participant.assignments.edit")}
+                </Button>
+              </div>
+            )}
+          </Stack>
+        </Section>
+        <Section title={t("participant.placementAgentur.title")} level={3}>
+          <Stack gap={3}>
+            <PlacementAgenturFacts detail={detail} />
+            {detail.capabilities.setPlacementAgentur && (
+              <div>
+                <Button kind="tertiary" size="sm" onClick={() => onPanel("agentur")}>
+                  {t(
+                    detail.placementAgenturKey
+                      ? "participant.placementAgentur.change"
+                      : "participant.placementAgentur.choose",
+                  )}
+                </Button>
+              </div>
+            )}
+          </Stack>
+        </Section>
       </Stack>
+    </Card>
+  );
+}
+
+/** "Fristen": the deadlines of the work list's row, each relative and absolute (principle 5). */
+function Deadlines({ row, today }: { row: ItemState; today: string }) {
+  const { t } = useTranslation();
+  if (row.state !== "loaded") return null;
+  const { deadlines } = row.item;
+  return (
+    <Card id="participant-deadlines" title={t("participant.overview.deadlines")}>
+      {deadlines.length === 0 ? (
+        <p>{t("participant.overview.noDeadlines")}</p>
+      ) : (
+        <Facts
+          labels="above"
+          items={deadlines.map((deadline) => ({
+            label: t(`worklist.deadlineKinds.${deadline.kind}`),
+            value: <RelativeDate date={deadline.date} today={today} kind="deadline" />,
+          }))}
+        />
+      )}
     </Card>
   );
 }
@@ -503,67 +511,57 @@ const address = (value: Detail["person"]["address"]) =>
   value && `${value.street}, ${value.postalCode} ${value.city}, ${value.country}`;
 
 /** "Stammdaten": the person and contact facts the viewer may read; an absent one isn't shown. */
-function MasterData({ detail }: { detail: Detail }) {
+function MasterData({ detail, card }: { detail: Detail; card: CardState }) {
   const { t } = useTranslation();
   const { person } = detail;
+  const identity = facts(t, [
+    ["personnelNumber", person.personnelNumber],
+    ["lastName", person.lastName],
+    ["firstName", person.firstName],
+    ["birthDate", date(person.birthDate)],
+    ["oldEmploymentEndDate", date(person.oldEmploymentEndDate)],
+  ]);
+  const contact = facts(t, [
+    ["address", address(person.address)],
+    ["phone", person.phone],
+    ["mobile", person.mobile],
+    ["privateEmail", person.privateEmail],
+    ["workEmail", person.workEmail],
+  ]);
   return (
-    <Card id="participant-master-data" title={t("participant.overview.masterData")}>
-      <Grid columns={2}>
-        <Facts
-          title={t("participant.person")}
-          rows={[
-            ["personnelNumber", person.personnelNumber],
-            ["lastName", person.lastName],
-            ["firstName", person.firstName],
-            ["birthDate", date(person.birthDate)],
-            ["oldEmploymentEndDate", date(person.oldEmploymentEndDate)],
-          ]}
-        />
-        <Facts
-          title={t("participant.contact")}
-          rows={[
-            ["address", address(person.address)],
-            ["phone", person.phone],
-            ["mobile", person.mobile],
-            ["privateEmail", person.privateEmail],
-            ["workEmail", person.workEmail],
-          ]}
-        >
-          {person.workEmail !== undefined && <p>{t("participant.workEmailHint")}</p>}
-        </Facts>
-      </Grid>
-    </Card>
+    <SectionCard
+      id="participant-master-data"
+      title={t("participant.overview.masterData")}
+      summary={t("participant.overview.masterDataSummary")}
+      {...card}
+    >
+      <Stack gap={5}>
+        {identity.length > 0 && (
+          <Section title={t("participant.person")} level={3}>
+            <Facts items={identity} />
+          </Section>
+        )}
+        {contact.length > 0 && (
+          <Section title={t("participant.contact")} level={3}>
+            <Stack gap={3}>
+              <Facts items={contact} />
+              {person.workEmail !== undefined && <p>{t("participant.workEmailHint")}</p>}
+            </Stack>
+          </Section>
+        )}
+      </Stack>
+    </SectionCard>
   );
 }
 
-/** A titled list of label/value pairs; `undefined` (not readable) hides the row. */
-function Facts({
-  title,
-  rows,
-  children,
-}: {
-  title: string;
-  rows: [FieldKey, ReactNode][];
-  children?: ReactNode;
-}) {
-  const { t } = useTranslation();
-  const shown = rows.filter(([, value]) => value !== undefined);
-  if (shown.length === 0) return null;
-  return (
-    <section aria-label={title}>
-      <h3>{title}</h3>
-      <dl className="tp-facts">
-        {shown.map(([key, value]) => (
-          <div key={key}>
-            <dt>{t(`participant.fields.${key}`)}</dt>
-            <dd>{value === null || value === "" ? "—" : value}</dd>
-          </div>
-        ))}
-      </dl>
-      {children}
-    </section>
-  );
-}
+/** Label and value pairs of the participant's fields; `undefined` (not readable) hides the row. */
+const facts = (
+  t: (key: `participant.fields.${FieldKey}`) => string,
+  rows: [FieldKey, ReactNode][],
+): Fact[] =>
+  rows
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => ({ label: t(`participant.fields.${key}`), value }));
 
 /**
  * "Welle und Vertragsdaten" (process-and-lifecycle.md, Dates): the wave and its four dates, the
@@ -573,9 +571,11 @@ function Facts({
 function WaveAndDates({
   detail,
   onPanel,
+  card,
 }: {
   detail: Detail;
   onPanel: (panel: OverviewPanel) => void;
+  card: CardState;
 }) {
   const { t } = useTranslation();
   const { entryWave: wave, dates } = detail;
@@ -602,19 +602,21 @@ function WaveAndDates({
     detail.capabilities.assignEntryWave || (waveRefusal && waveRefusal !== "forbidden");
   const mayDates =
     detail.capabilities.setParticipationDates || (datesRefusal && datesRefusal !== "forbidden");
+  const period =
+    dates.effectiveTgStart && dates.effectiveTgEnd
+      ? `${formatDate(dates.effectiveTgStart)} – ${formatDate(dates.effectiveTgEnd)}`
+      : null;
   return (
-    <Card id="participant-dates" title={t("participant.waveAndDates")}>
+    <SectionCard
+      id="participant-dates"
+      title={t("participant.waveAndDates")}
+      summary={[wave?.code ?? t("participant.overview.noWave"), period].filter(Boolean).join(" · ")}
+      {...card}
+    >
       <Stack gap={5}>
-        <dl className="tp-facts">
-          {rows.map(([key, value]) => (
-            <div key={key}>
-              <dt>{t(`participant.fields.${key}`)}</dt>
-              <dd>{value === null || value === "" ? "—" : value}</dd>
-            </div>
-          ))}
-        </dl>
+        <Facts items={facts(t, rows)} />
         {(mayWave || mayDates) && (
-          <div className="tp-button-row">
+          <ButtonSet>
             {mayWave && (
               <ActionButton
                 kind="tertiary"
@@ -643,11 +645,11 @@ function WaveAndDates({
                 {t("participant.dates.open")}
               </ActionButton>
             )}
-          </div>
+          </ButtonSet>
         )}
         <Amendments detail={detail} />
       </Stack>
-    </Card>
+    </SectionCard>
   );
 }
 

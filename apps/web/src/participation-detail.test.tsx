@@ -10,6 +10,7 @@ import {
   renderApp,
   staffUsers,
   unpinnedConfig,
+  openCard,
 } from "./test-utils";
 
 // A participant's page (data-protection.md, "Participation detail") and the PL's wave choice.
@@ -126,12 +127,16 @@ describe("the participant page", () => {
     expect(
       within(contact).getByText("Musterstraße 1, 99999 Beispielstadt, DE"),
     ).toBeInTheDocument();
-    expect(within(contact).getAllByText("—")).toHaveLength(2);
+    expect(within(contact).getAllByText("–")).toHaveLength(2);
     const stand = await section("Stand");
     expect(
       within(within(stand).getByRole("region", { name: "Status" })).getAllByText("Importiert"),
     ).not.toHaveLength(0);
-    expect(within(await section("Welle und Vertragsdaten")).getByText("Welle")).toBeInTheDocument();
+    // The other cards are collapsed to their summary until opened.
+    const dates = await section("Welle und Vertragsdaten");
+    expect(within(dates).queryByText("Welle")).toBeNull();
+    await openCard("Welle und Vertragsdaten");
+    expect(within(dates).getByText("Welle")).toBeInTheDocument();
   });
 
   it("hides the fields the API didn't send; back office sees why there is no wave choice", async () => {
@@ -162,6 +167,7 @@ describe("the participant page", () => {
         refusals: { assignEntryWave: "status_not_open" },
       },
     );
+    await openCard("Welle und Vertragsdaten");
     expect(
       await screen.findByText("In diesem Status ändert sich die Welle nicht mehr."),
     ).toBeInTheDocument();
@@ -186,6 +192,7 @@ describe("the participant page", () => {
         refusals: { assignEntryWave: "individual_dates_set" },
       },
     );
+    await openCard("Welle und Vertragsdaten");
     const dates = await section("Welle und Vertragsdaten");
     expect(within(dates).getByText("W1 – Welle 1")).toBeInTheDocument();
     expect(within(dates).getByText("01.03.2091 (aus der Welle)")).toBeInTheDocument();
@@ -210,6 +217,7 @@ describe("the participant page", () => {
       [`PUT ${detailPath}/entry-wave`]: () =>
         json({ ...detail, entryWave: w1, capabilities: { assignEntryWave: true } }),
     });
+    await openCard("Welle und Vertragsdaten");
     const panel = await openPanel("Welle zuordnen");
     await userEvent.selectOptions(
       await within(panel).findByRole("combobox", { name: "Welle zuordnen" }),
@@ -234,6 +242,7 @@ describe("the participant page", () => {
           errors: [{ pointer: "", code: "dsv_already_offered", detail: "Refused" }],
         }),
     });
+    await openCard("Welle und Vertragsdaten");
     const panel = await openPanel("Welle zuordnen");
     await userEvent.selectOptions(
       await within(panel).findByRole("combobox", { name: "Welle zuordnen" }),
@@ -326,6 +335,7 @@ describe("activation details", () => {
       activationDetail,
     );
     const card = await section("Portalaktivierung und Datenschutzhinweis");
+    await openCard("Portalaktivierung und Datenschutzhinweis");
     expect(await within(card).findByText("Petra Projektleitung")).toBeInTheDocument();
     const panel = await openPanel("Persönlich senden");
     const send = within(panel).getByRole("button", { name: "Aktivierungslink senden" });
@@ -374,6 +384,7 @@ describe("activation details", () => {
       { ...activationDetail, activationStatus: used.status },
     );
     const card = await section("Portalaktivierung und Datenschutzhinweis");
+    await openCard("Portalaktivierung und Datenschutzhinweis");
     expect(await within(card).findByText("Petra Projektleitung")).toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: "Code widerrufen" })).toBeNull();
     const panel = await openPanel("Datenschutzhinweis ausgedruckt persönlich übergeben");
@@ -428,6 +439,7 @@ describe("an activated account (ADR-0007, Q123)", () => {
       },
     );
     const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    await openCard("Portalaktivierung und Datenschutzhinweis");
     expect(
       await within(panel).findByText("Lichtbildausweis (kein Geburtsdatum hinterlegt)"),
     ).toBeInTheDocument();
@@ -488,6 +500,7 @@ describe("an activated account (ADR-0007, Q123)", () => {
       },
     );
     await section("Portalaktivierung und Datenschutzhinweis");
+    await openCard("Portalaktivierung und Datenschutzhinweis");
     const panel = await openPanel(
       "Zugang wiederherstellen",
       "Zugang wiederherstellen (Zugang verloren)",
@@ -566,6 +579,7 @@ describe("an activated account (ADR-0007, Q123)", () => {
       },
     );
     const card = await section("Portalaktivierung und Datenschutzhinweis");
+    await openCard("Portalaktivierung und Datenschutzhinweis");
     expect(await within(card).findByText(/Gesperrt seit 23\.10\.2026/)).toBeInTheDocument();
     const panel = await openPanel(
       "Zugang wiederherstellen",

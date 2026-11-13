@@ -14,9 +14,10 @@ import {
   worklistItem,
 } from "./test-utils";
 
-// The participant page as the plan of Slice 6b lays it out (6b-5): the header and its way back to
-// the work list (C6, AC 4), the three tracks (C3, AC 20), "Offen" in C2's order with its links and
-// C1's prerequisites, "Handlungsbedarf" and the timeline's list and keyboard path (D12).
+// The participant page (ui-patterns.md, the participant page): the header with its way back to
+// the work list (C6), its key facts and the one primary action, the three tracks as three bars
+// (C3), "Als Nächstes" in C2's order with its links and C1's prerequisites, the cards collapsed
+// to their summary, "Handlungsbedarf" and the timeline's list and keyboard path.
 
 const participationId = "00000000-0000-4000-a000-000000000001";
 const projectPath = `/api/v1/projects/${project.id}`;
@@ -167,12 +168,72 @@ describe("the participant page header", () => {
     await waitFor(() => expect(document.title).toContain("Teilnehmende Person"));
     expect(document.title).not.toMatch(/Beispiel|Erika|BSP-0001/);
     expect(screen.getByText("Personalnummer BSP-0001 · Welle W1")).toBeInTheDocument();
-    const header = document.querySelector(".tp-page-header")!;
+    const header = document.querySelector(".tp-detail-header")!;
     expect([...header.querySelectorAll(".tp-status-tag")].map((tag) => tag.textContent)).toEqual([
       "Status: Informiert",
       "Profiling: In Arbeit",
       "DSV: Angeboten",
     ]);
+  });
+
+  it("shows at most five key facts, each from what the page already loads", async () => {
+    setup({}, { ...detail, assignments: [{ staffUserId: "s1", displayName: "Bernd Beratung" }] });
+    await screen.findByRole("heading", { level: 1, name: "Beispiel, Erika" });
+    const header = document.querySelector<HTMLElement>(".tp-detail-header")!;
+    // The next appointment is the work list's row; it joins the facts once the row is there.
+    await within(header).findByText("Nächster Termin");
+    const facts = within(header)
+      .getAllByRole("term")
+      .map((term) => `${term.textContent}: ${term.nextElementSibling!.textContent}`);
+    expect(facts).toEqual([
+      "TG-Beginn: 01.12.2026",
+      "DSV-Angebotsfrist: seit 2 Tagen überfällig · 20.10.2026",
+      "Beratung: Bernd Beratung",
+      "Nächster Termin: 03.11.2026, 10:00",
+      "Portal: Kein Code",
+    ]);
+  });
+
+  it("has one primary action: the next step where the viewer may take it, else none", async () => {
+    // The next step is the overdue offer deadline, resolved in "Welle und Vertragsdaten", whose
+    // change is blocked for this viewer: no primary action, never the second item's.
+    const { router } = setup();
+    const open = await region("Als Nächstes");
+    await within(open).findAllByRole("listitem");
+    const header = document.querySelector<HTMLElement>(".tp-detail-header")!;
+    expect(within(header).queryByRole("button", { name: /Nächster Schritt/ })).toBeNull();
+    expect(header.querySelectorAll(".cds--btn--primary")).toHaveLength(0);
+    expect(router.state.location.hash).toBe("");
+  });
+
+  it("opens the place of the next step from the primary action", async () => {
+    const asu = { ...row, deadlines: [{ kind: "asu_due", date: "2026-10-20", state: "overdue" }] };
+    const { router } = setup({ [`GET ${projectPath}/worklist`]: () => json(worklist([asu])) });
+    const primary = await screen.findByRole("button", { name: "Nächster Schritt: Arbeitsuche" });
+    const header = document.querySelector<HTMLElement>(".tp-detail-header")!;
+    expect(header.querySelectorAll(".cds--btn--primary")).toHaveLength(1);
+    await userEvent.click(primary);
+    await waitFor(() => expect(router.state.location.search).toEqual({ tab: "asu" }));
+  });
+
+  it("offers the next step of a card only with the capability its action needs", async () => {
+    setup({}, { ...detail, capabilities: { ...detail.capabilities, setParticipationDates: true } });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Nächster Schritt: Welle und Vertragsdaten" }),
+    );
+    // The card the step points to opens.
+    const card = await region("Welle und Vertragsdaten");
+    expect(await within(card).findByText("Unterschriftsfrist")).toBeVisible();
+  });
+
+  it("has no primary action without the tab of the next step, or without the work list", async () => {
+    const asu = { ...row, deadlines: [{ kind: "asu_due", date: "2026-10-20", state: "overdue" }] };
+    setup(
+      { [`GET ${projectPath}/worklist`]: () => json(worklist([asu])) },
+      { ...detail, capabilities: { ...detail.capabilities, viewAsu: false } },
+    );
+    await within(await region("Als Nächstes")).findAllByRole("listitem");
+    expect(screen.queryByRole("button", { name: /Nächster Schritt/ })).toBeNull();
   });
 
   it("puts the actions the capabilities allow under Aktionen, and reminds this one person", async () => {
@@ -219,7 +280,7 @@ describe("the participant page header", () => {
 });
 
 describe("the overview's Stand (C3)", () => {
-  it("shows the three tracks as separate summaries, never one sequence across them", async () => {
+  it("shows the three tracks as three separate bars, never one sequence across them", async () => {
     setup();
     const stand = await region("Stand");
     const tracks = within(stand).getAllByRole("region");
@@ -235,8 +296,14 @@ describe("the overview's Stand (C3)", () => {
     }
     expect(document.querySelector(".cds--progress")).toBeNull();
     const profiling = tracks[1]!;
-    expect(within(profiling).getByText("Schritt 3 von 4")).toBeInTheDocument();
-    expect(within(profiling).getByText("In Arbeit", { selector: "li" })).toHaveAttribute(
+    expect(within(profiling).getByText(/Schritt 3 von 4/)).toBeInTheDocument();
+    const steps = within(profiling).getByRole("list", { name: "Schritte: Profiling" });
+    expect(
+      within(steps)
+        .getAllByRole("listitem")
+        .map((step) => step.textContent),
+    ).toEqual(["Nicht begonnen (erledigt)", "Angenommen (erledigt)", "In Arbeit", "Abgeschlossen"]);
+    expect(within(steps).getByText("In Arbeit").closest("li")).toHaveAttribute(
       "aria-current",
       "step",
     );
@@ -259,30 +326,34 @@ describe("the overview's Stand (C3)", () => {
     ).toEqual(["Status", "Profiling"]);
     expect(
       within(within(stand).getByRole("region", { name: "Status" })).getByText(
-        "Außerhalb der regulären Schrittfolge",
+        /Außerhalb der regulären Schrittfolge/,
       ),
     ).toBeInTheDocument();
   });
 });
 
-describe("the overview's Offen (C2, C1)", () => {
+describe("the overview's Als Nächstes (C2, C1)", () => {
   it("lists the open items in the work list's order, each linking to its tab", async () => {
     const { router } = setup();
-    const open = await region("Offen");
+    const open = await region("Als Nächstes");
     const items = await within(open).findAllByRole("listitem");
+    // Three of the four, each with what its tone means as text and its date as the detail.
     expect(items.map((item) => item.textContent)).toEqual([
-      expect.stringMatching(/^Überfällig.*DSV-Angebotsfrist: seit 2 Tagen überfällig/),
-      expect.stringMatching(/^Nachweis ungültig \(seit 01\.10\.2026\)/),
-      expect.stringMatching(/^Arbeitsuche fällig: in 8 Tagen/),
-      expect.stringMatching(/^Mobilnummer fehlt/),
+      expect.stringMatching(/^Überfällig: DSV-Angebotsfristseit 2 Tagen überfällig · 20\.10\.2026/),
+      expect.stringMatching(/^Offen: Nachweis ungültig \(seit 01\.10\.2026\)/),
+      expect.stringMatching(/^Anstehend: Arbeitsuche fälligin 8 Tagen/),
     ]);
+    expect(within(open).getByText("3 von 4 offenen Punkten")).toBeVisible();
+    await userEvent.click(within(open).getByRole("button", { name: "Alle 4 anzeigen" }));
+    items.push(within(open).getAllByRole("listitem")[3]!);
+    expect(items[3]).toHaveTextContent(/^Angabe oder Unterlage fehlt: Mobilnummer fehlt/);
     expect(within(items[1]!).getByRole("link", { name: "Zu „Unterlagen“" })).toBeInTheDocument();
     expect(within(items[3]!).getByRole("link", { name: "Zu „Selbstauskunft“" })).toBeVisible();
     await userEvent.click(within(items[2]!).getByRole("link", { name: "Zu „Arbeitsuche“" }));
     await waitFor(() => expect(router.state.location.search).toEqual({ tab: "asu" }));
   });
 
-  it("shows five items and the rest behind a disclosure", async () => {
+  it("shows three items, each with its own action, and the rest behind a disclosure", async () => {
     const many = {
       ...row,
       actions: ["a", "b", "c", "d", "e", "f"].map((key) => ({
@@ -292,8 +363,10 @@ describe("the overview's Offen (C2, C1)", () => {
       })),
     };
     setup({ [`GET ${projectPath}/worklist`]: () => json(worklist([many])) });
-    const open = await region("Offen");
-    expect(await within(open).findAllByRole("listitem")).toHaveLength(5);
+    const open = await region("Als Nächstes");
+    const first = await within(open).findAllByRole("listitem");
+    expect(first).toHaveLength(3);
+    for (const item of first) expect(within(item).getAllByRole("link")).toHaveLength(1);
     const more = within(open).getByRole("button", { name: "Alle 9 anzeigen" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(more);
@@ -306,7 +379,7 @@ describe("the overview's Offen (C2, C1)", () => {
 
   it("names the prerequisite of a blocked action as text (C1)", async () => {
     setup();
-    const open = await region("Offen");
+    const open = await region("Als Nächstes");
     const [overdue] = await within(open).findAllByRole("listitem");
     // The offer deadline is resolved in "Welle und Vertragsdaten", whose change is blocked.
     expect(
@@ -317,7 +390,7 @@ describe("the overview's Offen (C2, C1)", () => {
 
   it("links no tab the viewer doesn't have", async () => {
     setup({}, { ...detail, capabilities: { ...detail.capabilities, viewAsu: false } });
-    const open = await region("Offen");
+    const open = await region("Als Nächstes");
     const items = await within(open).findAllByRole("listitem");
     expect(within(items[2]!).queryByRole("link")).toBeNull();
   });
@@ -325,7 +398,7 @@ describe("the overview's Offen (C2, C1)", () => {
   it("says why there is nothing to list without the work list (403)", async () => {
     setup({ [`GET ${projectPath}/worklist`]: () => problem(403, "forbidden") });
     expect(
-      await within(await region("Offen")).findByText(/die Ihre Rolle nicht sieht/),
+      await within(await region("Als Nächstes")).findByText(/die Ihre Rolle nicht sieht/),
     ).toBeInTheDocument();
   });
 

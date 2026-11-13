@@ -3,6 +3,7 @@ import {
   ActionButton,
   Button,
   ButtonSet,
+  Card,
   CountTile,
   CountTiles,
   DataTable,
@@ -16,10 +17,12 @@ import {
   RelativeDate,
   Section,
   SectionCard,
+  Split,
   Stack,
   StatusTag,
   StepList,
   TilesSkeleton,
+  TrackBar,
   type DataColumn,
 } from "@transfer/ui";
 import { kit, kitToday } from "../components/ui-kit-fixtures";
@@ -226,6 +229,34 @@ function UiKit() {
               ),
             }))}
           />
+        </Section>
+        <Section title={kit.sections.trackBar}>
+          <Card title={kit.sections.trackBar} level={3}>
+            {kit.tracks.map((track) => (
+              <TrackBar
+                key={track.title}
+                title={track.title}
+                steps={track.steps}
+                current={track.current}
+                tag={
+                  track.family === "main" ? (
+                    <StatusTag family="main" code={track.code} />
+                  ) : track.family === "profiling" ? (
+                    <StatusTag family="profiling" code={track.code} />
+                  ) : (
+                    <StatusTag family="dsv" code={track.code} />
+                  )
+                }
+              >
+                {track.detail}
+              </TrackBar>
+            ))}
+          </Card>
+        </Section>
+        <Section title={kit.sections.split}>
+          <Split side={<Card title={kit.split.side} level={3} />}>
+            <Card title={kit.split.main} level={3} />
+          </Split>
         </Section>
         <Section title={kit.sections.dataTable}>
           <Stack gap={5}>

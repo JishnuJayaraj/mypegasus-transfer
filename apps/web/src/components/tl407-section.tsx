@@ -14,7 +14,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, useApi } from "../api";
 import { documentNavigation } from "./documents-tab";
-import { SignedScans } from "./tl407-scans";
 
 // The section "Profilingbogen (TL 407)" of the tab "Profiling" (data-protection.md, generated
 // forms and the readiness projection; ba-forms.md): the readiness as the API projects it for the
@@ -43,28 +42,57 @@ function failureOf(error: unknown): Failure {
 
 const readinessPath = "/api/v1/participations/{participationId}/forms/tl407/readiness";
 
-export function Tl407Section({ view }: { view: View }) {
+/** Where the fields a step waits for are listed, and the way there (the step list's link). */
+interface MissingElsewhere {
+  /** The keys the self-service step lists as missing: never listed here again. */
+  listed: ReadonlySet<string>;
+  /** That step's name. */
+  missingStep: string;
+  onShowMissing: () => void;
+}
+
+export function Tl407Form({ view, ...elsewhere }: { view: View } & MissingElsewhere) {
   const { t } = useTranslation();
   const { readTl407Readiness, readAssessment } = view.capabilities;
   // The profiler, who reads section C, gets the full check; the PL the summary.
   return (
-    <section className="tp-section" aria-labelledby="profiling-tl407">
-      <h2 id="profiling-tl407">{t("profiling.tl407.title")}</h2>
+    <Stack gap={6}>
       <p>{t("profiling.tl407.intro")}</p>
-      <Stack gap={6}>
-        {readTl407Readiness && readAssessment && <ProfilerReadinessBlock view={view} />}
-        {readTl407Readiness && !readAssessment && (
-          <SummaryBlock participationId={view.participationId} />
-        )}
-        <GeneratedForms view={view} />
-        <SignedScans key={view.tl407SignedOn ?? "unsigned"} view={view} />
-      </Stack>
-    </section>
+      {readTl407Readiness && readAssessment && (
+        <ProfilerReadinessBlock view={view} {...elsewhere} />
+      )}
+      {readTl407Readiness && !readAssessment && (
+        <SummaryBlock participationId={view.participationId} {...elsewhere} />
+      )}
+      <GeneratedForms view={view} />
+    </Stack>
+  );
+}
+
+/** The missing fields the self-service step already lists: their number and the way there. */
+function ListedElsewhere({
+  count,
+  missingStep,
+  onShowMissing,
+}: { count: number } & Omit<MissingElsewhere, "listed">) {
+  const { t } = useTranslation();
+  if (count === 0) return null;
+  return (
+    <p>
+      {t("profiling.steps.missingElsewhere", { count, step: missingStep })}{" "}
+      <Button kind="ghost" size="sm" onClick={onShowMissing}>
+        {t("profiling.steps.showMissing", { step: missingStep })}
+      </Button>
+    </p>
   );
 }
 
 /** The PL's summary: presence only, loaded at once (no logged read behind it). */
-function SummaryBlock({ participationId }: { participationId: string }) {
+function SummaryBlock({
+  participationId,
+  listed,
+  ...elsewhere
+}: { participationId: string } & MissingElsewhere) {
   const { t } = useTranslation();
   const api = useApi();
   const query = useQuery({
@@ -78,6 +106,7 @@ function SummaryBlock({ participationId }: { participationId: string }) {
   if (query.isPending) return <Loading label={t("profiling.tl407.loading")} />;
   if (query.isError) return <p role="alert">{t("profiling.tl407.readinessFailed")}</p>;
   const summary = query.data;
+  const own = summary.missing.filter((item) => !listed.has(item.key));
   return (
     <div>
       <h3>{t("profiling.tl407.readiness")}</h3>
@@ -85,12 +114,17 @@ function SummaryBlock({ participationId }: { participationId: string }) {
         <p>{t("profiling.tl407.summaryReady")}</p>
       ) : summary.missing.length > 0 ? (
         <>
-          <p>{t("profiling.tl407.summaryMissing")}</p>
-          <ul className="tp-list">
-            {summary.missing.map((item) => (
-              <li key={item.key}>{item.label}</li>
-            ))}
-          </ul>
+          <ListedElsewhere count={summary.missing.length - own.length} {...elsewhere} />
+          {own.length > 0 && (
+            <>
+              <p>{t("profiling.tl407.summaryMissing")}</p>
+              <ul className="tp-list">
+                {own.map((item) => (
+                  <li key={item.key}>{item.label}</li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       ) : (
         <p>{t("profiling.tl407.summaryNotReady")}</p>
@@ -101,7 +135,7 @@ function SummaryBlock({ participationId }: { participationId: string }) {
 }
 
 /** The profiler's check on "Prüfen", the confirmations and "Erzeugen". */
-function ProfilerReadinessBlock({ view }: { view: View }) {
+function ProfilerReadinessBlock({ view, ...elsewhere }: { view: View } & MissingElsewhere) {
   const { t } = useTranslation();
   const api = useApi();
   const showToast = useToast();
@@ -182,6 +216,7 @@ function ProfilerReadinessBlock({ view }: { view: View }) {
         </div>
         {readiness && (
           <ReadinessResult
+            {...elsewhere}
             readiness={readiness}
             confirmed={confirmed}
             onConfirm={(code, on) =>
@@ -207,16 +242,22 @@ function ProfilerReadinessBlock({ view }: { view: View }) {
   );
 }
 
-function ReadinessResult(props: {
-  readiness: ProfilerReadiness;
-  confirmed: readonly WarningCode[];
-  onConfirm: (code: WarningCode, on: boolean) => void;
-}) {
+function ReadinessResult(
+  props: {
+    readiness: ProfilerReadiness;
+    confirmed: readonly WarningCode[];
+    onConfirm: (code: WarningCode, on: boolean) => void;
+  } & MissingElsewhere,
+) {
   const { t } = useTranslation();
   const { readiness, confirmed } = props;
   const row = (issue: { row?: number }) =>
     issue.row === undefined ? "" : ` (${t("profiling.tl407.row", { row: issue.row + 1 })})`;
   const warnings = [...new Map(readiness.warnings.map((each) => [each.code, each])).values()];
+  // A missing field the self-service step lists is counted here, never listed again.
+  const elsewhere = (issue: ProfilerReadiness["errors"][number]) =>
+    issue.code === "required_missing" && props.listed.has(issue.key);
+  const errors = readiness.errors.filter((issue) => !elsewhere(issue));
   return (
     <Stack gap={4}>
       {readiness.formVersion === null ? (
@@ -228,11 +269,16 @@ function ReadinessResult(props: {
           })}
         </p>
       )}
-      {readiness.errors.length > 0 && (
+      <ListedElsewhere
+        count={readiness.errors.length - errors.length}
+        missingStep={props.missingStep}
+        onShowMissing={props.onShowMissing}
+      />
+      {errors.length > 0 && (
         <div>
           <h4>{t("profiling.tl407.errorsTitle")}</h4>
           <ul className="tp-list">
-            {readiness.errors.map((issue) => (
+            {errors.map((issue) => (
               <li key={`${issue.code}-${issue.key}-${issue.row ?? ""}`}>
                 <strong>{`${issue.label}${row(issue)}:`}</strong>{" "}
                 {t(`profiling.tl407.errors.${issue.code}`)}

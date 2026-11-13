@@ -1,6 +1,7 @@
 import type { components } from "@transfer/api-client";
 import type { OpenStep } from "@transfer/domain";
 import { formatDate, RelativeDate } from "@transfer/ui";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelfServiceLabel } from "./self-service-tab";
 
@@ -13,10 +14,31 @@ type CaseItemKind = Exclude<
   "knowledge_date_missing"
 >;
 
+/** The label of an item without a date of its own to count from (tiers 2 and 4). */
+function usePlainLabel() {
+  const { t } = useTranslation();
+  const label = useSelfServiceLabel();
+  return (step: Exclude<OpenStep, { source: "deadline" | "appointment" }>): string => {
+    switch (step.source) {
+      case "case":
+        // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
+        return step.kind === "knowledge_date_missing"
+          ? t("worklist.knowledgeDateMissing", { date: formatDate(step.date) })
+          : t(`worklist.caseItems.${step.kind as CaseItemKind}`, { date: formatDate(step.date) });
+      case "agentur":
+        return t(`worklist.agenturItems.${step.kind}`, { date: formatDate(step.date) });
+      case "flag":
+        return t(`worklist.flags.${step.kind}`);
+      case "action":
+        return `${label(step.action.key)} ${t(`worklist.actionStates.${step.action.state}`)}`;
+    }
+  };
+}
+
 /** One open item's label; tiers 1 and 3 with their relative and absolute date. */
 export function StepLabel({ step, today }: { step: OpenStep; today: string }) {
   const { t } = useTranslation();
-  const label = useSelfServiceLabel();
+  const plain = usePlainLabel();
   switch (step.source) {
     case "deadline":
       // The kind, then relative and absolute date (ui-patterns.md, principle 5).
@@ -34,18 +56,34 @@ export function StepLabel({ step, today }: { step: OpenStep; today: string }) {
           <RelativeDate date={step.date} today={today} kind="event" />
         </>
       );
-    case "case":
-      // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
-      return step.kind === "knowledge_date_missing"
-        ? t("worklist.knowledgeDateMissing", { date: formatDate(step.date) })
-        : t(`worklist.caseItems.${step.kind as CaseItemKind}`, { date: formatDate(step.date) });
-    case "agentur":
-      return t(`worklist.agenturItems.${step.kind}`, { date: formatDate(step.date) });
-    case "flag":
-      return t(`worklist.flags.${step.kind}`);
-    case "action":
-      return `${label(step.action.key)} ${t(`worklist.actionStates.${step.action.state}`)}`;
+    default:
+      return plain(step);
   }
+}
+
+/**
+ * One open item as a title and one line of detail (the participant overview's "Als Nächstes"):
+ * a dated item's date is the detail, relative and absolute (ui-patterns.md, principle 5).
+ */
+export function useStepText() {
+  const { t } = useTranslation();
+  const plain = usePlainLabel();
+  return (step: OpenStep, today: string): { title: string; detail?: ReactNode } => {
+    switch (step.source) {
+      case "deadline":
+        return {
+          title: `${t(`worklist.deadlineKinds.${step.kind}`)}${step.final ? ` (${t("worklist.deadlineFinal")})` : ""}`,
+          detail: <RelativeDate date={step.date} today={today} kind="deadline" />,
+        };
+      case "appointment":
+        return {
+          title: `${t(`worklist.appointmentItems.${step.kind}`)}: ${t(`appointments.kinds.${step.appointmentKind}`)}`,
+          detail: <RelativeDate date={step.date} today={today} kind="event" />,
+        };
+      default:
+        return { title: plain(step) };
+    }
+  };
 }
 
 /** A tab of the participant page that resolves an item. */

@@ -12,29 +12,41 @@ import {
   parseDisplayDate,
   RadioButton,
   RadioButtonGroup,
+  Section,
   Select,
   SelectItem,
   SimpleTable,
   Stack,
+  StepList,
   TextArea,
   TextInput,
   useToast,
+  type Step,
 } from "@transfer/ui";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { participationProfilingQuery, participationQuery, useApi } from "../api";
+import {
+  participationProfilingQuery,
+  participationQuery,
+  participationSelfServiceQuery,
+  useApi,
+} from "../api";
 import { ReloadNotice, useDraft } from "./draft";
 import { useCorrectionRequest } from "./evidence-correction";
 import { ProfilingException } from "./profiling-exception";
 import { SelfServiceTab } from "./self-service-tab";
-import { Tl407Section } from "./tl407-section";
+import { SignedScans } from "./tl407-scans";
+import { Tl407Form } from "./tl407-section";
 import { Tl407Submission } from "./tl407-submission";
 
-// The tab "Profiling" (process-and-lifecycle.md and data-protection.md, the profiling record):
-// the track and its steps, the sessions, section B as the tab "Selbstauskunft" shows it with
-// "Im assistierten Modus ergänzen"; for the assigned consultant the unemployment period, section C
-// with p. 7 and the pending declarations to the BA; the TL 407 (tl407-section.tsx). Every button
-// follows the API's capabilities.
+// The tab "Profiling" (process-and-lifecycle.md and data-protection.md, the profiling record;
+// ui-patterns.md, the step list in use): the steps of the profiling track as a step list, each
+// with its state and one line of status, the current one open. The status, the sessions, section
+// B as the tab "Selbstauskunft" shows it with "Im assistierten Modus ergänzen" and, for the
+// assigned consultant, the unemployment period; section C; the pending declarations to the BA;
+// the TL 407 (tl407-section.tsx), its signed paper and its submission; below the steps the
+// exception. A missing field is listed once, under the self-service step; the step that waits
+// for it names that step. Every button follows the API's capabilities.
 // Section C and the unemployment period are loaded on "Anzeigen" from their logged routes and kept
 // only in this component's state, never in the query cache.
 
@@ -56,36 +68,162 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
   const { t } = useTranslation();
   const api = useApi();
   const query = useQuery(participationProfilingQuery(api, detail.id));
+  // The self-service step's own read (self-service-tab.tsx), for what is missing there.
+  const selfService = useQuery(participationSelfServiceQuery(api, detail.id));
+  const [chosen, setChosen] = useState<string | null>(null);
   if (query.isPending) return <Loading label={t("profiling.loading")} />;
   if (query.isError) {
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return <p role="alert">{t(forbidden ? "profiling.forbidden" : "profiling.failed")}</p>;
   }
   const view = query.data;
+  const missing = selfService.data && new Set(selfService.data.missing.map((item) => item.key));
+  const listed = missing ?? new Set<string>();
+  const selfServiceTitle = t("profiling.selfService.title");
+  const tl407 =
+    view.capabilities.readTl407Readiness ||
+    view.tl407Forms.length > 0 ||
+    view.tl407Scans.length > 0;
+  const form = view.tl407Forms.find((each) => each.latest);
+  const { attempts, next } = view.tl407Submission;
+  const recorded = view.assessment?.recorded.length ?? 0;
+  const declared =
+    view.declarations?.jobboerseChoice != null && view.declarations.baContactConsent != null;
+  type Entry = Omit<Step, "state"> & { state: "done" | "open" | "blocked" };
+  const entries: (Entry | false | undefined)[] = [
+    {
+      id: "status",
+      title: t("profiling.status.title"),
+      state: ["not_started", "profiling_declined"].includes(view.profilingStatus) ? "open" : "done",
+      status: t(`participants.profilingStatuses.${view.profilingStatus}`),
+      children: <StatusSection view={view} detail={detail} projectId={projectId} />,
+    },
+    {
+      id: "sessions",
+      title: t("profiling.sessions.title"),
+      state: view.sessions.length > 0 ? "done" : "open",
+      status:
+        view.sessions.length > 0
+          ? t("profiling.steps.sessions", { count: view.sessions.length })
+          : t("profiling.steps.noSessions"),
+      children: <SessionsSection view={view} />,
+    },
+    {
+      id: "self-service",
+      title: selfServiceTitle,
+      state: missing?.size === 0 ? "done" : "open",
+      status:
+        missing &&
+        (missing.size > 0
+          ? t("profiling.steps.missing", { count: missing.size })
+          : t("profiling.steps.complete")),
+      children: (
+        <Stack gap={6}>
+          <p>{t("profiling.selfService.intro")}</p>
+          <SelfServiceTab
+            detail={detail}
+            projectId={projectId}
+            startLabel={t("participant.selfService.startAssisted")}
+            missingOnce
+          />
+          {view.unemploymentPeriodRecorded !== undefined &&
+            view.capabilities.readUnemploymentPeriod && <UnemploymentSection view={view} />}
+        </Stack>
+      ),
+    },
+    view.capabilities.readAssessment &&
+      view.assessment && {
+        id: "assessment",
+        title: t("profiling.assessment.title"),
+        state: recorded > 0 ? "done" : "open",
+        status:
+          recorded > 0
+            ? t("profiling.steps.assessment", { count: recorded })
+            : t("profiling.steps.noAssessment"),
+        children: <AssessmentSection view={view} />,
+      },
+    view.declarations && {
+      id: "declarations",
+      title: t("profiling.declarations.title"),
+      state: declared ? "done" : "open",
+      status: t(
+        declared ? "profiling.steps.declarationsRecorded" : "profiling.steps.declarationsOpen",
+      ),
+      children: <DeclarationsSection view={view} />,
+    },
+    tl407 && {
+      id: "tl407",
+      title: t("profiling.tl407.title"),
+      state: form ? "done" : "open",
+      status: form
+        ? t("profiling.steps.formGenerated", { date: formatDate(form.generatedAt.slice(0, 10)) })
+        : t("profiling.steps.noForm"),
+      children: (
+        <Tl407Form
+          view={view}
+          listed={listed}
+          missingStep={selfServiceTitle}
+          onShowMissing={() => setChosen("self-service")}
+        />
+      ),
+    },
+    tl407 && {
+      id: "scans",
+      title: t("profiling.scans.title"),
+      state: view.tl407SignedOn ? "done" : form || view.tl407Scans.length > 0 ? "open" : "blocked",
+      status: view.tl407SignedOn
+        ? t("profiling.steps.signed", { date: formatDate(view.tl407SignedOn) })
+        : view.tl407Scans.length > 0
+          ? t("profiling.steps.scans", { count: view.tl407Scans.length })
+          : t(form ? "profiling.steps.noScan" : "profiling.steps.waitsForForm"),
+      children: <SignedScans key={view.tl407SignedOn ?? "unsigned"} view={view} />,
+    },
+    {
+      id: "submission",
+      title: t("profiling.submission.title"),
+      state: next ? "open" : attempts.length > 0 ? "done" : "blocked",
+      status: next
+        ? t("profiling.steps.submissionOpen")
+        : attempts.length > 0
+          ? t("profiling.steps.submitted", { date: formatDate(attempts.at(-1)!.submittedOn) })
+          : t("profiling.steps.submissionWaits"),
+      children:
+        next === null && attempts.length === 0 ? (
+          <p>{t("profiling.steps.submissionWaits")}</p>
+        ) : (
+          <Tl407Submission view={view} />
+        ),
+    },
+  ];
+  // The current step: the first that is neither done nor waiting for another; none once the
+  // participation is closed (the list then starts on its first step).
+  const shown = entries.filter((entry): entry is Entry => Boolean(entry));
+  const current = view.closed ? undefined : shown.find((entry) => entry.state === "open");
+  const steps: Step[] = shown.map((entry) =>
+    entry === current ? { ...entry, state: "current" } : entry,
+  );
   return (
-    <Stack gap={7}>
+    <Stack gap={6}>
       {view.closed && (
         <InlineNotification kind="info" title={t("profiling.closed")} hideCloseButton lowContrast />
       )}
-      <StatusSection view={view} detail={detail} projectId={projectId} />
-      <SessionsSection view={view} />
-      <section className="tp-section" aria-labelledby="profiling-self-service">
-        <h2 id="profiling-self-service">{t("profiling.selfService.title")}</h2>
-        <p>{t("profiling.selfService.intro")}</p>
-        <SelfServiceTab
-          detail={detail}
-          projectId={projectId}
-          startLabel={t("participant.selfService.startAssisted")}
+      {/* Above the steps: it concerns the track, whichever step is open. */}
+      {view.profilingDoneSupported === false && (
+        <InlineNotification
+          kind="warning"
+          title={t("profiling.status.unsupported", { date: formatDate(view.profilingDoneOn) })}
+          hideCloseButton
+          lowContrast
         />
-      </section>
-      {view.unemploymentPeriodRecorded !== undefined &&
-        view.capabilities.readUnemploymentPeriod && <UnemploymentSection view={view} />}
-      {view.capabilities.readAssessment && view.assessment && <AssessmentSection view={view} />}
-      {view.declarations && <DeclarationsSection view={view} />}
-      {(view.capabilities.readTl407Readiness ||
-        view.tl407Forms.length > 0 ||
-        view.tl407Scans.length > 0) && <Tl407Section view={view} />}
-      <Tl407Submission view={view} />
+      )}
+      <StepList
+        label={t("profiling.steps.label")}
+        level={2}
+        steps={steps}
+        selected={chosen}
+        onSelect={setChosen}
+        keepMounted
+      />
       <ProfilingException view={view} detail={detail} />
     </Stack>
   );
@@ -157,8 +295,7 @@ function StatusSection({
       ? t("profiling.status.actions.profiling_accepted_again")
       : t(`profiling.status.actions.${to as "profiling_accepted"}`);
   return (
-    <section className="tp-section" aria-labelledby="profiling-status">
-      <h2 id="profiling-status">{t("profiling.status.title")}</h2>
+    <>
       <dl className="tp-facts">
         <div>
           <dt>{t("profiling.status.current")}</dt>
@@ -182,14 +319,6 @@ function StatusSection({
         )}
       </dl>
       {profilingDoneOnCorrection.element}
-      {view.profilingDoneSupported === false && (
-        <InlineNotification
-          kind="warning"
-          title={t("profiling.status.unsupported", { date: formatDate(view.profilingDoneOn) })}
-          hideCloseButton
-          lowContrast
-        />
-      )}
       {failure && (
         <InlineNotification
           kind="error"
@@ -229,7 +358,7 @@ function StatusSection({
       >
         <p>{t("profiling.status.declineText")}</p>
       </Modal>
-    </section>
+    </>
   );
 }
 
@@ -313,8 +442,7 @@ function SessionsSection({ view }: { view: View }) {
 
   if (!view.capabilities.record) {
     return (
-      <section className="tp-section" aria-labelledby="profiling-sessions">
-        <h2 id="profiling-sessions">{t("profiling.sessions.title")}</h2>
+      <>
         <SimpleTable
           title={t("profiling.sessions.title")}
           columns={(["date", "from", "to"] as const).map((key) => ({
@@ -329,7 +457,7 @@ function SessionsSection({ view }: { view: View }) {
           }))}
           emptyState={t("profiling.sessions.empty")}
         />
-      </section>
+      </>
     );
   }
 
@@ -365,8 +493,7 @@ function SessionsSection({ view }: { view: View }) {
         });
 
   return (
-    <section className="tp-section" aria-labelledby="profiling-sessions">
-      <h2 id="profiling-sessions">{t("profiling.sessions.title")}</h2>
+    <>
       <p>{t("profiling.sessions.intro")}</p>
       <Form className="tp-form" onSubmit={submit} noValidate>
         <Stack gap={5}>
@@ -447,7 +574,7 @@ function SessionsSection({ view }: { view: View }) {
           </div>
         </Stack>
       </Form>
-    </section>
+    </>
   );
 }
 
@@ -566,8 +693,7 @@ function UnemploymentSection({ view }: { view: View }) {
   }
 
   return (
-    <section className="tp-section" aria-labelledby="profiling-unemployment">
-      <h2 id="profiling-unemployment">{title}</h2>
+    <Section title={title} level={3}>
       <SensitiveHeader
         present={view.unemploymentPeriodRecorded === true}
         shown={form !== undefined}
@@ -634,7 +760,7 @@ function UnemploymentSection({ view }: { view: View }) {
           </Stack>
         </Form>
       )}
-    </section>
+    </Section>
   );
 }
 
@@ -787,8 +913,7 @@ function AssessmentSection({ view }: { view: View }) {
   const recorded = view.assessment?.recorded.length ?? 0;
 
   return (
-    <section className="tp-section" aria-labelledby="profiling-assessment">
-      <h2 id="profiling-assessment">{title}</h2>
+    <>
       <p>{t("profiling.assessment.intro")}</p>
       <p>{t("profiling.assessment.recorded", { count: recorded })}</p>
       {failure && <InlineNotification kind="error" title={failure} hideCloseButton lowContrast />}
@@ -865,7 +990,7 @@ function AssessmentSection({ view }: { view: View }) {
           </Stack>
         </Form>
       )}
-    </section>
+    </>
   );
 }
 
@@ -976,8 +1101,7 @@ function DeclarationsSection({ view }: { view: View }) {
   const choices = ["full", "anonymous_callme", "anonymous_no_contact", "none"] as const;
   const recordedAt = view.declarations?.recordedAt;
   return (
-    <section className="tp-section" aria-labelledby="profiling-declarations">
-      <h2 id="profiling-declarations">{t("profiling.declarations.title")}</h2>
+    <>
       <p>{t("profiling.declarations.intro")}</p>
       <Form
         className="tp-form"
@@ -1064,7 +1188,7 @@ function DeclarationsSection({ view }: { view: View }) {
           )}
         </Stack>
       </Form>
-    </section>
+    </>
   );
 }
 

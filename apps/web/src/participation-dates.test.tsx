@@ -9,6 +9,7 @@ import {
   renderApp,
   staffUsers,
   unpinnedConfig,
+  openCard,
 } from "./test-utils";
 
 // process-and-lifecycle.md, Dates (rounds 32–34): the PL changes the contractual TG dates; a signed
@@ -112,12 +113,16 @@ describe("changing the contractual dates", () => {
     const calls = setup(detail, () =>
       json({ ...detail, statusVersion: 5, baReportingTasks: [task] }),
     );
+    await openCard("Welle und Vertragsdaten");
     await open();
     expect(screen.getByText(/nicht unterstützt/)).toBeInTheDocument();
     expect(screen.queryByText("DSV-Nachtrag")).toBeNull();
     await type("TG-Ende (TT.MM.JJJJ)", "31.01.2092");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     const tasks = await screen.findByRole("region", { name: "BA-Meldungen" });
+    // The card's summary counts the new task; the task itself is in the opened card.
+    expect(await within(tasks).findByText("1 offene Meldung")).toBeInTheDocument();
+    await openCard("BA-Meldungen");
     expect(within(tasks).getByText("Geplantes Ende geändert")).toBeInTheDocument();
     expect(within(tasks).getByText("Ausstehend")).toBeInTheDocument();
     expect(sent(calls)).toEqual([{ tgStart: null, tgEnd: "2092-01-31", expectedVersion: 4 }]);
@@ -127,6 +132,7 @@ describe("changing the contractual dates", () => {
     const calls = setup({ ...detail, dsvStatus: "dsv_signed" }, () =>
       json({ ...detail, dsvStatus: "dsv_signed" }),
     );
+    await openCard("Welle und Vertragsdaten");
     await open();
     expect(screen.getByText("DSV-Nachtrag")).toBeInTheDocument();
     await type("TG-Ende (TT.MM.JJJJ)", "29.02.2092");
@@ -173,6 +179,7 @@ describe("changing the contractual dates", () => {
         ],
       });
     });
+    await openCard("Welle und Vertragsdaten");
     await open();
     await type("TG-Beginn (TT.MM.JJJJ)", "05.03.2091");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -192,6 +199,7 @@ describe("changing the contractual dates", () => {
       capabilities: { assignEntryWave: false, setParticipationDates: false },
       refusals: { assignEntryWave: "dsv_already_offered", setParticipationDates: "dsv_offer_open" },
     });
+    await openCard("Welle und Vertragsdaten");
     // Authorised but blocked: the button stays, disabled, with its prerequisite as text (C1).
     const button = await screen.findByRole("button", { name: "Vertragsdaten ändern" });
     expect(button).toBeDisabled();
@@ -212,6 +220,7 @@ describe("changing the contractual dates", () => {
 
   it("opens the form in a side panel that keeps the input on Escape (C4)", async () => {
     const calls = setup(detail, () => json(detail));
+    await openCard("Welle und Vertragsdaten");
     await open();
     const panel = await screen.findByRole("dialog", { name: "Vertragsdaten ändern" });
     await type("TG-Ende (TT.MM.JJJJ)", "31.01.2092");
@@ -249,6 +258,7 @@ describe("changing the contractual dates", () => {
         },
       ],
     });
+    await openCard("Welle und Vertragsdaten");
     const amendments = await screen.findByRole("region", { name: "DSV-Nachträge" });
     expect(within(amendments).getByText("Verlängerung")).toBeInTheDocument();
     expect(within(amendments).getByText("TG-Ende: 31.01.2092 → 29.02.2092")).toBeInTheDocument();

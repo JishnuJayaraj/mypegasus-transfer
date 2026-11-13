@@ -32,16 +32,33 @@ export function StepList({
   label,
   steps,
   level = 3,
+  selected: controlled,
+  onSelect,
+  keepMounted = false,
 }: {
   /** The list's accessible name: the track ("Profiling"). */
   label: string;
   steps: Step[];
   /** The selected step's heading level. */
   level?: 2 | 3;
+  /** The selected step held by the caller, with `onSelect`: for a link from one step to another. */
+  selected?: string | null;
+  onSelect?: (id: string) => void;
+  /**
+   * Keeps every step's content mounted and hides all but the selected one, so an unsaved input
+   * in one step survives a look at another (ui-patterns.md, C4). Without it only the selected
+   * step's content exists.
+   */
+  keepMounted?: boolean;
 }) {
   const { t } = useTranslation(UI_NAMESPACE);
   const id = useId();
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [own, setOwn] = useState<string | null>(null);
+  const chosen = controlled ?? own;
+  const choose = (step: string) => {
+    setOwn(step);
+    onSelect?.(step);
+  };
   const selected =
     steps.find((step) => step.id === chosen) ??
     steps.find((step) => step.state === "current") ??
@@ -61,7 +78,7 @@ export function StepList({
                   className={`tp-step tp-step--${step.state}`}
                   aria-current={current ? "step" : undefined}
                   aria-controls={`${id}-panel`}
-                  onClick={() => setChosen(step.id)}
+                  onClick={() => choose(step.id)}
                 >
                   <Icon size={16} aria-hidden="true" className="tp-step-icon" />
                   <span className="tp-step-text">
@@ -83,7 +100,15 @@ export function StepList({
       {selected && (
         <section id={`${id}-panel`} className="tp-card" aria-labelledby={`${id}-title`}>
           <Heading id={`${id}-title`}>{selected.title}</Heading>
-          <div className="tp-card-body">{selected.children}</div>
+          {keepMounted ? (
+            steps.map((step) => (
+              <div key={step.id} className="tp-card-body" hidden={step.id !== selected.id}>
+                {step.children}
+              </div>
+            ))
+          ) : (
+            <div className="tp-card-body">{selected.children}</div>
+          )}
         </section>
       )}
     </div>

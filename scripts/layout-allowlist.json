@@ -32,7 +32,6 @@
   "apps/web/src/components/kug200b-section.tsx",
   "apps/web/src/components/manual-participation-form.tsx",
   "apps/web/src/components/participant-activation.tsx",
-  "apps/web/src/components/participant-overview.tsx",
   "apps/web/src/components/participant-timeline.tsx",
   "apps/web/src/components/participants.tsx",
   "apps/web/src/components/participation-appointments.tsx",

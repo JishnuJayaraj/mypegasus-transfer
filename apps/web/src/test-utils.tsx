@@ -279,3 +279,12 @@ export async function openSection(name: string) {
   const entry = new RegExp(`^${name}( |$)`);
   await userEvent.click(await within(nav).findByRole("link", { name: entry, hidden: true }));
 }
+
+/**
+ * Opens a collapsible card (the kit's `SectionCard`) by its heading, unless it is open already:
+ * the participant overview's cards start collapsed to their summary.
+ */
+export async function openCard(name: string) {
+  const toggle = await screen.findByRole("button", { name });
+  if (toggle.getAttribute("aria-expanded") === "false") await userEvent.click(toggle);
+}

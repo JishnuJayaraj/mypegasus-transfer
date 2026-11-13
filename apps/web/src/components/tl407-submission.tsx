@@ -78,9 +78,8 @@ export function Tl407Submission({ view }: { view: View }) {
   if (next === null && attempts.length === 0) return null;
   const outdated = attempts.find((a) => a.rejection?.reason === "outdated_form_version");
   return (
-    <section className="tp-section" aria-labelledby="profiling-submission">
+    <>
       <Stack gap={5}>
-        <h2 id="profiling-submission">{t("profiling.submission.title")}</h2>
         {message && (
           <InlineNotification
             kind={message.kind}
@@ -231,7 +230,7 @@ export function Tl407Submission({ view }: { view: View }) {
           )
         }
       />
-    </section>
+    </>
   );
 }
 
