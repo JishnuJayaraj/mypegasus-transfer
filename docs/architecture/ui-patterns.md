@@ -105,10 +105,12 @@ favicon. Final branding swaps the mark and the favicon only. Dark mode for the c
 | Top of an object's page | `DetailHeader` | `PageHeader`'s props in a card, plus `facts`: the one `h1`, one metadata line, the track tags (C3), up to five key facts (more are dropped: they belong on the page), the primary action and "Aktionen". |
 | Top of a page | `PageHeader` | `breadcrumbs` (ancestor links; the page is the title), `title` (the one `h1`), `tags`, `metadata` (one plain line), `primaryAction` (one), `menuActions` ("Aktionen"; destructive ones last, in red). |
 | A titled part of a page | `Section` | `h2` by default, `level={3}` inside a section, panel or tab. In a tab panel that is named by its tab, no section heading repeats the tab. |
-| One topic that collapses | `SectionCard` | A titled card that collapses to its title and a one-line `summary`; the heading is the button (`aria-expanded`). The open state is component state only (principle 9). `protectedContent` (specially protected data) never starts open, whatever `defaultOpen` says, and the content is in the document only while open. |
+| One topic that collapses | `SectionCard` | A titled card that collapses to its title and a one-line `summary`; the heading is the button (`aria-expanded`). The open state is component state only (principle 9): the card's own, or its caller's (`open`, `onToggle`) where an in-page link opens the card. `protectedContent` (specially protected data) never starts open, whatever `defaultOpen` says, and the content is in the document only while open. |
 | Label and value pairs | `Facts` | A definition list in two or four columns (`columns`), the label beside or above its value (`labels`); one column at 400 % zoom; a missing value is "–". |
 | Open items with their actions | `NextSteps` | The items in C2's order as the caller gives them, each with its tone as icon and text (`toneLabel`), one line of detail and its own action beside it; `summary` and `more` in the header; without items it says so (`emptyText`). |
-| The steps of one track | `StepList` | For a long tab: the steps at the start, each with its state (icon and text) and one line of status; the selected step's content with its action beside them (below, under 66rem). It starts on the current step. One track only (C3). |
+| The steps of one track | `StepList` | For a long tab: the steps at the start, each with its state (icon and text) and one line of status; the selected step's content with its action beside them (below, under 66rem). It starts on the current step. One track only (C3). `keepMounted` keeps every step's content and hides all but the selected one, so an unsaved input survives a look at another step (C4); `selected` and `onSelect` let one step link to another. The step list in use, below. |
+| Where one track stands | `TrackBar` | The track's name, its fixed path as a segmented bar (done, current, ahead; each step named for assistive technology, the current one `aria-current="step"`), its `StatusTag`, which carries the meaning as text, and one line under it. One bar per track, never one across tracks (C3); a status off the path has no bar. |
+| A main and a side column | `Split side` | Side by side from 66rem (the side a third), the side column after the main one below. The side holds what is looked up (appointments, responsibility, deadlines), the main column what is worked on. |
 | The stages of one track as counts | `Funnel` | One row of stages (count over label), each optionally a link to exactly the counted rows (`renderLink`); ended stages (`ended`) are set apart; the row wraps on narrow screens. |
 | One topic as a block | `Card` | Details, a small form, a summary; a card's actions are its own. `id` makes it an in-page link target (`#project-import`). |
 | A count to act on | `CountTile` | In a `CountTiles` row. A dashboard tile on the theme's surface: icon, number, label, a severity border (by `tone`; a zero is neutral) and an arrow, as one link to exactly the counted rows ("1 Überfällig"). Its label is the quick view's with the same filter. `TilesSkeleton` while loading. |
@@ -213,22 +215,40 @@ who may use it; everyone else reads the value where it is shown (the page header
 ### The participant page
 
 The pattern for one object with parallel tracks (`apps/web/src/routes/projects/$projectId_.participations.$participationId.tsx`,
-`components/participant-overview.tsx`). The header's breadcrumb ends with the list the object came
-from, with that list's codes and sort (C6): the work list hands them over in the navigation's
-history state (a reload of the participant page keeps it), the work list's memory is the fallback.
-The tags name their track (C3); the actions the capabilities allow are under "Aktionen", the
-reminder and the invitation reuse the work list's dialogs with the one row. The derived hints are
-one "Handlungsbedarf" notification with a list, never one banner each.
+`components/participant-overview.tsx`). The header is a `DetailHeader`. Its breadcrumb ends with
+the list the object came from, with that list's codes and sort (C6): the work list hands them over
+in the navigation's history state (a reload of the participant page keeps it), the work list's
+memory is the fallback. Under the title one metadata line and the tags, which name their track
+(C3); then up to five key facts, each from what the page already holds and only where the viewer
+may read it: the TG start, the DSV's offer deadline while the work list's row carries it, the
+consultants, the next appointment and the portal account's state. The actions the capabilities
+allow are under "Aktionen"; the reminder and the invitation reuse the work list's dialogs with the
+one row. The derived hints are one "Handlungsbedarf" notification with a list, never one banner
+each.
 
-The overview is three columns (`Grid columns={3} collapse="wide"`) that separate concerns:
-*Stand* (each track its own summary with its tag, its short step list of the fixed lifecycle core
-and its key date; never one sequence across tracks), *Offen* (the open items in C2's order,
-`openSteps`, five shown and the rest behind "Alle n anzeigen", each linking to the tab or card
-that resolves it, with C1's prerequisite as text where the action there is blocked) and
-*Termine & Zuständigkeit*. Below them: the timeline, "Stammdaten", then one card per topic whose
-edit forms open in one side panel (C4). The open items, deadlines and appointments come from the
-work list's row of the participation (no API of its own); a viewer without the work list sees the
-page without them and is told why.
+**The one primary action is the participation's next step** (principle 3, C2;
+`components/participant-next-step.ts`): `nextStep` of the work list's row, offered where the
+viewer may take it, and it opens the tab or card that resolves the step ("Nächster Schritt:
+Profiling"). The viewer may take a step in a tab the page shows them, or in a card of the overview
+whose action their capabilities allow now (the contractual dates or the wave's choice, the privacy
+notice, a BA report's outcome). Otherwise the page has no primary action: never the second item
+instead of the first, and none without the work list. A blocked card action is no primary action;
+its prerequisite stays beside the item (C1).
+
+The overview is a `Split`. The main column separates concerns: *Als Nächstes* (`NextSteps`: the
+open items in C2's order, `openSteps`, three shown with "n von m offenen Punkten" and the rest
+behind "Alle n anzeigen"; each with what its tier means as text, its date as the line of detail,
+its own link to the tab or card that resolves it, and C1's prerequisite as text where the action
+there is blocked), *Stand* (each track its own `TrackBar` with its tag, its place on the fixed
+lifecycle core's path and its key date; never one sequence across tracks), the timeline, then
+one `SectionCard` per topic whose edit forms open in one side panel (C4). "Stammdaten" starts
+open; the others are collapsed to a one-line summary (the portal account and the notice, the wave
+and the TG period, the number of open BA reports) and open on their heading or when an item, the
+timeline or the address points to them. A card with specially protected content never starts
+open. The side column holds *Termine & Zuständigkeit* and *Fristen* (the row's deadlines,
+relative and absolute). The open items, deadlines and appointments come from the work list's row
+of the participation (no API of its own); a viewer without the work list sees the page without
+them and is told why.
 
 The timeline (stage 1) is inline SVG styled by CSS classes (no inline `<style>`, CSP) without
 a chart library: the TG period as a bar, a "heute" line, one shape per kind (circle, diamond,
@@ -240,6 +260,24 @@ colour **and** shape or pattern and a text label. Every event kind passes the fi
 matrix (data-protection.md) like any other field, and an absence's reason is shown only where its
 data class allows it (a sensitive category needs its own decision). A project-level view of the
 waves waits for the deferred items.
+
+### The step list in use
+
+A tab that is one long scroll becomes a `StepList` of its one track (`apps/web/src/components/profiling-tab.tsx`,
+the participant's "Profiling"): the track's steps only, each with its state and one line of status
+from what the tab already reads ("2 Termine erfasst", "4 Angaben fehlen", "wartet auf den
+Bogen"). A step is done, open, or blocked while it waits for another; the first open one is the
+current step and the tab opens on it, with its action. That step stays open while the viewer
+works in it, also once it is done, until they choose another. A step the viewer's capabilities
+give nothing for is not in the list. What concerns the track whichever step is open (a closed
+participation, a completion no paper supports) is above the list; what is no step of the track
+(the exception from profiling) is a `SectionCard` below it, collapsed to its state.
+
+**A fact is shown once.** The missing fields are listed in one step, the self-service data, each
+once whatever steps wait for it. A step that waits for them (the TL 407) says how many are
+missing and names that step with a link to it ("4 Pflichtangaben fehlen noch. Sie stehen unter
+…"); it lists only what is listed nowhere else. The steps stay mounted (`keepMounted`), so a
+draft in one survives a look at another, and a sensitive block stays behind its "Anzeigen".
 
 ### Side panel
 
@@ -299,7 +337,10 @@ browser storage). The kit page (`/ui-kit`, reached by its address only) shows ev
 in its states on fixed synthetic fixtures (`apps/web/src/components/ui-kit-fixtures.ts`);
 `ui-kit.spec.ts` drives it at 1440, 768, 375 and 320px with axe. `ui-kit-visual.spec.ts` compares
 its pixels with a committed baseline (`apps/web/e2e/__screenshots__/`) on a fixed clock, in CI's
-environment only and with a small tolerance (Q255). A baseline changes only in the PR that
+environment only and with a small tolerance (Q255). `ui-participant-visual.spec.ts` does the same
+for the participant page (the overview and "Profiling"): the API's answers come from a frozen
+synthetic fixture (`e2e/fixtures/participant-page.json`), since its relative dates follow the
+server's clock. A baseline changes only in the PR that
 changes the design, is named in that PR's description for a human to review, and is never
 regenerated to get CI green. The comparison adds to the behaviour tests, axe and the zoom checks.
 The pages that use the components run axe in the e2e suite (`expectAccessible`) at the

@@ -216,16 +216,38 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
           lowContrast
         />
       )}
-      <StepList
-        label={t("profiling.steps.label")}
-        level={2}
+      <Steps
         steps={steps}
-        selected={chosen}
-        onSelect={setChosen}
-        keepMounted
+        start={(current ?? shown[0])?.id ?? null}
+        chosen={chosen}
+        onChoose={setChosen}
       />
       <ProfilingException view={view} detail={detail} />
     </Stack>
+  );
+}
+
+/**
+ * The step list, open on the step the tab started with: that step stays open while the viewer
+ * works in it, also once it is done, until they choose another.
+ */
+function Steps(props: {
+  steps: Step[];
+  start: string | null;
+  chosen: string | null;
+  onChoose: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [opened] = useState(props.start);
+  return (
+    <StepList
+      label={t("profiling.steps.label")}
+      level={2}
+      steps={props.steps}
+      selected={props.chosen ?? opened}
+      onSelect={props.onChoose}
+      keepMounted
+    />
   );
 }
 

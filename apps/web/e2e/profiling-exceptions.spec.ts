@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openCard, test } from "./helpers";
 
 // A profiling exception with evidence (process-and-lifecycle.md, profiling exceptions;
 // data-protection.md, exception evidence; D30, Q194): an informed participant of Werk Nord whose
@@ -109,6 +109,7 @@ test("slice 6-7: a profiling exception on reviewed evidence, approved in Freigab
 
   // 1. The PL uploads the evidence: listed by date and state, never with "Öffnen".
   await page.goto(tab);
+  await openCard(page, "Ausnahme vom Profiling");
   const section = page.getByRole("region", { name: "Ausnahme vom Profiling" });
   await expect(section).toContainText("Keine Ausnahme beantragt.");
   await section.getByLabel("Nachweis hochladen").setInputFiles(certificate);
@@ -129,6 +130,7 @@ test("slice 6-7: a profiling exception on reviewed evidence, approved in Freigab
   // 3. The PL requests the exception: the reason and the reviewed document, chosen explicitly.
   await staffSession(api, baseURL!, projectLead);
   await page.goto(tab);
+  await openCard(page, "Ausnahme vom Profiling");
   await expect(section).toContainText("geprüft und angenommen");
   await section.getByRole("button", { name: "Ausnahme beantragen", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Ausnahme vom Profiling beantragen" });
@@ -167,6 +169,7 @@ test("slice 6-7: a profiling exception on reviewed evidence, approved in Freigab
   // 5. The PL sees the approval and may still revoke it before entry.
   await staffSession(api, baseURL!, projectLead);
   await page.goto(tab);
+  await openCard(page, "Ausnahme vom Profiling");
   await expect(section).toContainText("Genehmigt");
   await expect(section).toContainText(`Entschieden am${berlinToday()}`);
   await expect(section.getByRole("button", { name: "Widerrufen", exact: true })).toBeVisible();

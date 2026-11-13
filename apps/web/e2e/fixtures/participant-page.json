@@ -1,0 +1,1050 @@
+{
+  "//": "Synthetic data only. The API's answers for one participant of a ta_tg project, frozen for the pixel comparison (ui-participant-visual.spec.ts): recorded from the e2e fixtures, then set to a state with open items in every tier.",
+  "now": "2026-11-13T09:00:00.000Z",
+  "projectId": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+  "participationId": "69d93eb5-a4dd-48c2-8d5d-c430ddcf812a",
+  "responses": {
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364": {
+      "id": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+      "name": "Restrukturierung Werk Nord",
+      "customerName": "Beispiel Feinmechanik GmbH",
+      "type": "ta_tg",
+      "status": "active",
+      "projectAgenturKey": null,
+      "activatedAt": "2026-10-01T08:00:00.000000Z",
+      "createdAt": "2026-11-13T00:13:15.300725Z",
+      "createdBy": "00000000-0000-4000-8000-000000000003",
+      "regionId": "00000000-0000-4000-b000-000000000101",
+      "tKugNumber": null,
+      "employerBetriebsnummer": null,
+      "employerEconomicClass": null
+    },
+    "/api/v1/participations/69d93eb5-a4dd-48c2-8d5d-c430ddcf812a": {
+      "id": "69d93eb5-a4dd-48c2-8d5d-c430ddcf812a",
+      "projectId": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+      "status": "informed",
+      "profilingStatus": "profiling_in_progress",
+      "dsvStatus": "dsv_offered",
+      "statusVersion": 6,
+      "entryWave": {
+        "id": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead",
+        "code": "W1",
+        "name": "Welle 1",
+        "signingDeadline": "2026-11-18",
+        "defaultTgStart": "2026-12-01",
+        "defaultTgEnd": "2027-11-30",
+        "latestEntryDate": "2026-12-15"
+      },
+      "dates": {
+        "tgStart": null,
+        "tgEnd": null,
+        "offerDeadline": "2026-11-18",
+        "tgEntryDate": null,
+        "exitDate": null,
+        "withdrawnOn": null,
+        "profilingDoneOn": null,
+        "effectiveTgStart": "2026-12-01",
+        "effectiveTgEnd": "2027-11-30"
+      },
+      "hints": [],
+      "placementAgenturKey": "beispielstadt-nord",
+      "placementAgenturSetAt": "2026-10-20T08:00:00.000000Z",
+      "submissionBlockers": [],
+      "placementAgenturChoices": [
+        {
+          "agenturKey": "beispielstadt-nord",
+          "label": {
+            "de": "Agentur für Arbeit Beispielstadt Nord (Beispiel)",
+            "en": "Employment agency Beispielstadt Nord (sample)"
+          },
+          "pinnedVersion": null,
+          "latestVersion": 3
+        },
+        {
+          "agenturKey": "beispielstadt-sued",
+          "label": {
+            "de": "Agentur für Arbeit Beispielstadt Süd (Beispiel)",
+            "en": "Employment agency Beispielstadt Süd (sample)"
+          },
+          "pinnedVersion": null,
+          "latestVersion": 1
+        }
+      ],
+      "person": {
+        "personnelNumber": "TP-0001",
+        "lastName": "Beispiel",
+        "firstName": "Jana",
+        "birthDate": "1984-05-14",
+        "oldEmploymentEndDate": "2026-11-30",
+        "address": {
+          "street": "Musterstraße 16",
+          "postalCode": "99999",
+          "city": "Beispielstadt",
+          "country": "DE"
+        },
+        "phone": null,
+        "mobile": null,
+        "privateEmail": "teilnehmer-0001@example.org",
+        "workEmail": null
+      },
+      "amendments": [],
+      "baReportingTasks": [],
+      "assignments": [
+        {
+          "staffUserId": "00000000-0000-4000-8000-000000000004",
+          "displayName": "Bernd Beratung",
+          "assignedAt": "2026-10-15T08:00:00.000000Z"
+        }
+      ],
+      "activationStatus": {
+        "account": "activated",
+        "code": "none",
+        "issuedAt": null,
+        "expiresAt": null
+      },
+      "privacyNoticeState": {
+        "state": "provided",
+        "dueOn": "2026-12-13",
+        "providedAt": "2026-10-16T08:00:00.000000Z"
+      },
+      "capabilities": {
+        "assignEntryWave": false,
+        "setParticipationDates": false,
+        "assignParticipations": true,
+        "issueActivationCode": true,
+        "recordHandover": true,
+        "revokeActivationCode": true,
+        "providePrivacyNotice": true,
+        "setPlacementAgentur": true,
+        "startAssistedMode": true,
+        "viewProfiling": true,
+        "viewAsu": true,
+        "viewDsv": true,
+        "viewRetention": true,
+        "withdraw": false,
+        "contactStatus": [],
+        "correctEndReason": false,
+        "reconcileTgEntry": false
+      },
+      "refusals": {
+        "assignEntryWave": "dsv_already_offered",
+        "setParticipationDates": "dsv_offer_open",
+        "withdraw": "project_not_active",
+        "contactStatus": [
+          {
+            "to": "contacted",
+            "refusal": "project_not_active"
+          }
+        ]
+      },
+      "dateCorrections": {
+        "profilingDoneOn": null,
+        "withdrawnOn": null
+      },
+      "dsvSignedOn": null,
+      "dsvFullyExecutedOn": null,
+      "dsvCancellationValidOn": null
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/members": {
+      "members": [
+        {
+          "staffUserId": "00000000-0000-4000-8000-000000000003",
+          "displayName": "Petra Projektleitung",
+          "roles": ["project_lead"],
+          "deactivated": false
+        }
+      ],
+      "capabilities": {
+        "manageMembers": true,
+        "addReplacementLead": true,
+        "assignParticipations": true
+      }
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/entry-waves?limit=100": {
+      "items": [
+        {
+          "id": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead",
+          "projectId": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+          "code": "W1",
+          "name": "Welle 1",
+          "signingDeadline": "2091-02-15",
+          "defaultTgStart": "2091-03-01",
+          "defaultTgEnd": "2092-02-29",
+          "latestEntryDate": "2091-03-15",
+          "participations": 1,
+          "createdAt": "2026-11-13T00:13:15.350395Z",
+          "updatedAt": "2026-11-13T00:13:15.350395Z"
+        }
+      ],
+      "nextCursor": null
+    },
+    "/api/v1/participations/69d93eb5-a4dd-48c2-8d5d-c430ddcf812a/activation": {
+      "status": {
+        "account": "activated",
+        "code": "none",
+        "issuedAt": null,
+        "expiresAt": null
+      },
+      "current": null,
+      "account": null,
+      "channels": [],
+      "capabilities": {
+        "issueActivationCode": true,
+        "recordHandover": true,
+        "revokeActivationCode": true,
+        "providePrivacyNotice": true
+      }
+    },
+    "/api/v1/me": {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "displayName": "Petra Projektleitung",
+      "mayCreateProjects": true,
+      "orgRoles": [],
+      "sessionExpiresAt": "2026-11-13T17:00:00.000000Z"
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/dashboard": {
+      "scope": "project",
+      "generatedAt": "2026-11-13T09:00:00.000Z",
+      "counts": {
+        "tiles": [
+          {
+            "key": "participations",
+            "count": 3,
+            "filter": {}
+          },
+          {
+            "key": "open_actions",
+            "count": 3,
+            "filter": {
+              "actions": "any"
+            }
+          },
+          {
+            "key": "deadline_upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "deadline_overdue",
+            "count": 0,
+            "filter": {
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "flags",
+            "count": 0,
+            "filter": {
+              "flag": "any"
+            }
+          },
+          {
+            "key": "not_reachable",
+            "count": 3,
+            "filter": {
+              "portal": "not_reachable"
+            }
+          },
+          {
+            "key": "appointments_overdue",
+            "count": 0,
+            "filter": {
+              "appointment": "overdue"
+            }
+          },
+          {
+            "key": "appointments_to_resolve",
+            "count": 0,
+            "filter": {
+              "appointment": "to_resolve"
+            }
+          },
+          {
+            "key": "agentur_open",
+            "count": 0,
+            "filter": {
+              "agentur": "open"
+            }
+          },
+          {
+            "key": "dsv_not_fully_executed",
+            "count": 0,
+            "filter": {
+              "caseItem": "dsv_not_fully_executed"
+            }
+          },
+          {
+            "key": "cutoff_cases",
+            "count": 0,
+            "filter": {
+              "flag": "cutoff_case"
+            }
+          }
+        ],
+        "statuses": [
+          {
+            "key": "imported",
+            "count": 3,
+            "filter": {
+              "status": "imported"
+            }
+          },
+          {
+            "key": "contacted",
+            "count": 0,
+            "filter": {
+              "status": "contacted"
+            }
+          },
+          {
+            "key": "unreachable",
+            "count": 0,
+            "filter": {
+              "status": "unreachable"
+            }
+          },
+          {
+            "key": "informed",
+            "count": 0,
+            "filter": {
+              "status": "informed"
+            }
+          },
+          {
+            "key": "active_in_tg",
+            "count": 0,
+            "filter": {
+              "status": "active_in_tg"
+            }
+          },
+          {
+            "key": "withdrawn",
+            "count": 0,
+            "filter": {
+              "status": "withdrawn"
+            }
+          },
+          {
+            "key": "ta_completed",
+            "count": 0,
+            "filter": {
+              "status": "ta_completed"
+            }
+          },
+          {
+            "key": "exited",
+            "count": 0,
+            "filter": {
+              "status": "exited"
+            }
+          }
+        ],
+        "profilingStatuses": [
+          {
+            "key": "not_started",
+            "count": 3,
+            "filter": {
+              "profilingStatus": "not_started"
+            }
+          },
+          {
+            "key": "profiling_accepted",
+            "count": 0,
+            "filter": {
+              "profilingStatus": "profiling_accepted"
+            }
+          },
+          {
+            "key": "profiling_in_progress",
+            "count": 0,
+            "filter": {
+              "profilingStatus": "profiling_in_progress"
+            }
+          },
+          {
+            "key": "profiling_done",
+            "count": 0,
+            "filter": {
+              "profilingStatus": "profiling_done"
+            }
+          },
+          {
+            "key": "profiling_declined",
+            "count": 0,
+            "filter": {
+              "profilingStatus": "profiling_declined"
+            }
+          }
+        ],
+        "dsvStatuses": [
+          {
+            "key": "not_offered",
+            "count": 3,
+            "filter": {
+              "dsvStatus": "not_offered"
+            }
+          },
+          {
+            "key": "dsv_offered",
+            "count": 0,
+            "filter": {
+              "dsvStatus": "dsv_offered"
+            }
+          },
+          {
+            "key": "dsv_signed",
+            "count": 0,
+            "filter": {
+              "dsvStatus": "dsv_signed"
+            }
+          },
+          {
+            "key": "dsv_declined",
+            "count": 0,
+            "filter": {
+              "dsvStatus": "dsv_declined"
+            }
+          },
+          {
+            "key": "dsv_expired",
+            "count": 0,
+            "filter": {
+              "dsvStatus": "dsv_expired"
+            }
+          }
+        ],
+        "waves": [
+          {
+            "key": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead",
+            "count": 1,
+            "filter": {
+              "wave": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead"
+            }
+          },
+          {
+            "key": "none",
+            "count": 2,
+            "filter": {
+              "wave": "none"
+            }
+          }
+        ],
+        "activation": [
+          {
+            "key": "activated",
+            "count": 0,
+            "filter": {
+              "activation": "activated"
+            }
+          },
+          {
+            "key": "none",
+            "count": 3,
+            "filter": {
+              "activation": "none"
+            }
+          },
+          {
+            "key": "printed",
+            "count": 0,
+            "filter": {
+              "activation": "printed"
+            }
+          },
+          {
+            "key": "open",
+            "count": 0,
+            "filter": {
+              "activation": "open"
+            }
+          },
+          {
+            "key": "delivery_unknown",
+            "count": 0,
+            "filter": {
+              "activation": "delivery_unknown"
+            }
+          },
+          {
+            "key": "expired",
+            "count": 0,
+            "filter": {
+              "activation": "expired"
+            }
+          },
+          {
+            "key": "locked",
+            "count": 0,
+            "filter": {
+              "activation": "locked"
+            }
+          },
+          {
+            "key": "revoked",
+            "count": 0,
+            "filter": {
+              "activation": "revoked"
+            }
+          },
+          {
+            "key": "used",
+            "count": 0,
+            "filter": {
+              "activation": "used"
+            }
+          }
+        ],
+        "notice": [
+          {
+            "key": "provided",
+            "count": 0,
+            "filter": {
+              "notice": "provided"
+            }
+          },
+          {
+            "key": "due",
+            "count": 3,
+            "filter": {
+              "notice": "due"
+            }
+          },
+          {
+            "key": "overdue",
+            "count": 0,
+            "filter": {
+              "notice": "overdue"
+            }
+          }
+        ],
+        "deadlines": [
+          {
+            "key": "offer_deadline:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "offer_deadline",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "offer_deadline:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "offer_deadline",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "tg_start:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "tg_start",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "tg_start:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "tg_start",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "asu_due:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "asu_due",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "asu_due:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "asu_due",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "tl407_submission:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "tl407_submission",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "tl407_submission:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "tl407_submission",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "latest_entry_cutoff:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "latest_entry_cutoff",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "latest_entry_cutoff:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "latest_entry_cutoff",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "privacy_notice:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "privacy_notice",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "privacy_notice:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "privacy_notice",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "profiling_exception:upcoming",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "profiling_exception",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "profiling_exception:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "profiling_exception",
+              "deadlineState": "overdue"
+            }
+          }
+        ],
+        "flags": [
+          {
+            "key": "conflict_dsv_signed_profiling_declined",
+            "count": 0,
+            "filter": {
+              "flag": "conflict_dsv_signed_profiling_declined"
+            }
+          },
+          {
+            "key": "dsv_never_offered",
+            "count": 0,
+            "filter": {
+              "flag": "dsv_never_offered"
+            }
+          },
+          {
+            "key": "informed_without_wave_at_cutoff",
+            "count": 0,
+            "filter": {
+              "flag": "informed_without_wave_at_cutoff"
+            }
+          },
+          {
+            "key": "dsv_signed_not_entered_at_cutoff",
+            "count": 0,
+            "filter": {
+              "flag": "dsv_signed_not_entered_at_cutoff"
+            }
+          },
+          {
+            "key": "profiling_declined_after_entry",
+            "count": 0,
+            "filter": {
+              "flag": "profiling_declined_after_entry"
+            }
+          }
+        ],
+        "portal": [
+          {
+            "key": "reachable",
+            "count": 0,
+            "filter": {
+              "portal": "reachable"
+            }
+          },
+          {
+            "key": "consent_required",
+            "count": 0,
+            "filter": {
+              "portal": "consent_required"
+            }
+          },
+          {
+            "key": "not_reachable",
+            "count": 3,
+            "filter": {
+              "portal": "not_reachable"
+            }
+          }
+        ],
+        "appointments": [
+          {
+            "key": "upcoming",
+            "count": 0,
+            "filter": {
+              "appointment": "upcoming"
+            }
+          },
+          {
+            "key": "overdue",
+            "count": 0,
+            "filter": {
+              "appointment": "overdue"
+            }
+          },
+          {
+            "key": "to_resolve",
+            "count": 0,
+            "filter": {
+              "appointment": "to_resolve"
+            }
+          },
+          {
+            "key": "attendance_missing",
+            "count": 0,
+            "filter": {
+              "appointment": "attendance_missing"
+            }
+          },
+          {
+            "key": "missed",
+            "count": 0,
+            "filter": {
+              "appointment": "missed"
+            }
+          },
+          {
+            "key": "notice_undelivered",
+            "count": 0,
+            "filter": {
+              "appointment": "notice_undelivered"
+            }
+          },
+          {
+            "key": "needs_resolution",
+            "count": 0,
+            "filter": {
+              "appointment": "needs_resolution"
+            }
+          },
+          {
+            "key": "attendance_conflict",
+            "count": 0,
+            "filter": {
+              "appointment": "attendance_conflict"
+            }
+          }
+        ],
+        "agentur": [
+          {
+            "key": "open",
+            "count": 0,
+            "filter": {
+              "agentur": "open"
+            }
+          },
+          {
+            "key": "tl407_escalated",
+            "count": 0,
+            "filter": {
+              "agentur": "tl407_escalated"
+            }
+          },
+          {
+            "key": "tl407_resubmission_open",
+            "count": 0,
+            "filter": {
+              "agentur": "tl407_resubmission_open"
+            }
+          },
+          {
+            "key": "tl407_original_missing",
+            "count": 0,
+            "filter": {
+              "agentur": "tl407_original_missing"
+            }
+          },
+          {
+            "key": "kug200b_confirmation_missing",
+            "count": 0,
+            "filter": {
+              "agentur": "kug200b_confirmation_missing"
+            }
+          },
+          {
+            "key": "ba_report_pending",
+            "count": 0,
+            "filter": {
+              "agentur": "ba_report_pending"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/worklist": {
+      "generatedAt": "2026-11-13T09:00:00.000Z",
+      "items": [
+        {
+          "id": "69d93eb5-a4dd-48c2-8d5d-c430ddcf812a",
+          "status": "informed",
+          "profilingStatus": "profiling_in_progress",
+          "dsvStatus": "dsv_offered",
+          "entryWaveId": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead",
+          "placementAgenturKey": "beispielstadt-nord",
+          "personnelNumber": "TP-0001",
+          "lastName": "Beispiel",
+          "firstName": "Jana",
+          "consultants": [],
+          "activationStatus": {
+            "account": "activated",
+            "code": "none",
+            "issuedAt": null,
+            "expiresAt": null
+          },
+          "privacyNoticeState": {
+            "state": "provided",
+            "dueOn": "2026-12-13",
+            "providedAt": "2026-10-16T08:00:00.000000Z"
+          },
+          "actions": [
+            {
+              "kind": "field",
+              "key": "gender",
+              "state": "missing"
+            },
+            {
+              "kind": "field",
+              "key": "maritalStatus",
+              "state": "missing"
+            },
+            {
+              "kind": "field",
+              "key": "drivingLicence",
+              "state": "missing"
+            },
+            {
+              "kind": "field",
+              "key": "earliestStartDate",
+              "state": "missing"
+            }
+          ],
+          "deadlines": [
+            {
+              "kind": "asu_due",
+              "date": "2026-11-11",
+              "state": "overdue"
+            },
+            {
+              "kind": "offer_deadline",
+              "date": "2026-11-18",
+              "state": "upcoming"
+            },
+            {
+              "kind": "tg_start",
+              "date": "2026-12-01",
+              "state": "upcoming"
+            }
+          ],
+          "caseItems": [],
+          "agenturItems": [],
+          "flags": [],
+          "portal": "reachable",
+          "reminder": null,
+          "appointments": {
+            "next": {
+              "kind": "info_event",
+              "startsAt": "2026-11-17T09:00:00.000Z"
+            },
+            "items": []
+          },
+          "capabilities": {
+            "assignEntryWave": false,
+            "issueActivationCode": true,
+            "recordHandover": true,
+            "revokeActivationCode": true,
+            "providePrivacyNotice": true,
+            "remind": {
+              "allowed": true,
+              "code": null,
+              "channel": "email"
+            },
+            "invite": {
+              "allowed": false,
+              "channel": null
+            },
+            "generateKug200b": true,
+            "generateDsv": true
+          }
+        }
+      ]
+    },
+    "/api/v1/participations/69d93eb5-a4dd-48c2-8d5d-c430ddcf812a/self-service": {
+      "participationId": "69d93eb5-a4dd-48c2-8d5d-c430ddcf812a",
+      "revision": 4,
+      "updatedAt": "2026-10-21T09:00:00.000000Z",
+      "notice": {
+        "version": "self-service-purposes:v1",
+        "acknowledgedAt": "2026-10-21T08:00:00.000000Z"
+      },
+      "values": {
+        "gender": null,
+        "maritalStatus": null,
+        "address": null,
+        "phone": null,
+        "mobile": null,
+        "privateEmail": null,
+        "educationHistory": null,
+        "workHistory": null,
+        "languageSkills": null,
+        "drivingLicence": null,
+        "vehicleAvailable": null,
+        "workingTimePreferences": null,
+        "jobWishes": null,
+        "desiredWorkLocations": null,
+        "maxCommuteDistance": null,
+        "earliestStartDate": null
+      },
+      "customValues": {},
+      "customLabels": {},
+      "participantMaintained": [],
+      "sensitive": {
+        "healthRestrictions": false,
+        "severeDisability": false
+      },
+      "sensitiveReadable": [],
+      "missing": [
+        {
+          "step": "profiling",
+          "ruleId": "base-tl407-gender",
+          "kind": "field",
+          "key": "gender",
+          "reason": "missing"
+        },
+        {
+          "step": "profiling",
+          "ruleId": "base-tl407-maritalStatus",
+          "kind": "field",
+          "key": "maritalStatus",
+          "reason": "missing"
+        },
+        {
+          "step": "profiling",
+          "ruleId": "base-tl407-drivingLicence",
+          "kind": "field",
+          "key": "drivingLicence",
+          "reason": "missing"
+        },
+        {
+          "step": "profiling",
+          "ruleId": "base-tl407-earliestStartDate",
+          "kind": "field",
+          "key": "earliestStartDate",
+          "reason": "missing"
+        },
+        {
+          "step": "data_collection",
+          "ruleId": "base-import-gender",
+          "kind": "field",
+          "key": "gender",
+          "reason": "missing"
+        }
+      ]
+    },
+    "/api/v1/participations/69d93eb5-a4dd-48c2-8d5d-c430ddcf812a/profiling": {
+      "participationId": "69d93eb5-a4dd-48c2-8d5d-c430ddcf812a",
+      "profilingStatus": "profiling_in_progress",
+      "statusVersion": 6,
+      "profilingDoneOn": null,
+      "closed": false,
+      "revision": 3,
+      "sessions": [
+        {
+          "id": "00000000-0000-4000-a000-0000000000c1",
+          "date": "2026-10-20",
+          "from": "09:00",
+          "to": "10:00",
+          "recordedAt": "2026-10-20T11:00:00.000000Z"
+        },
+        {
+          "id": "00000000-0000-4000-a000-0000000000c2",
+          "date": "2026-11-03",
+          "from": "09:00",
+          "to": "09:45",
+          "recordedAt": "2026-11-03T11:00:00.000000Z"
+        }
+      ],
+      "tl407Forms": [],
+      "tl407Scans": [],
+      "tl407SignedOn": null,
+      "profilingDoneSupported": null,
+      "tl407Submission": {
+        "attempts": [],
+        "next": null
+      },
+      "tl407Versions": ["08-2025"],
+      "exception": {
+        "current": null,
+        "evidenceDocuments": [],
+        "capabilities": {
+          "addEvidence": false,
+          "request": false,
+          "revoke": false
+        }
+      },
+      "transitions": [
+        {
+          "to": "profiling_declined",
+          "allowed": true,
+          "refusal": null
+        }
+      ],
+      "capabilities": {
+        "record": false,
+        "readAssessment": false,
+        "writeAssessment": false,
+        "readUnemploymentPeriod": false,
+        "generateTl407": false,
+        "readTl407Readiness": true,
+        "addTl407Scan": true
+      }
+    },
+    "/api/v1/participations/69d93eb5-a4dd-48c2-8d5d-c430ddcf812a/forms/tl407/readiness": {
+      "view": "project_lead",
+      "ready": false,
+      "missing": [
+        {
+          "key": "gender",
+          "label": "22 Geschlecht"
+        },
+        {
+          "key": "maritalStatus",
+          "label": "30 Familienstand"
+        },
+        {
+          "key": "drivingLicence",
+          "label": "42 Führerscheinklasse(n)"
+        },
+        {
+          "key": "earliestStartDate",
+          "label": "51 Frühestmöglicher Termin für eine Arbeitsaufnahme"
+        }
+      ]
+    }
+  }
+}

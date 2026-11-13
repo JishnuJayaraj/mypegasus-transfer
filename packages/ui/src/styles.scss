@@ -464,6 +464,16 @@ body {
   }
 }
 
+// A section inside a card of a split page is a part of the card: the card's spacing, never the
+// page's gap after it.
+.tp-split .tp-card .tp-section {
+  margin-block-end: 0;
+
+  h3 {
+    margin-block: 0 var(--tp-space-2);
+  }
+}
+
 // The dashboard's tiles: each one a link to the work list with its filter (Slice 5).
 .tp-tiles {
   display: grid;
@@ -1350,6 +1360,13 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--tp-space-4);
+}
+
+// The actions never widen the card: a long primary action is capped at the card's width (400 %
+// zoom) by the kit's button cap.
+.tp-detail-header-main > .tp-page-header-actions {
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .tp-detail-header-title {

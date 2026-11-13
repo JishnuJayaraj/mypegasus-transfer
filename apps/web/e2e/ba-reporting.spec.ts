@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, showColumn, test } from "./helpers";
+import { expect, expectAccessible, openCard, showColumn, test } from "./helpers";
 
 // Closing BA reporting tasks (process-and-lifecycle.md, BA reporting; D28, Q207): a contacted
 // participant of Werk Nord has two pending tasks, a later entry from two days ago and an early
@@ -107,6 +107,7 @@ test("slice 6-6: two pending BA reports, one sent and one not required", async (
   // 2. The overview's "BA-Meldungen": both pending, each with its two actions.
   await page.goto(`/projects/${projectId}/participations/${participationId}`);
   const section = page.getByRole("region", { name: "BA-Meldungen" });
+  await openCard(page, "BA-Meldungen");
   const later = section.getByRole("row").filter({ hasText: "Späterer Eintritt" });
   const exit = section.getByRole("row").filter({ hasText: "Vorzeitiger Austritt" });
   await expect(later).toContainText("Ausstehend");

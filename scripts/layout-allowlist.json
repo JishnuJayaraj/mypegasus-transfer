@@ -55,7 +55,6 @@
   "apps/web/src/components/template-migration.tsx",
   "apps/web/src/components/tl407-scans.tsx",
   "apps/web/src/components/tl407-section.tsx",
-  "apps/web/src/components/tl407-submission.tsx",
   "apps/web/src/components/worklist-tools.tsx",
   "apps/web/src/routes/__root.tsx",
   "apps/web/src/routes/admin/regions.tsx",

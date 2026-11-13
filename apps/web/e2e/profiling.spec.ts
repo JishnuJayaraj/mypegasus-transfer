@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openStep, test } from "./helpers";
 
 // The tab "Profiling" (process-and-lifecycle.md and data-protection.md, the profiling record):
 // the assigned consultant agrees the track, records a session, the pending declarations and
@@ -74,6 +74,7 @@ test("slice 6-2: the profiler's tab, then the PL's view of it", async ({ page, b
   await expect(status).toContainText("In Arbeit");
 
   // 2. A session, written whole.
+  await openStep(page, "Termine des Profilings");
   await page.getByRole("button", { name: "Termin hinzufügen" }).click();
   const row = page.getByRole("group", { name: "Termin 1" });
   await row.getByLabel("Datum").fill("20.10.2026");
@@ -83,6 +84,7 @@ test("slice 6-2: the profiler's tab, then the PL's view of it", async ({ page, b
   await expect(page.getByText("Die Termine wurden gespeichert.")).toBeVisible();
 
   // 3. The pending declarations to the BA.
+  await openStep(page, "Erklärungen gegenüber der BA");
   await page
     .getByLabel("Veröffentlichung in der Jobbörse (Feld 50)")
     .selectOption("anonymous_callme");
@@ -94,6 +96,7 @@ test("slice 6-2: the profiler's tab, then the PL's view of it", async ({ page, b
   await expect(page.getByText("Die Erklärungen wurden gespeichert.")).toBeVisible();
 
   // 4. Section C on "Anzeigen": a rating and a text, the health line's rating only.
+  await openStep(page, "Handlungsbedarf (Abschnitt C)");
   const assessment = page.getByRole("region", { name: "Handlungsbedarf (Abschnitt C)" });
   await assessment.getByRole("button", { name: /Anzeigen/ }).click();
   const school = assessment.getByRole("group", { name: "Schulische Qualifikation" });
@@ -117,6 +120,7 @@ test("slice 6-2: the profiler's tab, then the PL's view of it", async ({ page, b
   // 5. The PL sees the status and the sessions, not section C, the period or the declarations.
   await staffSession(api, baseURL!, projectLead);
   await page.goto(`/projects/${projectId}/participations/${participationId}?tab=profiling`);
+  await openStep(page, "Termine des Profilings");
   await expect(page.getByRole("table", { name: "Termine des Profilings" })).toContainText(
     "20.10.2026",
   );

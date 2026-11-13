@@ -187,7 +187,7 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
       summary={
         current
           ? t(`profiling.exception.statuses.${current.status}`)
-          : t("profiling.steps.exceptionNone")
+          : t("profiling.exception.none")
       }
       defaultOpen={current !== null || exception.evidenceDocuments.length > 0}
     >

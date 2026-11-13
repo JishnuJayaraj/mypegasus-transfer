@@ -20,7 +20,7 @@ import {
   pl,
   testDatabaseUrls,
 } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openStep, test } from "./helpers";
 
 // Date corrections (data-protection.md, evidence corrections: field targets and the DSV
 // signature-date supersession). (1) A wrong `profilingDoneOn` blocked the entry: the PL requests
@@ -264,6 +264,7 @@ test("a wrong profilingDoneOn: requested, approved, the missed start reconciled"
 
   // The reconciliation isn't offered: the completion is recorded after the planned start.
   await page.goto(`/projects/${projectId}/participations/${id}?tab=profiling`);
+  await openStep(page, "Profiling-Status");
   const correctionButton = "Korrektur beantragen: Profiling abgeschlossen am";
   await expect(page.getByRole("button", { name: correctionButton })).toBeVisible();
   await expectAccessible(page);
