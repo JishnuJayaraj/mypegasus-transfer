@@ -125,34 +125,31 @@ test("the project page: header, sections, the dashboard's three layers and Einri
     "Team",
   ]);
 
-  // The dashboard: four tiles, the other open work, the funnel, every figure open at 1440.
+  // The dashboard: four tiles, the other open work, the funnel, the waves at the side.
   const today = page.getByRole("region", { name: "Heute zu tun" });
   await expect(today.locator(".tp-tile")).toHaveCount(4);
   await expect(today.getByRole("region", { name: "Weitere offene Arbeit" })).toBeVisible();
   const progress = page.getByRole("region", { name: "Verlauf" });
   await expect(progress.getByRole("link", { name: "12 Teilnehmende" })).toBeVisible();
-  const imported = progress
-    .getByRole("table", { name: "Status" })
-    .getByRole("row", { name: /Importiert/ });
-  await expect(imported.getByRole("link", { name: "12" })).toBeVisible();
-  // The bar's width comes through the CSSOM (no CSP violation; the fixture fails on any).
-  await expect(imported.locator(".tp-bar-fill")).toHaveAttribute("style", /inline-size: 100%/);
-  const toggle = page.getByRole("button", { name: /^Alle Kennzahlen (anzeigen|ausblenden)$/ });
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  // The main status is one row of stages; its number opens the work list with exactly those rows.
+  await expect(progress.getByRole("list", { name: "Status" })).toBeVisible();
+  await expect(progress.getByRole("link", { name: "12 Importiert" })).toBeVisible();
+  // "Kennzahlen" lists the values above zero; "Alle anzeigen" shows the rest (component state).
+  const figures = page.getByRole("region", { name: "Kennzahlen" });
+  await expect(figures.getByRole("button", { name: "Alle anzeigen" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Nach Welle" })).toBeVisible();
   // The section is named once, by the heading under the header (principle 6).
   await expect(page.getByRole("heading", { name: "Übersicht" })).toHaveCount(1);
 
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 });
-    // "Alle Kennzahlen" is collapsed by default below 1280px, following the width.
     await expect(today.locator(".tp-tile")).toHaveCount(4);
-    await expect(toggle).toHaveAttribute("aria-expanded", width < 1280 ? "false" : "true");
     await expectNoPageScroll(page);
     await expectAccessible(page);
     await shot(page, `project-overview-${width}`);
   }
-  await toggle.click();
+  await figures.getByRole("button", { name: "Alle anzeigen" }).click();
+  await expect(figures.getByRole("button", { name: "Nur Werte über 0" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Nach Welle" })).toBeVisible();
   await expectNoPageScroll(page);
   await expectAccessible(page);

@@ -189,7 +189,8 @@ allows per-user storage. A new list adds its quick view the same way (Slice 7's 
 
 ### The dashboard
 
-The project's "Übersicht" (`apps/web/src/components/project-dashboard.tsx`) has three layers:
+The project's "Übersicht" (`apps/web/src/components/project-dashboard.tsx`) has three layers, and
+a side column:
 
 1. **"Heute zu tun"**: four `CountTile`s from the existing counts, labelled like their quick
    views (`tileLabelKey`): "Überfällig", "In den nächsten 14 Tagen", "Angaben/Unterlagen fehlen"
@@ -198,12 +199,16 @@ The project's "Übersicht" (`apps/web/src/components/project-dashboard.tsx`) has
    views (a mandatory BA reporting task, also after the participation closed; Agentur items;
    flags) isn't counted there, so "Weitere offene Arbeit" lists every other open-work count as a
    link right below. A true all-clear would need every category checked and is not offered.
-2. **"Verlauf"**: the main status and, in `ta_tg`, the DSV track, each as its own card of bars of
-   all participations (C3: two summaries, never one sequence), with the total as a link.
-3. **"Alle Kennzahlen"**: the other groups as compact cards in a three-column grid, open from
-   1280px and collapsed below (a disclosure button; the viewer's choice in component state).
+2. **"Verlauf"**: one `Funnel` row per track: the main status and, in `ta_tg`, the DSV track
+   (C3: two rows, never one sequence). Each stage's number is a link to exactly its rows; the
+   stages that end a participation are set apart. The total is a link above the rows.
+3. **"Kennzahlen"**: only the counts above zero, grouped in cards; "Alle anzeigen" shows the zero
+   ones too (a disclosure of the viewer's choice, in component state only).
 
-Every number links to the work list with exactly the counted rows.
+The side column, from the page's own load, lists the entry waves with their dates ("Nach
+Welle", `ta_tg` only). Every number links to the work list with exactly the counted rows.
+The page loads no work-list rows, so it has no table of the oldest overdue items and no
+week's appointments; a region that needs them waits for a load the page doesn't make.
 
 ### Setup pages
 

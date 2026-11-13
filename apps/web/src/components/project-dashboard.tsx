@@ -5,17 +5,17 @@ import type { WorklistFilter } from "@transfer/domain";
 import {
   Button,
   Card,
-  ChevronDown,
-  ChevronUp,
   CountTile,
+  CountTiles,
   EmptyState,
   formatDate,
+  Funnel,
   Grid,
   Link,
   Section,
+  Split,
   Stack,
   TilesSkeleton,
-  useMediaQuery,
   type StatusTone,
 } from "@transfer/ui";
 import { useId, useState, type ReactNode } from "react";
@@ -29,9 +29,6 @@ const RouterLink = createLink(Link);
 
 type Count = components["schemas"]["DashboardCount"];
 type Counts = components["schemas"]["ProjectDashboard"]["counts"];
-
-/** "Alle Kennzahlen" is open by default from the preferred layout's width (D10: 1280px). */
-const PREFERRED_QUERY = "(min-width: 80rem)";
 
 /** The search of a count's link: the work list with the same filter. */
 const listSearch = (filter: WorklistFilter) => filter;
@@ -113,9 +110,21 @@ export function ProjectDashboard({ projectId, taTg }: { projectId: string; taTg:
   return (
     <Stack gap={7}>
       {scope === "assigned" && <p>{t("dashboard.scopeAssigned")}</p>}
-      <Today projectId={projectId} tiles={counts.tiles} />
-      <Progress projectId={projectId} counts={counts} taTg={taTg} />
-      <AllFigures projectId={projectId} counts={counts} taTg={taTg} />
+      <Split
+        side={
+          taTg && (
+            <Section title={t("dashboard.groups.waves")} level={3}>
+              <Waves projectId={projectId} counts={counts.waves} />
+            </Section>
+          )
+        }
+      >
+        <Stack gap={7}>
+          <Today projectId={projectId} tiles={counts.tiles} />
+          <Progress projectId={projectId} counts={counts} taTg={taTg} />
+          <AllFigures projectId={projectId} counts={counts} />
+        </Stack>
+      </Split>
     </Stack>
   );
 }
@@ -139,22 +148,21 @@ function Today({ projectId, tiles }: { projectId: string; tiles: Count[] }) {
   return (
     <Section title={t("dashboard.today")}>
       <Stack gap={5}>
-        <ul className="tp-count-tiles">
+        <CountTiles>
           {shown.map(({ key, count, filter, tone }) => (
-            <li key={key}>
-              <CountTile
-                count={count}
-                label={t(tileLabelKey(key))}
-                tone={tone}
-                renderLink={({ className, children }) => (
-                  <CountLink projectId={projectId} filter={filter} className={className}>
-                    {children}
-                  </CountLink>
-                )}
-              />
-            </li>
+            <CountTile
+              key={key}
+              count={count}
+              label={t(tileLabelKey(key))}
+              tone={tone}
+              renderLink={({ className, children }) => (
+                <CountLink projectId={projectId} filter={filter} className={className}>
+                  {children}
+                </CountLink>
+              )}
+            />
           ))}
-        </ul>
+        </CountTiles>
         {/* Never "Alles erledigt": these views don't count every kind of open work (a BA
             reporting task, Agentur items, flags), so a true all-clear isn't offered. */}
         {nothing && <p>{t("dashboard.nothingInViews")}</p>}
@@ -175,7 +183,10 @@ function Today({ projectId, tiles }: { projectId: string; tiles: Count[] }) {
   );
 }
 
-/** Layer 2: "Verlauf", the main status and (ta_tg) the DSV track as bars of the total. */
+/**
+ * Layer 2: "Verlauf". Each track is one `Funnel` row of its stages, each number linking to exactly
+ * its rows; the main status and (ta_tg) the DSV track stay two rows, never one sequence (C3).
+ */
 function Progress({
   projectId,
   counts,
@@ -186,7 +197,24 @@ function Progress({
   taTg: boolean;
 }) {
   const { t } = useTranslation();
+  const label = useCountLabel();
   const total = counts.tiles.find((tile) => tile.key === "participations");
+  const track = (group: "statuses" | "dsvStatuses", values: Count[]) => (
+    <Funnel
+      label={t(`dashboard.groups.${group}`)}
+      stages={values.map(({ key, count, filter }) => ({
+        key,
+        count,
+        label: label(group, key),
+        ended: group === "statuses" && terminalStatuses.has(key),
+        renderLink: ({ className, children }) => (
+          <CountLink projectId={projectId} filter={filter} className={className}>
+            {children}
+          </CountLink>
+        ),
+      }))}
+    />
+  );
   return (
     <Section
       title={t("dashboard.progress")}
@@ -198,88 +226,63 @@ function Progress({
         )
       }
     >
-      <Grid columns={2}>
-        <Card title={t("dashboard.groups.statuses")} level={3}>
-          <CountTable
-            projectId={projectId}
-            group="statuses"
-            counts={counts.statuses}
-            total={total?.count}
-          />
-        </Card>
-        {taTg && (
-          <Card title={t("dashboard.groups.dsvStatuses")} level={3}>
-            <CountTable
-              projectId={projectId}
-              group="dsvStatuses"
-              counts={counts.dsvStatuses}
-              total={total?.count}
-            />
-          </Card>
-        )}
-      </Grid>
+      <Stack gap={5}>
+        {track("statuses", counts.statuses)}
+        {taTg && track("dsvStatuses", counts.dsvStatuses)}
+      </Stack>
     </Section>
   );
 }
 
-/** Layer 3: "Alle Kennzahlen", open from 1280px, collapsed below (the viewer can toggle it). */
-function AllFigures({
-  projectId,
-  counts,
-  taTg,
-}: {
-  projectId: string;
-  counts: Counts;
-  taTg: boolean;
-}) {
+/** The main statuses that end a participation (process-and-lifecycle.md), set apart in a row. */
+const terminalStatuses = new Set(["withdrawn", "ta_completed", "exited"]);
+
+/**
+ * Layer 3: "Kennzahlen". Only the values above zero are listed; "Alle anzeigen" shows the rest.
+ * The viewer's choice is component state only (ui-patterns.md, the dashboard), never stored.
+ */
+function AllFigures({ projectId, counts }: { projectId: string; counts: Counts }) {
   const { t } = useTranslation();
-  const preferred = useMediaQuery(PREFERRED_QUERY);
-  // The viewer's own choice wins over the width, in component state only.
-  const [chosen, setChosen] = useState<boolean>();
-  const open = chosen ?? preferred;
-  const bodyId = useId();
-  const group = (key: LabelledGroup, values: Count[]) => (
-    <Card key={key} title={t(`dashboard.groups.${key}`)} level={3}>
-      <CountTable projectId={projectId} group={key} counts={values} />
-    </Card>
-  );
+  const [all, setAll] = useState(false);
+  const groups: { key: LabelledGroup; values: Count[] }[] = [
+    { key: "profilingStatuses", values: counts.profilingStatuses },
+    { key: "flags", values: counts.flags },
+    { key: "appointments", values: counts.appointments },
+    { key: "agentur", values: counts.agentur },
+    { key: "activation", values: counts.activation },
+    { key: "notice", values: counts.notice },
+    { key: "portal", values: counts.portal },
+  ];
+  const above = (values: Count[]) => values.filter((count) => count.count > 0);
+  const rows = groups.flatMap(({ values }) => values);
+  const zeros = rows.length - groups.reduce((sum, { values }) => sum + above(values).length, 0);
   return (
     <Section
       title={t("dashboard.all")}
+      description={zeros > 0 ? t("dashboard.zeros", { count: zeros }) : undefined}
       actions={
-        <Button
-          kind="ghost"
-          size="sm"
-          renderIcon={open ? ChevronUp : ChevronDown}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={() => setChosen(!open)}
-        >
-          {open ? t("dashboard.hideAll") : t("dashboard.showAll")}
-        </Button>
+        zeros > 0 && (
+          <Button kind="ghost" size="sm" onClick={() => setAll(!all)}>
+            {all ? t("dashboard.onlyAbove") : t("dashboard.showRest")}
+          </Button>
+        )
       }
     >
-      <div id={bodyId} hidden={!open}>
-        {open && (
-          <Grid columns={3}>
-            {group("profilingStatuses", counts.profilingStatuses)}
-            {taTg && (
-              <Card title={t("dashboard.groups.waves")} level={3}>
-                <Waves projectId={projectId} counts={counts.waves} />
-              </Card>
-            )}
-            <Card title={t("dashboard.groups.deadlines")} level={3}>
-              <Deadlines projectId={projectId} counts={counts.deadlines} />
+      <Grid columns={2}>
+        {groups.map(({ key, values }) => {
+          const shown = all ? values : above(values);
+          return shown.length === 0 ? null : (
+            <Card key={key} title={t(`dashboard.groups.${key}`)} level={3}>
+              <CountTable projectId={projectId} group={key} counts={shown} />
             </Card>
-            {group("flags", counts.flags)}
-            {group("appointments", counts.appointments)}
-            {group("agentur", counts.agentur)}
-            {group("activation", counts.activation)}
-            {group("notice", counts.notice)}
-            {group("portal", counts.portal)}
-          </Grid>
+          );
+        })}
+        {(all || above(counts.deadlines).length > 0) && (
+          <Card title={t("dashboard.groups.deadlines")} level={3}>
+            <Deadlines projectId={projectId} counts={counts.deadlines} />
+          </Card>
         )}
-      </div>
+      </Grid>
     </Section>
   );
 }

@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { projectFunnel } from "@transfer/domain";
+import { funnelFilters, projectFunnel } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
 import { featuredTiles } from "./components/project-dashboard";
 import { tileViews } from "./components/worklist-views";
@@ -129,7 +129,7 @@ describe("Heute zu tun", () => {
 });
 
 describe("Verlauf", () => {
-  it("draws each status as a bar of all participations, with the number as text", async () => {
+  it("is one row per track, each number opening exactly its rows (C3)", async () => {
     setup([
       worklistItem({ id: id(1), status: "informed" }),
       worklistItem({ id: id(2), personnelNumber: "BSP-0002", status: "informed" }),
@@ -138,17 +138,86 @@ describe("Verlauf", () => {
     ]);
     const progress = within(await screen.findByRole("region", { name: "Verlauf" }));
     expect(progress.getByRole("link", { name: "4 Teilnehmende" })).toBeInTheDocument();
-    const statuses = within(progress.getByRole("table", { name: "Status" }));
-    const informed = statuses.getByRole("row", { name: /Informiert/ });
-    expect(within(informed).getByRole("link", { name: "2" })).toBeInTheDocument();
-    // A CSS width through React's style prop (CSP-safe); decorative, the number is the text.
-    const bar = informed.querySelector<HTMLElement>(".tp-bar")!;
-    expect(bar).toHaveAttribute("aria-hidden", "true");
-    expect(bar.querySelector<HTMLElement>(".tp-bar-fill")!.style.inlineSize).toBe("50%");
-    const exited = statuses.getByRole("row", { name: /Ausgetreten/ });
-    expect(exited.querySelector<HTMLElement>(".tp-bar-fill")!.style.inlineSize).toBe("0%");
-    // The DSV track as its own bars (ta_tg; C3: never one sequence with the main status).
-    expect(progress.getByRole("table", { name: "DSV" })).toBeInTheDocument();
+    // The main status is one row of stages; the DSV track is its own row, never one sequence.
+    const statuses = progress.getByRole("list", { name: "Status" });
+    expect(within(statuses).getByRole("link", { name: "2 Informiert" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("status=informed"),
+    );
+    expect(within(statuses).getByRole("link", { name: "2 Kontaktiert" })).toBeInTheDocument();
+    expect(within(statuses).getByText("Ausgetreten").closest("li")).toHaveTextContent(
+      "0 Ausgetreten",
+    );
+    expect(progress.queryByRole("table", { name: "Status" })).toBeNull();
+    expect(progress.getByRole("list", { name: "DSV" })).toBeInTheDocument();
+  });
+
+  it("links each stage of a track to exactly the rows its filter counts", async () => {
+    setup([
+      worklistItem({ id: id(1), status: "informed" }),
+      worklistItem({ id: id(2), personnelNumber: "BSP-0002", status: "contacted" }),
+    ]);
+    const statuses = within(
+      (await screen.findByRole("region", { name: "Verlauf" })).querySelector("ol")!,
+    );
+    const informed = statuses.getByRole("link", { name: "1 Informiert" });
+    expect(new URL(informed.getAttribute("href")!, "http://x").search).toBe("?status=informed");
+  });
+});
+
+describe("every number opens exactly its rows", () => {
+  // The rows the page counts are the work list's, so a count and its list share one predicate
+  // (data-protection.md, the dashboard): each link's search is the counted filter, and the
+  // count is the number of rows that filter selects.
+  const rows = [
+    worklistItem({
+      id: id(1),
+      status: "informed",
+      deadlines: [{ kind: "tg_start", date: "2026-10-30", state: "overdue" }],
+    }),
+    worklistItem({ id: id(2), personnelNumber: "BSP-0002", status: "informed" }),
+    worklistItem({ id: id(3), personnelNumber: "BSP-0003", status: "contacted" }),
+  ];
+
+  it("links each Verlauf stage to the work list with its filter and the counted rows", async () => {
+    setup(rows);
+    const progress = within(await screen.findByRole("region", { name: "Verlauf" }));
+    const funnel = funnelFilters({ type: "ta_tg", waves: [] }).statuses;
+    const informed = progress.getByRole("link", { name: "2 Informiert" });
+    const filter = funnel.find((f) => f.key === "informed")!.filter;
+    const search = new URL(informed.getAttribute("href")!, "http://x").search;
+    expect(search).toBe(`?status=${filter.status}`);
+    const selected = rows.filter((row) => row.status === filter.status);
+    expect(selected).toHaveLength(2);
+  });
+
+  it("links each today tile with the quick view's filter (the same rows as its list)", async () => {
+    setup(rows);
+    const tiles = within(await screen.findByRole("region", { name: "Heute zu tun" }));
+    const overdue = tiles.getByRole("link", { name: "1 Überfällig" });
+    expect(new URL(overdue.getAttribute("href")!, "http://x").search).toContain(
+      "deadlineState=overdue",
+    );
+  });
+});
+
+describe("Kennzahlen", () => {
+  it("shows only values above zero, and 'Alle anzeigen' the rest, in the viewer's own choice", async () => {
+    const { router } = setup([
+      worklistItem({ id: id(1), status: "informed" }),
+      worklistItem({ id: id(2), personnelNumber: "BSP-0002", status: "contacted" }),
+    ]);
+    await screen.findByRole("region", { name: "Verlauf" });
+    const figures = screen.getByRole("region", { name: "Kennzahlen" });
+    // Only the counts above zero: the two "Nicht begonnen" rows are listed, the zeros are not.
+    const profiling = within(figures).getByRole("table", { name: "Profiling" });
+    expect(within(profiling).getByRole("row", { name: /Nicht begonnen/ })).toHaveTextContent("2");
+    expect(within(figures).queryByRole("row", { name: /Abgelehnt/ })).toBeNull();
+    const more = within(figures).getByRole("button", { name: "Alle anzeigen" });
+    await userEvent.click(more);
+    expect(within(figures).getByRole("row", { name: /Abgelehnt/ })).toBeInTheDocument();
+    expect(within(figures).getByRole("button", { name: "Nur Werte über 0" })).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({});
   });
 });
 
