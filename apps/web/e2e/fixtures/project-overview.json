@@ -411,6 +411,37 @@
       "mayCreateProjects": true,
       "orgRoles": [],
       "sessionExpiresAt": "2026-11-13T17:00:00.000000Z"
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/config": {
+      "projectAgenturKey": null,
+      "baseDefaultsVersion": 1,
+      "pins": [],
+      "projectBlockers": [
+        {
+          "code": "project_activation_blocked",
+          "agenturKey": null
+        }
+      ],
+      "agenturen": [],
+      "activationBlockers": ["project_activation_blocked"],
+      "override": {
+        "version": 0,
+        "agenturSettings": [],
+        "relaxations": []
+      },
+      "relaxationRequests": [],
+      "relaxableRules": [],
+      "capabilities": {
+        "pinTemplate": true,
+        "setProjectAgentur": true,
+        "changeOverride": true,
+        "requestRelaxation": true,
+        "activateProject": true,
+        "migrateTemplate": true,
+        "importParticipations": true,
+        "setProjectRegion": true,
+        "editKug200aHeader": true
+      }
     }
   }
 }

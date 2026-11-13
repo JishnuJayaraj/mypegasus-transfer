@@ -20,16 +20,20 @@ const fixture = JSON.parse(
 };
 
 test("the project overview looks as its reviewed baseline", async ({ page }) => {
+  // A request the fixture doesn't hold is a gap in the fixture, not a page detail: it is recorded
+  // and fails the test, so the baseline never renders an error page (the 404 would hide it).
+  const unanswered: string[] = [];
   await page.route("**/api/v1/**", (route) => {
     const url = new URL(route.request().url());
-    const body = route.request().method() === "GET" && fixture.responses[url.pathname + url.search];
-    return body
-      ? route.fulfill({ json: body })
-      : route.fulfill({
-          status: 404,
-          contentType: "application/problem+json",
-          json: { type: "urn:transfer:problem:not-found", title: "Not found", status: 404 },
-        });
+    const key = url.pathname + url.search;
+    const body = route.request().method() === "GET" && fixture.responses[key];
+    if (body) return route.fulfill({ json: body });
+    unanswered.push(`${route.request().method()} ${key}`);
+    return route.fulfill({
+      status: 404,
+      contentType: "application/problem+json",
+      json: { type: "urn:transfer:problem:not-found", title: "Not found", status: 404 },
+    });
   });
   await page.clock.setFixedTime(new Date(fixture.now));
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -37,6 +41,7 @@ test("the project overview looks as its reviewed baseline", async ({ page }) => 
   await page.goto(`/projects/${fixture.projectId}/overview`);
   await expect(page.getByRole("region", { name: "Verlauf" })).toBeVisible();
   await expect(page.getByRole("link", { name: "14 Teilnehmende" })).toBeVisible();
+  expect(unanswered, "requests the fixture does not answer").toEqual([]);
   await page.evaluate(() => document.fonts.ready);
   // The whole page in one viewport: a full-page capture would stitch the fixed header in.
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
