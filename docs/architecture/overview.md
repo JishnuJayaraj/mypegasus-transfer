@@ -300,15 +300,15 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - **The dashboard** ("Übersicht") counts distinct participations. Each count is defined as a
   `WorklistFilter` (`projectFunnel`, `funnelFilters`) and links to the work list with that filter,
   so a count and its drill-down are one predicate (a domain test holds
-  `count = items.filter(filter).length`). From Slice 6b (PR 6b-4; ui-patterns.md, dashboard) it
-  has three layers: "Heute zu tun" (four `CountTile`s labelled like their quick views:
-  "Überfällig", "In den nächsten 14 Tagen", "Angaben/Unterlagen fehlen" and, for the PL, "Termine
-  zu klären", else "Hinweise"; then every other tile under "Weitere offene Arbeit"), "Verlauf" (the
-  main status and, in `ta_tg`, the DSV track as bars of all participations, with the total
-  "n Teilnehmende") and "Alle Kennzahlen" (the other groups as compact cards, collapsed below
-  1280px). The bars are CSS widths set through React's `style` prop: the CSP forbids inline
-  `<style>` and `style` attributes in markup, not the CSSOM (`apps/api/src/app.ts`), so no chart
-  library is needed. From PR 5b-4 the tiles "Termine überfällig" and "Termine zu
+  `count = items.filter(filter).length`). It has three layers (ui-patterns.md, the dashboard):
+  "Heute zu tun" (four `CountTile`s labelled like their quick views: "Überfällig", "In den
+  nächsten 14 Tagen", "Angaben/Unterlagen fehlen" and, for the PL, "Termine zu klären", else
+  "Hinweise"; then every other tile under "Weitere offene Arbeit"), "Verlauf" (one `Funnel` row of
+  the main status and, in `ta_tg`, one of the DSV track, each number linking to its rows, with the
+  total "n Teilnehmende") and "Kennzahlen" (only the values above zero; "Alle anzeigen" for the
+  rest, the viewer's choice in component state). The waves sit in a side column (`Split`) from the
+  entry waves the page already loads. The page loads no work-list rows, so it has no table of the
+  oldest overdue items and no week's appointments. From PR 5b-4 the tiles "Termine überfällig" and "Termine zu
   klären" and the table "Termine" (one count per value of the filter `appointment`: a next
   booking, the two unions, each item kind) count the appointment items the same way
   (process-and-lifecycle.md, appointment items).

@@ -137,15 +137,10 @@ const ready = worklistSection;
 /** The shown rows' Personalnummern, in the order of the default sort unless a test sorts. */
 const personnelNumbers = () => shownPersonnelNumbers().toSorted();
 
-/** Opens "Alle Kennzahlen", collapsed below 1280px (jsdom matches no media query). */
+/** Shows the Kennzahlen's zero values too ("Alle anzeigen"; the viewer's choice in memory). */
 async function showAllFigures() {
-  const toggle = await screen.findByRole("button", { name: "Alle Kennzahlen anzeigen" });
-  expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await userEvent.click(toggle);
-  expect(screen.getByRole("button", { name: "Alle Kennzahlen ausblenden" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  await userEvent.click(await screen.findByRole("button", { name: "Alle anzeigen" }));
+  expect(screen.getByRole("button", { name: "Nur Werte über 0" })).toBeInTheDocument();
 }
 
 describe("Übersicht", () => {
@@ -166,10 +161,9 @@ describe("Übersicht", () => {
 
   it("links every table count to its filter", async () => {
     setup({}, "");
-    const statuses = await screen.findByRole("table", { name: "Status" });
+    const statuses = await screen.findByRole("list", { name: "Status" });
     await showAllFigures();
-    const informed = within(statuses).getByRole("row", { name: /Informiert/ });
-    const link = within(informed).getByRole("link", { name: "2" });
+    const link = within(statuses).getByRole("link", { name: "2 Informiert" });
     const filter = funnelFilters({ type: "ta_tg", waves: [wave] }).statuses.find(
       (f) => f.key === "informed",
     )!.filter;
