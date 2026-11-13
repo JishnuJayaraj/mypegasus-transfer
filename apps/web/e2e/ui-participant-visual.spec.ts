@@ -42,7 +42,10 @@ test("the participant page looks as its reviewed baselines", async ({ page }) =>
     await page.setViewportSize({ width: 1280, height: 900 });
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.setViewportSize({ width: 1280, height });
-    await expect(page).toHaveScreenshot(name, { animations: "disabled", maxDiffPixelRatio: 0.01 });
+    // Soft: one run reports every baseline that differs, not only the first.
+    await expect
+      .soft(page)
+      .toHaveScreenshot(name, { animations: "disabled", maxDiffPixelRatio: 0.01 });
   };
 
   await page.goto(path);
