@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join } from "node:path";
 import { ProjectDashboard } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
 
@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 describe("the project overview fixture", () => {
   it("holds a dashboard the API's schema accepts", () => {
     const fixture = JSON.parse(
-      readFileSync(resolve("e2e/fixtures/project-overview.json"), "utf8"),
+      readFileSync(join(import.meta.dirname, "../e2e/fixtures/project-overview.json"), "utf8"),
     ) as { projectId: string; responses: Record<string, unknown> };
     const key = `/api/v1/projects/${fixture.projectId}/dashboard`;
     expect(ProjectDashboard.safeParse(fixture.responses[key]).success).toBe(true);

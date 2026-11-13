@@ -442,6 +442,20 @@
         "setProjectRegion": true,
         "editKug200aHeader": true
       }
-    }
+    },
+    "/api/v1/regions": [
+      {
+        "id": "00000000-0000-4000-b000-000000000101",
+        "code": "NORD",
+        "name": "Niederlassung Nord",
+        "createdAt": "2026-10-15T08:00:00.000000Z"
+      },
+      {
+        "id": "00000000-0000-4000-b000-000000000102",
+        "code": "SUED",
+        "name": "Niederlassung Süd",
+        "createdAt": "2026-10-15T08:00:00.000000Z"
+      }
+    ]
   }
 }
