@@ -115,9 +115,8 @@ or access changes; one new domain read rule (`nextStep`). Plan: [`plans/archive/
 reflow, the portal), `domain/process-and-lifecycle.md` (the next step's tiers) and
 `domain/data-protection.md` (the work list's memory, the portal's checklist); one new endpoint,
 `GET /portal/progress` (value-free, for C5).
-Still open from Slice 6b: the D11 usability walkthrough (30 minutes, one PL and one consultant, on
-synthetic data; the four tasks and the findings table are in PR #108), and a manual zoom check in
-real Chrome (each PR emulated it in Chromium).
+The D11 usability walkthrough of Slice 6b ran in Slice 7b (PR 7b-8, 2026-11-13; see Slice 7b).
+Still open from Slice 6b: a manual zoom check in real Chrome (each PR emulated it in Chromium).
 Not in Slice 6b (its D9), for Slice 9 hardening or v1.1, placed by the owner: content dark mode;
 server-side saved views; persistent column preferences after a DPO check (Q223); the
 cross-project staff start page "Meine Aufgaben" with its own API and access model (Q224);
@@ -127,12 +126,20 @@ and a project-level view of the waves; aligning the wizard's page progress (Q140
 start page's task count (C5).
 
 ## Slice 7b — Foundations before the TG module
-After the owner's review of the application (2026-11-12): database functions as source files and
-generated lists, the domain docs split by topic, and the UI's second layer (a product theme on
-Carbon, a real navigation, the kit's detail header, section cards and step lists) with three
-reference pages: the participant page, the project overview and the project setup. No lifecycle,
-access or API change. Before Slice 8, which builds on it; the remaining screens migrate with
-Slice 9. Plan: [`plans/slice-7b.md`](plans/slice-7b.md) (PRs 7b-1 to 7b-8; Q254–Q258).
+**Done** 2026-11-13 (PRs 7b-1 to 7b-8; 7b-7 is #135): plan archived in
+[`plans/archive/slice-7b.md`](plans/archive/slice-7b.md); its rules live in
+`architecture/ui-patterns.md` (theme, buttons, navigation, kit components, step lists, the three
+reference pages), ADR-0002 and `architecture/database/function-sources.md` (function sources,
+generated lists), and the split `domain/` docs. No lifecycle, access or API change.
+Three reference pages are on the new layer: the participant page, the project overview and the
+project setup, plus the kit page. **Screens left for Slice 9** (D13; they have the theme and the
+navigation and keep their layout): "Selbstauskunft", "Unterlagen", "Termine", "Nachrichten",
+"DSV", "Aufbewahrung", "Verlauf", "Freigaben", the appointment page, "Team", the admin pages and the
+portal's layouts; also the split of the large API route files.
+**The walkthrough** (one Projektleiter, one Berater; findings in
+[`decisions/2026-11-13-walkthrough-7b.md`](decisions/2026-11-13-walkthrough-7b.md)) found both
+users dissatisfied with the product as a whole. The larger findings are Q261–Q266 and the owner
+places them before Slice 8 builds on these screens.
 
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of
