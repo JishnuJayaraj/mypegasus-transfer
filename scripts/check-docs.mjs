@@ -44,7 +44,7 @@ const questionFiles = [
 
 /**
  * Numbers that never had a row of their own, or whose row is not in the three files yet:
- * Q241–Q253 are reserved for the Slice 8 plan (plans/slice-7b.md, status).
+ * Q241–Q253 are reserved for the Slice 8 plan (plans/archive/slice-7b.md, status).
  */
 const unassignedQuestions = new Set(Array.from({ length: 13 }, (_, index) => 241 + index));
 

@@ -1,8 +1,8 @@
 # Slice 7b — Foundations before the TG module: agent groundwork and the UI's second layer
 
-Status: **approved by the product owner for implementation on synthetic data** (2026-11-12), with
+Status: **done and archived 2026-11-13 (PR 7b-8)**; was **approved by the product owner for implementation on synthetic data** (2026-11-12), with
 the answers to Q254–Q258 recorded in
-[the decisions](../decisions/2026-11-12-answers-slice-7b.md) and the project section "Agentur"
+[the decisions](../../decisions/2026-11-12-answers-slice-7b.md) and the project section "Agentur"
 restored in the navigation (D7). Q241–Q253 are taken by the Slice 8 plan (PR #126).
 
 Why now: the owner's review of the application (2026-11-12) found the UI dated and unorganised,
@@ -122,19 +122,19 @@ only.
 - **D9. One table.** `DataTable` (sort, filter, column chooser, empty and loading states) is the
   table for every list that can exceed five rows; `SimpleTable` stays for short read-only tables.
   The reference pages use it; the remaining lists follow with their screens (D13).
-- **D10. A long tab becomes a step list** ([mock-up 2](mockups/slice-7b/participant-profiling.png)):
+- **D10. A long tab becomes a step list** ([mock-up 2](../mockups/slice-7b/participant-profiling.png)):
   the steps of the tab's one track at the left, each with its state and one line of status; the
   current step open at the right with its action; the others collapsed to their summary. A fact
   is shown once: the missing fields appear in "Angaben prüfen" and are named by the step that
   waits for them. The step list is within one track, so C3 (parallel tracks are never one
   sequence) holds.
-- **D11. The participant page** ([mock-up 1](mockups/slice-7b/participant-overview.png)): the
+- **D11. The participant page** ([mock-up 1](../mockups/slice-7b/participant-overview.png)): the
   header answers who, where in each track, and the next step; "Als Nächstes" lists three open
   items with their actions; "Stand" shows the three tracks as three bars; "Stammdaten" and the
   other cards collapse to a summary; appointments, responsibility and deadlines sit in a side
   column. Everything shown is data the page already loads.
-- **D12. The project overview and the setup** ([mock-up 3](mockups/slice-7b/project-dashboard.png),
-  [mock-up 4](mockups/slice-7b/project-setup.png)): tiles for what needs work today, the funnel as
+- **D12. The project overview and the setup** ([mock-up 3](../mockups/slice-7b/project-dashboard.png),
+  [mock-up 4](../mockups/slice-7b/project-setup.png)): tiles for what needs work today, the funnel as
   one row whose numbers open the list, the oldest overdue items as a table, the week's dates and
   the waves at the side; "Kennzahlen" shows only values above zero with "Alle anzeigen".
   "Einrichtung" is a step list of the setup with what blocks activation named in the header; each
@@ -259,6 +259,6 @@ finding fixed, deferred with its slice, or recorded as a question.
 ## Questions
 
 Q254–Q258, answered by the product owner on 2026-11-12
-([the decisions](../decisions/2026-11-12-answers-slice-7b.md)): Q254 accepted, Q255 accepted, Q256
+([the decisions](../../decisions/2026-11-12-answers-slice-7b.md)): Q254 accepted, Q255 accepted, Q256
 accepted with the upgrade safeguards and explicit retention rules, Q257 amended, Q258 accepted
 with "Agentur" restored. None blocks a PR or the pilot.

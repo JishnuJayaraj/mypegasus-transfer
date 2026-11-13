@@ -1,6 +1,6 @@
 # Answers: Q254–Q258, the Slice 7b plan (2026-11-12)
 
-The product owner's decisions on [the Slice 7b plan](../plans/slice-7b.md) (PR #127), for
+The product owner's decisions on [the Slice 7b plan](../plans/archive/slice-7b.md) (PR #127), for
 implementation on synthetic data.
 
 - **"Agentur" is preserved.** The proposed project routes omitted the existing section with the
