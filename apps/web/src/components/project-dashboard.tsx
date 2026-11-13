@@ -268,7 +268,7 @@ function AllFigures({ projectId, counts }: { projectId: string; counts: Counts }
         )
       }
     >
-      <Grid columns={3}>
+      <Grid columns={2}>
         {groups.map(({ key, values }) => {
           const shown = all ? values : above(values);
           return shown.length === 0 ? null : (
