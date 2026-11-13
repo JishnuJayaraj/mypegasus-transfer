@@ -1,0 +1,416 @@
+{
+  "//": "Synthetic data only. The API's answers for the project overview, frozen for the pixel comparison (ui-project-visual.spec.ts): the project, its team, its waves and the dashboard's counts (a fixed clock, one fixed set of numbers). No real person, project or date.",
+  "now": "2026-11-13T09:00:00.000Z",
+  "projectId": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+  "responses": {
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364": {
+      "id": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+      "name": "Restrukturierung Werk Nord",
+      "customerName": "Beispiel Feinmechanik GmbH",
+      "type": "ta_tg",
+      "status": "active",
+      "projectAgenturKey": null,
+      "activatedAt": "2026-10-01T08:00:00.000000Z",
+      "createdAt": "2026-11-13T00:13:15.300725Z",
+      "createdBy": "00000000-0000-4000-8000-000000000003",
+      "regionId": "00000000-0000-4000-b000-000000000101",
+      "tKugNumber": null,
+      "employerBetriebsnummer": null,
+      "employerEconomicClass": null
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/members": {
+      "members": [
+        {
+          "staffUserId": "00000000-0000-4000-8000-000000000003",
+          "displayName": "Petra Projektleitung",
+          "roles": ["project_lead"],
+          "deactivated": false
+        }
+      ],
+      "capabilities": {
+        "manageMembers": true,
+        "addReplacementLead": true,
+        "assignParticipations": true
+      }
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/entry-waves?limit=100": {
+      "items": [
+        {
+          "id": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead",
+          "projectId": "39047f39-d34b-4ae5-81f6-72b2f72df364",
+          "code": "W1",
+          "name": "Welle 1",
+          "signingDeadline": "2091-02-15",
+          "defaultTgStart": "2091-03-01",
+          "defaultTgEnd": "2092-02-29",
+          "latestEntryDate": "2091-03-15",
+          "participations": 1,
+          "createdAt": "2026-11-13T00:13:15.350395Z",
+          "updatedAt": "2026-11-13T00:13:15.350395Z"
+        }
+      ],
+      "nextCursor": null
+    },
+    "/api/v1/projects/39047f39-d34b-4ae5-81f6-72b2f72df364/dashboard": {
+      "scope": "project",
+      "generatedAt": "2026-11-13T09:00:00.000Z",
+      "counts": {
+        "tiles": [
+          {
+            "key": "participations",
+            "count": 14,
+            "filter": {}
+          },
+          {
+            "key": "open_actions",
+            "count": 6,
+            "filter": {
+              "actions": "any"
+            }
+          },
+          {
+            "key": "deadline_upcoming",
+            "count": 4,
+            "filter": {
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "deadline_overdue",
+            "count": 2,
+            "filter": {
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "flags",
+            "count": 3,
+            "filter": {
+              "flag": "any"
+            }
+          },
+          {
+            "key": "not_reachable",
+            "count": 1,
+            "filter": {
+              "portal": "not_reachable"
+            }
+          },
+          {
+            "key": "appointments_overdue",
+            "count": 0,
+            "filter": {
+              "appointment": "overdue"
+            }
+          },
+          {
+            "key": "appointments_to_resolve",
+            "count": 0,
+            "filter": {
+              "appointment": "to_resolve"
+            }
+          },
+          {
+            "key": "agentur_open",
+            "count": 1,
+            "filter": {
+              "agentur": "open"
+            }
+          },
+          {
+            "key": "dsv_not_fully_executed",
+            "count": 1,
+            "filter": {
+              "caseItem": "dsv_not_fully_executed"
+            }
+          },
+          {
+            "key": "cutoff_cases",
+            "count": 0,
+            "filter": {
+              "flag": "cutoff_case"
+            }
+          }
+        ],
+        "statuses": [
+          {
+            "key": "imported",
+            "count": 2,
+            "filter": {
+              "status": "imported"
+            }
+          },
+          {
+            "key": "contacted",
+            "count": 2,
+            "filter": {
+              "status": "contacted"
+            }
+          },
+          {
+            "key": "unreachable",
+            "count": 1,
+            "filter": {
+              "status": "unreachable"
+            }
+          },
+          {
+            "key": "informed",
+            "count": 5,
+            "filter": {
+              "status": "informed"
+            }
+          },
+          {
+            "key": "active_in_tg",
+            "count": 3,
+            "filter": {
+              "status": "active_in_tg"
+            }
+          },
+          {
+            "key": "withdrawn",
+            "count": 0,
+            "filter": {
+              "status": "withdrawn"
+            }
+          },
+          {
+            "key": "ta_completed",
+            "count": 0,
+            "filter": {
+              "status": "ta_completed"
+            }
+          },
+          {
+            "key": "exited",
+            "count": 1,
+            "filter": {
+              "status": "exited"
+            }
+          }
+        ],
+        "dsvStatuses": [
+          {
+            "key": "not_offered",
+            "count": 6,
+            "filter": {
+              "dsvStatus": "not_offered"
+            }
+          },
+          {
+            "key": "dsv_offered",
+            "count": 4,
+            "filter": {
+              "dsvStatus": "dsv_offered"
+            }
+          },
+          {
+            "key": "dsv_signed",
+            "count": 3,
+            "filter": {
+              "dsvStatus": "dsv_signed"
+            }
+          },
+          {
+            "key": "dsv_declined",
+            "count": 1,
+            "filter": {
+              "dsvStatus": "dsv_declined"
+            }
+          },
+          {
+            "key": "dsv_expired",
+            "count": 0,
+            "filter": {
+              "dsvStatus": "dsv_expired"
+            }
+          }
+        ],
+        "profilingStatuses": [
+          {
+            "key": "not_started",
+            "count": 6,
+            "filter": {
+              "profilingStatus": "not_started"
+            }
+          },
+          {
+            "key": "profiling_accepted",
+            "count": 2,
+            "filter": {
+              "profilingStatus": "profiling_accepted"
+            }
+          },
+          {
+            "key": "profiling_in_progress",
+            "count": 4,
+            "filter": {
+              "profilingStatus": "profiling_in_progress"
+            }
+          },
+          {
+            "key": "profiling_done",
+            "count": 2,
+            "filter": {
+              "profilingStatus": "profiling_done"
+            }
+          },
+          {
+            "key": "profiling_declined",
+            "count": 0,
+            "filter": {
+              "profilingStatus": "profiling_declined"
+            }
+          }
+        ],
+        "waves": [
+          {
+            "key": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead",
+            "count": 9,
+            "filter": {
+              "wave": "affb9ae8-8fb1-4da5-9d42-7c0ff3e00ead"
+            }
+          },
+          {
+            "key": "none",
+            "count": 5,
+            "filter": {
+              "wave": "none"
+            }
+          }
+        ],
+        "activation": [
+          {
+            "key": "activated",
+            "count": 3,
+            "filter": {
+              "activation": "activated"
+            }
+          },
+          {
+            "key": "printed",
+            "count": 2,
+            "filter": {
+              "activation": "printed"
+            }
+          },
+          {
+            "key": "none",
+            "count": 1,
+            "filter": {
+              "activation": "none"
+            }
+          }
+        ],
+        "notice": [
+          {
+            "key": "provided",
+            "count": 10,
+            "filter": {
+              "notice": "provided"
+            }
+          },
+          {
+            "key": "due",
+            "count": 2,
+            "filter": {
+              "notice": "due"
+            }
+          },
+          {
+            "key": "overdue",
+            "count": 0,
+            "filter": {
+              "notice": "overdue"
+            }
+          }
+        ],
+        "deadlines": [
+          {
+            "key": "offer_deadline:upcoming",
+            "count": 3,
+            "filter": {
+              "deadlineKind": "offer_deadline",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "offer_deadline:overdue",
+            "count": 1,
+            "filter": {
+              "deadlineKind": "offer_deadline",
+              "deadlineState": "overdue"
+            }
+          },
+          {
+            "key": "tg_start:upcoming",
+            "count": 4,
+            "filter": {
+              "deadlineKind": "tg_start",
+              "deadlineState": "upcoming"
+            }
+          },
+          {
+            "key": "tg_start:overdue",
+            "count": 0,
+            "filter": {
+              "deadlineKind": "tg_start",
+              "deadlineState": "overdue"
+            }
+          }
+        ],
+        "flags": [
+          {
+            "key": "dsv_never_offered",
+            "count": 2,
+            "filter": {
+              "flag": "dsv_never_offered"
+            }
+          },
+          {
+            "key": "cutoff_warning",
+            "count": 1,
+            "filter": {
+              "flag": "cutoff_warning"
+            }
+          }
+        ],
+        "portal": [
+          {
+            "key": "not_reachable",
+            "count": 1,
+            "filter": {
+              "portal": "not_reachable"
+            }
+          }
+        ],
+        "appointments": [
+          {
+            "key": "upcoming",
+            "count": 2,
+            "filter": {
+              "appointment": "upcoming"
+            }
+          }
+        ],
+        "agentur": [
+          {
+            "key": "open",
+            "count": 1,
+            "filter": {
+              "agentur": "open"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "displayName": "Petra Projektleitung",
+      "mayCreateProjects": true,
+      "orgRoles": [],
+      "sessionExpiresAt": "2026-11-13T17:00:00.000000Z"
+    }
+  }
+}
