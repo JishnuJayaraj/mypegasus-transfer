@@ -9,6 +9,7 @@ import {
   renderApp,
   staffUsers,
   unpinnedConfig,
+  openCard,
 } from "./test-utils";
 
 // process-and-lifecycle.md, BA reporting (D28): on the overview's "BA-Meldungen" the PL or back
@@ -118,6 +119,7 @@ describe("BA-Meldungen (D28)", () => {
   it("lists each task's outcome; buttons only for the pending one the viewer may close", async () => {
     setup(detail);
     const tasks = await section();
+    await openCard("BA-Meldungen");
     expect(within(tasks).getByText("Gemeldet am 22.10.2026")).toBeInTheDocument();
     expect(within(tasks).getByText("Nicht erforderlich: Irrtümlich angelegt")).toBeInTheDocument();
     expect(within(tasks).getAllByRole("button", { name: "Gemeldet am …" })).toHaveLength(1);
@@ -130,6 +132,7 @@ describe("BA-Meldungen (D28)", () => {
       baReportingTasks: [{ ...pending, capabilities: { recordOutcome: false } }],
     });
     const tasks = await section();
+    await openCard("BA-Meldungen");
     expect(within(tasks).getByText("Ausstehend")).toBeInTheDocument();
     expect(within(tasks).queryByRole("button", { name: "Gemeldet am …" })).toBeNull();
     expect(within(tasks).queryByRole("columnheader", { name: "Aktionen" })).toBeNull();
@@ -137,6 +140,7 @@ describe("BA-Meldungen (D28)", () => {
 
   it("confirms 'Gemeldet am' with the date typed, never a default, and sends it", async () => {
     const calls = setup(detail, () => new Response(null, { status: 204 }));
+    await openCard("BA-Meldungen");
     await userEvent.click(within(await section()).getByRole("button", { name: "Gemeldet am …" }));
     const dialog = screen.getByRole("dialog", { name: "Meldung als gesendet festhalten" });
     expect(
@@ -153,6 +157,7 @@ describe("BA-Meldungen (D28)", () => {
 
   it("confirms 'Nicht erforderlich' with a reason chosen, never a default", async () => {
     const calls = setup(detail, () => new Response(null, { status: 204 }));
+    await openCard("BA-Meldungen");
     await userEvent.click(
       within(await section()).getByRole("button", { name: "Nicht erforderlich …" }),
     );
@@ -176,6 +181,7 @@ describe("BA-Meldungen (D28)", () => {
       }),
     );
     const tasks = await section();
+    await openCard("BA-Meldungen");
     await userEvent.click(within(tasks).getByRole("button", { name: "Gemeldet am …" }));
     await userEvent.type(screen.getByLabelText("Gemeldet am"), "01.01.2099");
     await userEvent.click(confirm());

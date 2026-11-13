@@ -2,18 +2,18 @@ import type { Page } from "@playwright/test";
 import { seedRegionIds } from "@transfer/db";
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openCard, openStep, test } from "./helpers";
 import { worklistParticipations } from "./participants";
 
 // The participant page (docs/architecture/ui-patterns.md): the header
 // with its breadcrumb back to the work list as it was left (C6), the three tracks as separate tags
-// and summaries (C3), "Offen", the timeline with its keyboard path and its list (D12), and an edit
-// form in a side panel that keeps its input on Escape (C4). Each width passes axe without a
+// and bars (C3), "Als Nächstes", the timeline with its keyboard path and its list, an edit
+// form in a side panel that keeps its input on Escape (C4), and the tab "Profiling" as a step list. Each width passes axe without a
 // horizontal page scroll (D10). The test brings its own project (created through the staff API)
 // and participations (owner fixtures). Synthetic data only; the suite fails on any CSP violation.
-// Screenshots go to docs/screenshots/6b-5/.
+// Screenshots go to docs/screenshots/7b-5/.
 
-const screenshots = fileURLToPath(new URL("../../../docs/screenshots/6b-5/", import.meta.url));
+const screenshots = fileURLToPath(new URL("../../../docs/screenshots/7b-5/", import.meta.url));
 // 320px is a 1280px window at 400 % zoom (WCAG 1.4.10).
 const widths = [1440, 768, 375, 320] as const;
 // A 1280×720 window at 200 % and 400 % zoom, in CSS pixels (D10's manual check, emulated).
@@ -147,7 +147,7 @@ test("the participant page: header, Stand, Offen, the timeline and a side panel"
     "Teilnehmende",
   ]);
   await expect(crumbs.locator("[aria-current]")).toHaveCount(0);
-  const header = page.locator(".tp-page-header");
+  const header = page.locator(".tp-detail-header");
   await expect(header.getByText("Personalnummer TP-0001 · Welle W1")).toBeVisible();
   await expect(header.locator(".tp-status-tag")).toHaveText([
     "Status: Importiert",
@@ -155,11 +155,12 @@ test("the participant page: header, Stand, Offen, the timeline and a side panel"
     "DSV: Nicht angeboten",
   ]);
 
-  // The overview: three columns, each track its own summary (C3), the open items, the timeline.
+  // The overview: each track its own bar (C3), the open items, the side column, the timeline.
   const stand = page.getByRole("region", { name: "Stand" });
   await expect(stand.getByRole("region")).toHaveCount(3);
   await expect(page.locator(".cds--progress")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Offen" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Als Nächstes" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Fristen" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Termine & Zuständigkeit" })).toBeVisible();
   const timeline = page.getByRole("region", { name: "Zeitstrahl" });
   const markers = timeline.locator("svg.tp-timeline-svg a");
@@ -196,6 +197,7 @@ test("the participant page: header, Stand, Offen, the timeline and a side panel"
 
   // An edit form in a side panel: Escape asks before discarding, Escape again keeps the input.
   await page.setViewportSize({ width: 1440, height: 900 });
+  await openCard(page, "Welle und Vertragsdaten");
   await page.getByRole("button", { name: "Vertragsdaten ändern" }).click();
   const panel = page.getByRole("dialog", { name: "Vertragsdaten ändern" });
   await panel.getByLabel("TG-Ende (TT.MM.JJJJ)").fill("31.01.2092");
@@ -231,6 +233,38 @@ test("the participant page: header, Stand, Offen, the timeline and a side panel"
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expectNoPageScroll(page);
   }
+
+  // The tab "Profiling" as a step list: the track's steps, one open at a time, at every width.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("tab", { name: "Profiling" }).click();
+  const steps = page.getByRole("navigation", { name: "Schritte des Profilings" });
+  await expect(steps.getByRole("button")).toHaveText([
+    /^Profiling-Status/,
+    /^Termine des Profilings/,
+    /^Angaben aus der Selbstauskunft/,
+    /^Profilingbogen \(TL 407\)/,
+    /^Unterschriebene Bögen/,
+    /^Übermittlung an die Agentur/,
+  ]);
+  await expect(steps.locator('[aria-current="step"]')).toHaveCount(1);
+  await openStep(page, "Angaben aus der Selbstauskunft");
+  await expect(page.getByRole("region", { name: "Angaben aus der Selbstauskunft" })).toContainText(
+    "Fehlende Angaben",
+  );
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(steps).toBeVisible();
+    await expectNoPageScroll(page);
+    await expectAccessible(page);
+    await shot(page, `participant-profiling-${width}`);
+  }
+  for (const size of zooms) {
+    await page.setViewportSize(size);
+    await expect(steps).toBeVisible();
+    await expectNoPageScroll(page);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("tab", { name: "Übersicht" }).click();
 
   // Back through the breadcrumb: the work list as it was left, sorted by name descending (C6).
   await page.setViewportSize({ width: 1440, height: 900 });

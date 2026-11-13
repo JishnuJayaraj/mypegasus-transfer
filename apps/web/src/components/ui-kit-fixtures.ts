@@ -27,6 +27,8 @@ export const kit = {
     sectionCard: "SectionCard",
     facts: "Facts",
     stepList: "StepList",
+    trackBar: "TrackBar",
+    split: "Split",
     dataTable: "DataTable",
     buttons: "Button",
   },
@@ -109,6 +111,36 @@ export const kit = {
     { label: "Austrittsdatum", value: "28.02.2027" },
     { label: "Telefon", value: null },
   ],
+  tracks: [
+    {
+      title: "Status",
+      steps: ["Importiert", "Kontaktiert", "Informiert", "In der TG", "Ausgetreten"],
+      current: 2,
+      family: "main",
+      code: "informed",
+      detail: "Schritt 3 von 5",
+    },
+    {
+      title: "Profiling",
+      steps: ["Offen", "Angenommen", "In Arbeit", "Abgeschlossen"],
+      current: 2,
+      family: "profiling",
+      code: "profiling_in_progress",
+      detail: "Schritt 3 von 4",
+    },
+    {
+      title: "DSV",
+      steps: ["Nicht angeboten", "Angeboten", "Unterschrieben"],
+      current: 1,
+      family: "dsv",
+      code: "dsv_offered",
+      detail: "Schritt 2 von 3",
+    },
+  ] as const,
+  split: {
+    main: "Hauptspalte: woran gearbeitet wird.",
+    side: "Seitenspalte: was nachgeschlagen wird.",
+  },
   steps: {
     label: "Profiling",
     items: [

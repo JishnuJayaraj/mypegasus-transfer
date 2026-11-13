@@ -9,6 +9,7 @@ import {
   renderApp,
   staffUsers,
   unpinnedConfig,
+  openCard,
 } from "./test-utils";
 
 // "Ausnahme vom Profiling" on the tab "Profiling" and the queue "Freigaben"
@@ -291,6 +292,8 @@ describe("Ausnahme vom Profiling", () => {
       [`POST ${detailPath}/exception-evidence`]: () => json({ evidenceRecordId: recordId }, 201),
       [`POST ${detailPath}/profiling-exception-requests`]: () => json({ requestId }, 201),
     });
+    // Nothing requested yet: the card is collapsed to its summary until it is opened.
+    await openCard("Ausnahme vom Profiling");
     await user.click(await screen.findByRole("button", { name: "Ausnahme beantragen" }));
     const dialog = await screen.findByRole("dialog", { name: "Ausnahme vom Profiling beantragen" });
     const confirm = within(dialog).getByRole("button", { name: "Beantragen" });
@@ -335,6 +338,8 @@ describe("Ausnahme vom Profiling", () => {
           }),
       },
     );
+    // Nothing requested yet: the card is collapsed to its summary until it is opened.
+    await openCard("Ausnahme vom Profiling");
     await user.click(await screen.findByRole("button", { name: "Ausnahme beantragen" }));
     const dialog = await screen.findByRole("dialog", { name: "Ausnahme vom Profiling beantragen" });
     await user.selectOptions(within(dialog).getByLabelText("Grund"), "force_majeure");

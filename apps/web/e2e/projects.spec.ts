@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { seedStaffUserIds } from "@transfer/db";
-import { expect, expectAccessible, openSection, test } from "./helpers";
+import { expect, expectAccessible, openCard, openSection, test } from "./helpers";
 
 /** A synthetic import fixture (fixtures/imports/README.md). */
 const fixture = (name: string) =>
@@ -185,6 +185,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   // The only other choice: W1, labelled with its code, name and dates.
   // The wave's choice opens in a side panel (ui-patterns.md, C4).
+  await openCard(page, "Welle und Vertragsdaten");
   await page.getByRole("button", { name: "Welle zuordnen" }).click();
   const wavePanel = page.getByRole("dialog", { name: "Welle zuordnen" });
   await wavePanel.getByRole("combobox", { name: "Welle zuordnen" }).selectOption({ index: 1 });
@@ -202,6 +203,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Vertragsdaten geändert", { exact: true })).toBeVisible();
   const reports = page.getByRole("region", { name: "BA-Meldungen" });
+  await expect(reports).toContainText("1 offene Meldung");
+  await openCard(page, "BA-Meldungen");
   await expect(reports.getByRole("cell", { name: "Geplantes Ende geändert" })).toBeVisible();
   await expect(reports.getByRole("cell", { name: "Ausstehend" })).toBeVisible();
   await expect(page.getByText("31.01.2092 (individuell)")).toBeVisible();

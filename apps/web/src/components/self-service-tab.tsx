@@ -26,11 +26,14 @@ export function SelfServiceTab({
   detail,
   projectId,
   startLabel,
+  missingOnce = false,
 }: {
   detail: Detail;
   projectId: string;
   /** The assisted-mode button's text where it isn't the generic one (the tab "Profiling"). */
   startLabel?: string;
+  /** Each missing field once, whatever steps wait for it (the tab "Profiling"'s step list). */
+  missingOnce?: boolean;
 }) {
   const { t } = useTranslation();
   const api = useApi();
@@ -71,7 +74,7 @@ export function SelfServiceTab({
           </dd>
         </div>
       </dl>
-      <Missing view={view} />
+      <Missing view={view} once={missingOnce} />
       {wizardPages
         .filter(({ page }) => page !== "further" && page !== "documents")
         .map(({ page }) => (
@@ -103,15 +106,22 @@ export function useSelfServiceLabel() {
 }
 
 /** The missing items per step, as labels. */
-function Missing({ view }: { view: View }) {
+function Missing({ view, once }: { view: View; once: boolean }) {
   const { t } = useTranslation();
   const label = useSelfServiceLabel();
   const steps = [...new Set(view.missing.map((item) => item.step))];
+  const keys = [...new Set(view.missing.map((item) => item.key))];
   return (
     <section className="tp-section" aria-label={t("participant.selfService.missing")}>
       <h2>{t("participant.selfService.missing")}</h2>
       {steps.length === 0 ? (
         <p>{t("participant.selfService.missingNone")}</p>
+      ) : once ? (
+        <ul className="tp-list">
+          {keys.map((key) => (
+            <li key={key}>{label(key)}</li>
+          ))}
+        </ul>
       ) : (
         steps.map((step) => (
           <div key={step}>

@@ -68,7 +68,7 @@ export { StepList, type Step, type StepState } from "./step-list";
 export { formatDate, formatTimestamp, parseDisplayDate } from "./dates";
 export { DateField } from "./fields";
 export { createI18n, syncDocumentLanguage, UI_NAMESPACE, uiResources } from "./i18n";
-export { Card, Grid, Section, SectionHeading } from "./layout";
+export { Card, Grid, Section, SectionHeading, Split } from "./layout";
 export { PageHeader, type MenuAction } from "./page-header";
 export { RelativeDate, relativeDate } from "./relative-date";
 export {
@@ -94,4 +94,5 @@ export {
 } from "./status";
 export { SimpleTable, type TableColumn } from "./table";
 export { CountTile, CountTiles, TilesSkeleton } from "./tiles";
+export { TrackBar } from "./track-bar";
 export { ToastProvider, useToast } from "./toast";

@@ -117,3 +117,17 @@ export function Grid({
   const modifier = collapse === "wide" ? " tp-grid--collapse-wide" : "";
   return <div className={`tp-grid tp-grid--${columns}${modifier}`}>{children}</div>;
 }
+
+/**
+ * A main column with a side column (ui-patterns.md, which pattern): side by side from 66rem, the
+ * side column after the main one below. For a page whose side holds what is looked up, never
+ * what is worked on.
+ */
+export function Split({ children, side }: { children: ReactNode; side: ReactNode }) {
+  return (
+    <div className="tp-split">
+      <div className="tp-split-main">{children}</div>
+      <div className="tp-split-side">{side}</div>
+    </div>
+  );
+}

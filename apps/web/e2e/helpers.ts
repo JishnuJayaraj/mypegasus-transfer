@@ -124,3 +124,20 @@ export async function openSection(page: Page, name: string) {
     .getByRole("link", { name: new RegExp(`^${name}( |$)`) })
     .click();
 }
+
+/**
+ * Opens a collapsible card (the kit's `SectionCard`) by its heading unless it is open already:
+ * the participant overview's cards start collapsed to their summary (ui-patterns.md).
+ */
+export async function openCard(page: Page, name: string) {
+  const toggle = page.getByRole("button", { name, exact: true });
+  if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+}
+
+/** Opens a step of the tab "Profiling" (ui-patterns.md, the step list in use) by its title. */
+export async function openStep(page: Page, title: string) {
+  await page
+    .getByRole("navigation", { name: "Schritte des Profilings" })
+    .getByRole("button", { name: title })
+    .click();
+}

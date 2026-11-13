@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openStep, test } from "./helpers";
 
 // The TL 407 on the tab "Profiling" (data-protection.md, generated forms and the readiness
 // projection): the assigned consultant completes section B with the participant in assisted mode,
@@ -186,6 +186,7 @@ test("slice 6-3: the profiler generates the TL 407, the signed paper completes p
   await expect(page.getByRole("region", { name: "Profiling-Status" })).toContainText("In Arbeit");
 
   // 2. A session, the unemployment period and the declarations to the BA.
+  await openStep(page, "Termine des Profilings");
   await page.getByRole("button", { name: "Termin hinzufügen" }).click();
   const row = page.getByRole("group", { name: "Termin 1" });
   await row.getByLabel("Datum").fill("20.10.2026");
@@ -193,11 +194,13 @@ test("slice 6-3: the profiler generates the TL 407, the signed paper completes p
   await row.getByLabel("bis").fill("10:30");
   await page.getByRole("button", { name: "Termine speichern" }).click();
   await expect(page.getByText("Die Termine wurden gespeichert.")).toBeVisible();
+  await openStep(page, "Angaben aus der Selbstauskunft");
   const period = page.getByRole("region", { name: "Arbeitslos seit / bis" });
   await period.getByRole("button", { name: /Anzeigen/ }).click();
   await period.getByRole("textbox", { name: "Arbeitslos seit" }).fill("01.07.2026");
   await period.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Gespeichert.", { exact: true })).toBeVisible();
+  await openStep(page, "Erklärungen gegenüber der BA");
   await page.getByLabel("Veröffentlichung in der Jobbörse (Feld 50)").selectOption("full");
   await page
     .getByRole("group", { name: /Kontaktaufnahme durch die BA/ })
@@ -207,6 +210,7 @@ test("slice 6-3: the profiler generates the TL 407, the signed paper completes p
   await expect(page.getByText("Die Erklärungen wurden gespeichert.")).toBeVisible();
 
   // 3. The readiness on "Prüfen", the explicit "no school qualification", the generation.
+  await openStep(page, "Profilingbogen (TL 407)");
   const tl407 = page.getByRole("region", { name: "Profilingbogen (TL 407)" });
   await tl407.getByRole("button", { name: "Prüfen" }).click();
   await expect(tl407).toContainText("Der Bogen (Fassung 08/2025) kann erzeugt werden.");
@@ -230,6 +234,7 @@ test("slice 6-3: the profiler generates the TL 407, the signed paper completes p
   // 5. The PL: the summary from presence and the generated form, never the profiler's check.
   await staffSession(api, baseURL!, projectLead);
   await page.goto(`/projects/${projectId}/participations/${participationId}?tab=profiling`);
+  await openStep(page, "Profilingbogen (TL 407)");
   const lead = page.getByRole("region", { name: "Profilingbogen (TL 407)" });
   await expect(lead).toContainText("Aus Ihrer Sicht fehlt keine Pflichtangabe.");
   await expect(lead.getByRole("button", { name: "Prüfen" })).toHaveCount(0);
@@ -241,7 +246,8 @@ test("slice 6-3: the profiler generates the TL 407, the signed paper completes p
   // 6. The signed paper comes back: the consultant uploads it from the generated form.
   await staffSession(api, baseURL!, consultant);
   await page.goto(`/projects/${projectId}/participations/${participationId}?tab=profiling`);
-  const signed = page.getByRole("region", { name: "Profilingbogen (TL 407)" });
+  await openStep(page, "Unterschriebene Bögen");
+  const signed = page.getByRole("region", { name: "Unterschriebene Bögen" });
   await expect(signed).toContainText("„Profiling abschließen“ ist möglich, sobald");
   await signed.getByLabel(/Datei auswählen/).setInputFiles(scan);
   await expect(page.getByText("Der Bogen wurde hochgeladen.")).toBeVisible();
@@ -267,6 +273,7 @@ test("slice 6-3: the profiler generates the TL 407, the signed paper completes p
   // 8. "Profiling abschließen" on the later signature date, the default.
   await expect(signed.getByLabel("Profiling abgeschlossen am")).toHaveValue(berlinToday());
   await signed.getByRole("button", { name: "Profiling abschließen" }).click();
+  await openStep(page, "Profiling-Status");
   const status = page.getByRole("region", { name: "Profiling-Status" });
   await expect(status).toContainText("Abgeschlossen");
   await expect(status).toContainText(berlinToday());

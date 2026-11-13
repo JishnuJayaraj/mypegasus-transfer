@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   Button,
-  Card,
+  SectionCard,
   DateField,
   formatDate,
   formatTimestamp,
@@ -50,7 +50,14 @@ function messageOf(error: unknown): string {
   return error.status === 422 && code ? `codes.${code}` : "failed";
 }
 
-export function BaReportingTasks({ detail }: { detail: Detail }) {
+export function BaReportingTasks({
+  detail,
+  card,
+}: {
+  detail: Detail;
+  /** The card's open state, held by the overview (collapsed to its summary otherwise). */
+  card: { open: boolean; onToggle: (open: boolean) => void };
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
@@ -110,6 +117,7 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
       ...(task.replacesTaskId !== null ? [t("participant.tasks.replacement")] : []),
       ...(task.correction.pending ? [t("corrections.pending")] : []),
     ].join(" · ");
+  const pending = tasks.filter((task) => task.status === "pending").length;
   const columns = [
     "reportingKind",
     "subjectDate",
@@ -119,7 +127,16 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
     ...(anyAction ? (["actions"] as const) : []),
   ] as const;
   return (
-    <Card id="participant-ba" title={t("participant.tasks.title")}>
+    <SectionCard
+      id="participant-ba"
+      title={t("participant.tasks.title")}
+      summary={
+        pending > 0
+          ? t("participant.tasks.summaryOpen", { count: pending })
+          : t("participant.tasks.summaryNone")
+      }
+      {...card}
+    >
       <Stack gap={5}>
         {correction.element}
         <p>{t("participant.tasks.intro")}</p>
@@ -184,7 +201,7 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
         onReported={(task, reportedOn) => record(task, { outcome: "reported", reportedOn })}
         onNotRequired={(task, reason) => record(task, { outcome: "not_required", reason })}
       />
-    </Card>
+    </SectionCard>
   );
 }
 

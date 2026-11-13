@@ -51,5 +51,9 @@
       "open": "Offen",
       "blocked": "Blockiert"
     }
+  },
+  "trackBar": {
+    "steps": "Schritte: {{track}}",
+    "done": "erledigt"
   }
 }

@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, call, pl, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, showColumn, test } from "./helpers";
+import { expect, expectAccessible, openStep, showColumn, test } from "./helpers";
 
 // The TL 407's submission and the escalations (process-and-lifecycle.md, TL 407 submission;
 // data-protection.md, the regional view; D26, D27, Q57, Q189): an informed participant of Werk Nord
@@ -181,6 +181,7 @@ test("slice 6-5b: the TL 407 from the escalation through a rejection to the orig
   // 2. The PL records "An Agentur übermittelt am" by the Agentur's channel.
   await staffSession(api, baseURL!, projectLead);
   await page.goto(`/projects/${projectId}/participations/${participationId}?tab=profiling`);
+  await openStep(page, "Übermittlung an die Agentur");
   const section = page.getByRole("region", { name: "Übermittlung an die Agentur" });
   await expect(section).toContainText(`TL 407 08/2025 an ${agenturKey}, Weg: E-Mail.`);
   await section.getByLabel("An Agentur übermittelt am").fill(berlin(-1).display);
@@ -224,6 +225,7 @@ test("slice 6-5b: the TL 407 from the escalation through a rejection to the orig
 
   // 4. The new submission, then "Original versandt am": nothing is open any more.
   await page.goto(`/projects/${projectId}/participations/${participationId}?tab=profiling`);
+  await openStep(page, "Übermittlung an die Agentur");
   await section.getByLabel("An Agentur übermittelt am").fill(berlin().display);
   await section.getByRole("button", { name: "Übermittlung an die Agentur erfassen" }).click();
   await expect(attempts.getByRole("row")).toHaveCount(3);

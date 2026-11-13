@@ -155,6 +155,8 @@ test("filter and tile agree; bulk DSV; documenting, escalating and the manager's
   // The participant's overview names both items and points to the tab "DSV".
   await page.goto(`/projects/${projectId}/participations/${signedId}`);
   await expect(page.getByText(/DSV nicht vollständig unterschrieben \(Teilnehmende/)).toBeVisible();
+  // "Als Nächstes" shows three items; the rest are behind "Alle n anzeigen".
+  await page.getByRole("button", { name: /^Alle \d+ anzeigen$/ }).click();
   await expect(page.getByText(/Eintritt klären \(geplanter Beginn überschritten/)).toBeVisible();
   await shot(page, "overview-open-items");
   await page.goto(`/projects/${projectId}`);

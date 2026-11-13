@@ -3,7 +3,7 @@ import { createLink } from "@tanstack/react-router";
 import type { components } from "@transfer/api-client";
 import {
   Button,
-  Card,
+  SectionCard,
   Checkbox,
   formatDate,
   formatTimestamp,
@@ -68,17 +68,32 @@ function useRefresh(detail: Detail, projectId: string) {
   };
 }
 
+/** The portal account's state in words, as the card and the page header name it. */
+export function useActivationText() {
+  const { t } = useTranslation();
+  return (status: Detail["activationStatus"]): string =>
+    status.account === "activated"
+      ? status.code === "none"
+        ? t("activation.status.activated")
+        : t("activation.status.activatedRecovery", { code: t(`activation.code.${status.code}`) })
+      : t(`activation.code.${status.code}`);
+}
+
 export function ActivationCard({
   detail,
   projectId,
   onOpen,
+  card,
 }: {
   detail: Detail;
   projectId: string;
   onOpen: (panel: ActivationPanelKind) => void;
+  /** The card's open state, held by the overview (collapsed to its summary otherwise). */
+  card: { open: boolean; onToggle: (open: boolean) => void };
 }) {
   const { t } = useTranslation();
   const api = useApi();
+  const statusText = useActivationText();
   const refresh = useRefresh(detail, projectId);
   const query = useQuery({
     ...participationActivationQuery(api, detail.id),
@@ -114,8 +129,16 @@ export function ActivationCard({
     recovery: t("activation.recovery.open"),
     notice: t("activation.detail.noticeHandedOver"),
   };
+  const notice = t(`activation.notice.${detail.privacyNoticeState.state}`, {
+    dueOn: formatDate(detail.privacyNoticeState.dueOn),
+  });
   return (
-    <Card id="participant-activation" title={t("activation.detail.title")}>
+    <SectionCard
+      id="participant-activation"
+      title={t("activation.detail.title")}
+      summary={`${statusText(status)} · ${t("activation.detail.notice")}: ${notice}`}
+      {...card}
+    >
       <Stack gap={5}>
         {failed && (
           <InlineNotification
@@ -127,15 +150,7 @@ export function ActivationCard({
         <dl className="tp-facts">
           <div>
             <dt>{t("activation.detail.status")}</dt>
-            <dd>
-              {status.account === "activated"
-                ? status.code === "none"
-                  ? t("activation.status.activated")
-                  : t("activation.status.activatedRecovery", {
-                      code: t(`activation.code.${status.code}`),
-                    })
-                : t(`activation.code.${status.code}`)}
-            </dd>
+            <dd>{statusText(status)}</dd>
           </div>
           {query.data?.account && (
             <>
@@ -151,11 +166,7 @@ export function ActivationCard({
           )}
           <div>
             <dt>{t("activation.detail.notice")}</dt>
-            <dd>
-              {t(`activation.notice.${detail.privacyNoticeState.state}`, {
-                dueOn: formatDate(detail.privacyNoticeState.dueOn),
-              })}
-            </dd>
+            <dd>{notice}</dd>
           </div>
           {current && (
             <>
@@ -251,7 +262,7 @@ export function ActivationCard({
           </p>
         )}
       </Stack>
-    </Card>
+    </SectionCard>
   );
 }
 

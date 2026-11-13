@@ -335,13 +335,23 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## The participant page
 
-- From Slice 6b (6b-5) the page follows ui-patterns.md, "The participant page": breadcrumb back to
-  the work list as it was left, three track tags, "Aktionen", one "Handlungsbedarf"; the overview
-  with *Stand*, *Offen*, *Termine & Zuständigkeit*, the timeline (stage 1, the facts the page
-  already loads) and the cards "Stammdaten", "Portalaktivierung und Datenschutzhinweis", "Welle und
-  Vertragsdaten" and "BA-Meldungen", whose edit forms open in a side panel. The open items come
-  from the work list's snapshot (`GET /projects/{id}/worklist`, the viewer's own scope), usually
-  already cached from the list.
+- The page follows ui-patterns.md, "The participant page"
+  (`apps/web/src/routes/projects/$projectId_.participations.$participationId.tsx`): the kit's
+  `DetailHeader` with the breadcrumb back to the work list as it was left, one metadata line, three
+  track tags, up to five key facts, "Aktionen" and one primary action, the participation's next
+  step where the viewer may take it (`components/participant-next-step.ts`: `nextStep` of the work
+  list's row, then the viewer's tabs and the detail's capabilities); one "Handlungsbedarf". The
+  overview (`components/participant-overview.tsx`) has a main column with *Als Nächstes*, *Stand*
+  (one bar per track), the timeline (stage 1, the facts the page already loads) and the cards
+  "Stammdaten", "Portalaktivierung und Datenschutzhinweis", "Welle und Vertragsdaten" and
+  "BA-Meldungen", collapsed to a summary, whose edit forms open in a side panel; and a side column
+  with *Termine & Zuständigkeit* and *Fristen*. The open items, the deadlines and the next
+  appointment come from the work list's snapshot (`GET /projects/{id}/worklist`, the viewer's own
+  scope), usually already cached from the list; the page has no endpoint of its own.
+- "Profiling" (`components/profiling-tab.tsx`) is a step list of the profiling track (ui-patterns.md,
+  "The step list in use"): the status, the sessions, the self-service data with the missing fields,
+  section C, the declarations, the TL 407, its signed paper and its submission, from the tab's own
+  reads (`GET /participations/{id}/profiling` and `/self-service`); below it the exception.
 - The tabs "Übersicht", "Selbstauskunft", "Unterlagen", "Termine", "Nachrichten" and "Verlauf", the tab in
   the route's search param (`?tab=history`); each tab other than the overview loads its data only
   while shown, so opening "Verlauf" (an audited opening, data-protection.md) happens only when the
